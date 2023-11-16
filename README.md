@@ -17,13 +17,13 @@ Note: It is my first time building such a bot, so there may be imperfections/inc
 ### Prerequisites
 Before running AxleBot, make sure you have the following dependencies installed:
 
-Python 3.11 (persoanlly used)
-Discord.py
-yt_dlp
-pytube
-spotipy
-PIL (Python Imaging Library)
-(Along with some others)
+- Python 3.11 (persoanlly used)
+- Discord.py
+- yt_dlp
+- pytube
+- spotipy
+- PIL (Python Imaging Library)
+- (Along with some others)
 *Note: FFMPEG must be installed and the path must be given*
 
 ### Install the dependencies using:
@@ -54,12 +54,12 @@ python your_bot_script_name.py
 ```
 
 ### Usage
-Note, the bot currently only works in one server, but plans exist add functionality to work in multiple servers at once
-Use -p or -play to play a song from Spotify, YouTube, or a playlist.
-Use -q or -queue to display the current song queue.
-Use -l or -lyrics to show lyrics for the current song.
-Use other commands like -skip, -pause, -resume, -stop, etc., to control playback.
-For a full list of commands, use -help within a text channel
+*Note, the bot currently only works in one server, but plans exist add functionality to work in multiple servers at once*
+- Use -p or -play to play a song from Spotify, YouTube, or a playlist.
+- Use -q or -queue to display the current song queue.
+- Use -l or -lyrics to show lyrics for the current song.
+- Use other commands like -skip, -pause, -resume, -stop, etc., to control playback.
+- For a full list of commands, type -help within a text channel (after you run the bot)
 
 ### Contributors
 @Anay-Joshi26
