@@ -13,10 +13,12 @@ import requests
 import io
 from song import Song
 import random
+from dotenv import load_dotenv, find_dotenv
 
+load_dotenv(find_dotenv())
 
-client_id = "SPOTIFY_CLIENT_ID" 
-client_secret = "SPOTIFY_CLIENT_SECRET"  
+client_id = os.getenv("SPOTIFY_CLIENT_ID") 
+client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")  
 
 # Create an instance of the Spotipy client
 client_credentials_manager = SpotifyClientCredentials(
@@ -787,4 +789,4 @@ def update_progress_bar(progress):
     return f"{bar}"
 
 
-client.run("YOUR_DISCORD_BOT_TOKEN")
+client.run(os.getenv("SECRET_KEY"))

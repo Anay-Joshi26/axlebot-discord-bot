@@ -1,0 +1,6 @@
+**/__pycache__/
+.env
+ffmpeg.exe
+venv
+axlebot/account_key.json
+axlebot/Lavalink.jar
