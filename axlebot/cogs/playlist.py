@@ -244,7 +244,8 @@ class PlaylistCog(commands.Cog):
 
         if not playlist:
             no_pl_found = craft_no_playlist_found(name)
-            await ctx.send(no_pl_found)
+            await ctx.send(embed = no_pl_found)
+            return
 
         if client.voice_client is None:
             vc = await ctx.author.voice.channel.connect()

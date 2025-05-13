@@ -15,6 +15,8 @@ from typing import List
 from datetime import datetime, timedelta
 import time
 import re
+from async_lru import alru_cache
+from uuid import uuid1
 
 load_dotenv(find_dotenv())
 
@@ -53,7 +55,7 @@ yt_dl_options = {
 yt_dl = YoutubeDL(yt_dl_options)
 ffmpeg_options = {
     "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-    "options": "-vn -bufsize 2000k -probesize 100M -b:a 128k", 
+    "options": "-vn", 
 }
 
 class LyricsStatus(Enum):
@@ -65,7 +67,7 @@ class LyricsStatus(Enum):
 
 
 class Song:
-    def __init__(self, duration, artist, yt_url, player, name, thumbnail_url, audio_url, song_type = None, is_spot=False, is_yt=True, is_playlist = False):
+    def __init__(self, duration, artist, yt_url, player, name, thumbnail_url, audio_url, song_type = None, is_spot=False, is_yt=True, is_playlist = False, belongs_to = None):
         self.yt_url = yt_url
         self.name = name
         self.artist = artist
@@ -92,11 +94,12 @@ class Song:
         self._play_task = None
         self.is_playlist = is_playlist
         self.song_colour = None # probably for spotify
+        self.belongs_to = belongs_to # belonging to a playlist
 
     @property
     async def player(self) -> discord.FFmpegPCMAudio:
         audio_url = await self.audio_url
-        return discord.FFmpegPCMAudio(audio_url, **ffmpeg_options)  
+        return discord.FFmpegOpusAudio(audio_url, **ffmpeg_options)  
     
     @property
     async def audio_url(self) -> str:
@@ -121,15 +124,42 @@ class Song:
             raise ValueError("Time format not recognized. Use MM:SS or HH:MM:SS")
 
     @classmethod
-    async def CreateSong(cls, youtube_query):
+    async def CreateSong_old(cls, youtube_query):
+        print("searching song")
         yt_url, name, duration = await Song.search_youtube_video(youtube_query)
+        print("song search finished, got url, getting info")
         loop = asyncio.get_event_loop()
         data = await loop.run_in_executor(
             None, lambda: yt_dl.extract_info(yt_url, download=False)
         )
+        print("got info")
         artist = data.get("artist") or data.get("uploader") or "Unknown Artist"
         thumbnail_url = data["thumbnail"]
         audio_url = data["url"]
+        player = None
+        print("SONG CREATED")
+        # Create the song instance
+        song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url)
+        
+        # Start fetching lyrics concurrently
+        
+
+        return song
+    
+    @classmethod
+    async def CreateSong(cls, youtube_query):
+        import pprint
+        print("searching song")
+        #yt_url, name, duration = await Song.search_youtube_video(youtube_query)
+        #print("song search finished, got url, getting info")
+        data = await Song.get_youtube_video_info(youtube_query)
+        print("got info")
+        artist = data.get("artist") or data.get("uploader") or data.get("channel") or "Unknown Artist"
+        thumbnail_url = data["thumbnail"]
+        audio_url = data["url"]
+        duration = data["duration"]
+        yt_url = data["webpage_url"]
+        name = data["title"]
         player = None
         print("SONG CREATED")
         # Create the song instance
@@ -160,12 +190,15 @@ class Song:
 
         semaphore = asyncio.Semaphore(max_concurrent_song_loadings)
 
+        unique_playlist_id = uuid1().int>>64
+
         async def process_track(track) -> Song:
             async with semaphore:
                 try:
                     song = await Song.SpotifySong(track[0], track[1], track[2])
                     if song:
                         song.is_playlist = True
+                        song.belongs_to = unique_playlist_id
 
                     await asyncio.sleep(0.1)
 
@@ -242,11 +275,8 @@ class Song:
         print(f"Fetching lyrics for {name_to_use} by {self.artist}")
         
         if URL is None:
-            URL = (
-                f"https://lyrist.vercel.app/api/{urllib.parse.quote(name_to_use)}/{urllib.parse.quote(self.artist)}"
-                if self.artist
-                else f"https://lyrist.vercel.app/api/{urllib.parse.quote(name_to_use)}"
-            )
+            URL = f"https://api.lyrics.ovh/v1/{urllib.parse.quote(self.artist)}/{urllib.parse.quote(name_to_use)}"
+            
 
         self._lyrics_status = LyricsStatus.FETCHING
         try:
@@ -258,21 +288,21 @@ class Song:
                     if res_lyrics is None:
                         self.lyrics = None
                         self._lyrics_status = LyricsStatus.NO_LYRICS_FOUND
-                        if self.artist and tries == 1:
-                            await self.fetch_lyrics(
-                                f"https://lyrist.vercel.app/api/{urllib.parse.quote(name_to_use)}", tries + 1
-                            )
+                        # if self.artist and tries == 1:
+                        #     await self.fetch_lyrics(
+                        #         f"https://lyrist.vercel.app/api/{urllib.parse.quote(name_to_use)}", tries + 1
+                        #     )
                     else:
-                        self.lyrics = res_lyrics
+                        self.lyrics = res_lyrics.replace('\n\n', '\n')
                         self._lyrics_status = LyricsStatus.FETCHED
         except Exception as e:
             print("Error fetching lyrics", e)
             self.lyrics = None
             self._lyrics_status = LyricsStatus.ERROR
-            if self.artist and tries == 1:
-                await self.fetch_lyrics(
-                    f"https://lyrist.vercel.app/api/{urllib.parse.quote(name_to_use)}", tries + 1
-                )
+            # if self.artist and tries == 1:
+            #     await self.fetch_lyrics(
+            #         f"https://lyrist.vercel.app/api/{urllib.parse.quote(name_to_use)}", tries + 1
+            #     )
 
 
         
@@ -314,6 +344,7 @@ class Song:
             )
             for track in playlist_tracks["items"]
         ]
+        print(track_info)
         return track_info
     
     @staticmethod
@@ -324,6 +355,17 @@ class Song:
             await playlist.getNextVideos()
         
         return [f"https://www.youtube.com/watch?v={video['id']}" for video in playlist.videos]
+    
+    @staticmethod
+    @alru_cache(maxsize=128, ttl=86400)
+    async def get_youtube_video_info(query: str) -> dict:
+        loop = asyncio.get_event_loop()
+        data = await loop.run_in_executor(
+            None, lambda: yt_dl.extract_info(f"ytsearch1:{query}", download=False)
+        )
+        data = data["entries"][0]
+        return data
+
     
     @staticmethod
     async def search_youtube_video(query: str):

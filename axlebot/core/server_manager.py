@@ -3,31 +3,43 @@ from typing import Dict
 import asyncio
 import discord
 import discord.ext.commands as commands
+from core.caching.managed_cache import CacheManager
+from core.caching.base_cache import BaseCache
 
 class ServerManager:
-    def __init__(self):
+    def __init__(self, cache_manager: CacheManager):
         # Active clients who have invoked client needing commands recently
-        self.active_clients: Dict[int, Client] = {}
+        self.clients = cache_manager
+
+    @property
+    def active_clients(self) -> BaseCache:
+        """
+        Returns the active clients.
+        """
+        print("Active clients", self.clients.active_cache)
+        return self.clients.active_cache
 
     async def get_client(self, guild_id: int, ctx: commands.Context = None) -> Client:
-        """
-        Returns the client for the given guild id
-        """
-        # If the client had only just invoked a client needing command, then the client will be in the active clients list
-        if guild_id not in self.active_clients:
-            if ctx is not None:
-                msg = await ctx.send("*Please wait while we fetch your server data...\nStaying inactive for a while will remove server data from quick access*")
+        print("Getting client for guild", guild_id)
+        client = await self.clients.get(str(guild_id))
+        #
+        client = await Client.from_dict(client)
 
-            self.active_clients[guild_id] = await Client.from_guild_id(guild_id)
+        print(client)
 
-            print("Client put into active clients")
+        if not client:
+            # if ctx:
+            #     msg = await ctx.send("*Please wait while we fetch your server data...*")
 
-            if ctx is not None:
-                await msg.delete()
+            # client = await Client.from_guild_id(guild_id)
+            # await self.cache.set(str(guild_id), client)
 
-        return self.active_clients[guild_id]
+            # if ctx:
+            #     await msg.delete()
+            pass
+
+        return client
     
     
     def remove_client(self, guild_id):
-        if guild_id in self.active_clients:
-            del self.active_clients[guild_id]
+        pass

@@ -35,7 +35,7 @@ class Client:
         self.max_concurrent_song_loadings = 2 # will increase to 5 if paid for premium
         self.playlists : list[Playlist] = []
         self.last_added_playlist: Union[Playlist, None] = None
-        self.is_premium : bool | None = None
+        self.is_premium : bool | None = None # check this, coz its funky
 
     @staticmethod
     async def from_guild_id(guild_id):
@@ -110,7 +110,13 @@ class Client:
                 return playlist
         
         return None
-
+    
+    def __repr__(self):
+        """
+        Returns a string representation of the client object
+        """
+        return f"Client(server_id = {self.server_id}, is_premium = {self.is_premium})"
+    
     def to_dict(self):
         """
         Converts the client object to a dictionary
@@ -127,6 +133,7 @@ class Client:
     async def from_dict(data: dict, server_id: int | None = None):
         """
         Creates a client object from data dictionary
+        This client is a client which has just began using the bot and has an empty queue
         """
         if server_id is None:
             server_id = data["guild_id"]

@@ -52,6 +52,24 @@ class SongQueue:
         for _ in range(num):
             self.queue.insert(1, current_song)
     
+    def move(self, song_in_question: int, move_to: int) -> None:
+        """
+        Moves a song in the queue to a different position
+        """
+        if song_in_question == 1:
+            raise ValueError("You can't move the current song")
+        
+        if song_in_question < 2 or song_in_question >= len(self.queue) + 1:
+            raise ValueError("You did not select a valid song from the queue")
+
+        if move_to == 1:
+            raise ValueError("You can't move a song to the current song")
+        
+        if move_to < 2 or move_to >= len(self.queue) + 1:
+            raise ValueError("You did not select a valid position to move the song to")
+
+        self.queue.insert(move_to-1, self.queue.pop(song_in_question-1))
+
     def shuffle(self) -> None:
         """
         Shuffles the queue (except the currently playing song)

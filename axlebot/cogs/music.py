@@ -113,7 +113,40 @@ class MusicCog(commands.Cog):
         progress_message = await ctx.send(embed = embed, view = MusicPlaybackButtons(ctx, client), silent = True)
         song.progress_message = progress_message
         asyncio.create_task(update_progress_bar_embed(song, embed, progress_message)) # function updates the progress bar in the embed (every set interval seconds)
-        
+
+    @commands.command(aliases = ['mv'])
+    @commands.check(in_voice_channel)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    async def move(self, ctx, *args):
+        """
+        Moves a song from one position in the queue to another
+        """
+        client = await self.server_manager.get_client(ctx.guild.id)
+        queue = client.queue
+
+        if len(queue) == 0:
+            await ctx.send("The queue is empty, there are no songs to move")
+            return
+
+        if len(args) != 2:
+            await ctx.send("Invalid number of arguments, you need to provide the current position and the new position")
+            return
+
+        try:
+            current_pos = int(args[0])
+            new_pos = int(args[1])
+        except ValueError:
+            await ctx.send("Invalid arguments, the positions must be integers")
+            return
+
+        try:
+            queue.move(current_pos, new_pos)
+        except ValueError as e:
+            await ctx.send(e)
+            return
+
+        embed = craft_move_song(queue[new_pos-1], new_pos)
+        await ctx.send(embed=embed, silent = True)
 
     @commands.command(aliases = ['p'])
     @commands.check(in_voice_channel)
@@ -121,6 +154,8 @@ class MusicCog(commands.Cog):
     async def play(self, ctx, *args):
         query = ' '.join(args)
         client = await self.server_manager.get_client(ctx.guild.id, ctx)
+
+        print("Client for guild found", client)
 
         if client.voice_client is None:
             vc = await ctx.author.voice.channel.connect()
@@ -159,8 +194,9 @@ class MusicCog(commands.Cog):
             # Start the generator to populate the queue
             async for song in song_generator:
                 if song:
-                    queue.append(song)
+                    queue.append(song, position)
                     print(f"Added to queue: {song.name}")
+                    position += 1
 
                 # Start playing the first song if it's not already playing
                 if len(queue) == 1:

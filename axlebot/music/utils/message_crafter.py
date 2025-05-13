@@ -51,7 +51,7 @@ def craft_now_playing(song: Song, is_looping = False):
 
 def craft_playlist_added(type_of_playlist):
     embed = discord.Embed(title = f"{'Spotify' if type_of_playlist == 'spot' else 'YouTube'} Playlist Queued",
-                    description=f"You have just queued a playlist in the default order.\n\nIt may take some time to queue every song in the playlist. There are some playlist specific commands you can use while a playlist is being played.\n\n**The first song should start to play shortly...**\n\nYou can inspect the queue to see the added songs via `-queue` or `q`.\n\n`-skip {'spot' if type_of_playlist == 'spot' else 'yt'}` skips the **current playing** {'Spotify' if type_of_playlist == 'spot' else 'YouTube'} playlist\n`-shuffle {'spot' if type_of_playlist == 'spot' else 'yt'}` skips the **current playing** {'Spotify' if type_of_playlist == 'spot' else 'YouTube'} playlist",
+                    description=f"You have just queued a playlist in the default order.\n\nIt may take some time to queue every song in the playlist. There are some playlist specific commands you can use while a playlist is being played.\n\n**The first song should start to be queued shortly...**\n\nYou can inspect the queue to see the added songs via `-queue` or `q`.\n\n`-skip {'spot' if type_of_playlist == 'spot' else 'yt'}` skips the **current playing** {'Spotify' if type_of_playlist == 'spot' else 'YouTube'} playlist\n`-shuffle {'spot' if type_of_playlist == 'spot' else 'yt'}` will shuffle the **current playing** {'Spotify' if type_of_playlist == 'spot' else 'YouTube'} playlist",
                     colour=0x1ED760 if type_of_playlist == "spot" else 0xFF0033)
 
     return embed
@@ -84,7 +84,7 @@ async def update_progress_bar_embed(song: Song, progress_embed: discord.Embed, s
     bar_length = 18
 
     if update_interval is None:
-        update_interval = max(1, (song.duration/bar_length) * 0.25)
+        update_interval = max(1, (song.duration/bar_length) * 0.5)
 
 
     while progress < 95:
@@ -108,6 +108,12 @@ def craft_delete_song(song: Song) -> discord.Embed:
 
     embed.set_thumbnail(url=song.thumbnail_url)
 
+    return embed
+
+def craft_move_song(song: Song, move_to: int) -> discord.Embed:
+    embed = discord.Embed(title=song.name,
+                      description=f"The song has been **moved** to position `{move_to}` in the queue.\n\nYou can view the updated queue via `-queue` or `-q`.",
+                      colour=0x00b0f4)
     return embed
 
 
@@ -398,10 +404,13 @@ def craft_music_playback_controls_help_command():
                     value="`-loop` or `-lp`\nWill toggle looping\nof the current playing song.\nIf on the song will be stuck on loop.\nRun `-loop` to toggle it off",
                     inline=True)
     embed.add_field(name="Repeat",
-                    value="`-rep` or `-repeat`\nWill repeat the current playing\nsong once",
+                    value="`-rep` or `-repeat`\nWill repeat the current playing song\nonce",
                     inline=True)
     embed.add_field(name="Play Next",
                     value="`-pn <any -p param>`\nWill take in anything `-p` \ncan play, and will queue it next up\n(right after the current song)",
+                    inline=True)
+    embed.add_field(name="Move song",
+                    value="`-mv <position of song> <destination position>`\nWill select the song in the first position\nand move it to the second position\nE.g., `-mv 3 5` will move the 3rd song in the queue to the 5th position",
                     inline=True)
     embed.add_field(name="Delete",
                     value="`-del <position>`\nWill delete the song in\n`position` in the queue.\nE.g., `-del 5` will delete\nthe 5th song in the queue.",
