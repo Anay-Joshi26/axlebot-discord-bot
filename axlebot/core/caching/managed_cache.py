@@ -28,6 +28,7 @@ class CacheManager:
                 print("InMemoryCache...........")
                 try:
                     value = cache.sync_get(key)
+                    print("ID value", id(value))
                 except Exception as e:
                     print(f"Exception in sync_get: {e}")
                     raise
@@ -38,10 +39,10 @@ class CacheManager:
             if value is None:
                 print('aaa')
                 continue
+            
+            final_client_obj = await self._promote(key, cache, i, value, to_top=True)
 
-            await self._promote(key, cache, i, value, to_top=True)
-
-            return value
+            return final_client_obj
         
         return None
     
@@ -65,23 +66,36 @@ class CacheManager:
         """
         Promote a key/object to a higher priority cache
         """
+        print(f"Promoting {key} from cache {curr_cache_index}")
+        from models.client import Client
         if curr_cache_index == 0:
             # Already in the top cache
-            return 
+            return value
 
         if to_top:
             print("Promoting to top cache")
             if not curr_cache.is_db:
                 await curr_cache.delete(key)
             if isinstance(self.caches[0], InMemoryCache):
-                self.caches[0].set(key, value)
+                client_obj = await Client.from_dict(value)
+                print("client_obj", client_obj)
+                self.caches[0].set(key, client_obj)
+
+                print("Set client_obj id:", id(client_obj))
+                print("Get client_obj id:", id(self.caches[0].sync_get(key)))
+                return client_obj
+
             else:
+                # rendunant atm
                 await self.caches[0].set(key, value)
             return
         
         if not curr_cache.is_db:
             await curr_cache.delete(key)
-        await self.caches[curr_cache_index - 1].set(key, value)
+        elif isinstance(self.caches[curr_cache_index - 1], InMemoryCache):
+            self.caches[curr_cache_index - 1].set(key, await Client.from_dict(value))
+        else:
+            await self.caches[curr_cache_index - 1].set(key, value)
 
     async def _demote(self, key, curr_cache: BaseCache, curr_cache_index: int, value):
         """

@@ -50,10 +50,9 @@ class RedisCache(BaseCache):
         """
         await self.redis.delete(key)
 
-
 class InMemoryCache(BaseCache):
     """
-    An in-memory cache implementation.
+    An in-memory cache implementation, which will likely hold actual Client objects.
     """
     
     def __init__(self, priority: int, ttl: timedelta = None, is_db = False):

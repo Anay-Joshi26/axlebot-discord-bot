@@ -2,7 +2,7 @@ from music.songs_queue import SongQueue
 import time
 from typing import Tuple, Union
 from models.playlist import Playlist
-from core.firebase import FirebaseClient
+#from core.firebase import FirebaseClient
 from core.extensions.firebase import fbc
 import asyncio
 import discord

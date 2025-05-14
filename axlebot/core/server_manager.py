@@ -22,10 +22,21 @@ class ServerManager:
     async def get_client(self, guild_id: int, ctx: commands.Context = None) -> Client:
         print("Getting client for guild", guild_id)
         client = await self.clients.get(str(guild_id))
-        #
-        client = await Client.from_dict(client)
 
-        print(client)
+        if isinstance(client, Client):
+            print("Client found in cache")
+            return client
+        
+        if client is None:
+            print("Client not found in cache, creating new client")
+            # client = await Client.from_guild_id(guild_id)
+            # await self.clients.set(str(guild_id), client)
+            # return client
+            return
+        
+        #client = await Client.from_dict(client)
+
+        #print(client)
 
         if not client:
             # if ctx:

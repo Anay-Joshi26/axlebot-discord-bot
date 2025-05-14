@@ -156,6 +156,8 @@ class MusicCog(commands.Cog):
         client = await self.server_manager.get_client(ctx.guild.id, ctx)
 
         print("Client for guild found", client)
+        print("Client queue", client.queue.queue)
+        print("Playing client id", id(client))
 
         if client.voice_client is None:
             vc = await ctx.author.voice.channel.connect()
