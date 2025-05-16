@@ -1,14 +1,19 @@
 from typing import List
 from core.caching.base_cache import BaseCache
 from core.caching.caches import InMemoryCache, RedisCache, FirestoreCache
+from datetime import timedelta
+import asyncio
 
 class CacheManager:
     """
-    A class to manage a caches
+    A class to manage a caches.
+    The CacheManager is in charge of promoting Client objects to higher priority caches and demoting inactive clients to lower priority caches.
+    The priority is a measure of the access speed
     """
     def __init__(self, caches: List[BaseCache]):
         print(caches)
         self.caches = sorted(caches, key=lambda c: c.priority)
+        self._start_eviction_loop()
 
     @property
     def active_cache(self) -> BaseCache:
@@ -118,4 +123,22 @@ class CacheManager:
 
     async def _delete(self, key, cache: BaseCache): 
         await cache.delete(key)
+
+    def _start_eviction_loop(self):
+        self._eviction_task = asyncio.create_task(self._evict_expired_loop())
+
+    async def _evict_expired_loop(self, check_every):
+        while True:
+            await self.evict_expired()
+            await asyncio.sleep(check_every)
+
+    async def evict_expired(self):
+        for cache in self.caches:
+            if hasattr(cache, "all") and not cache.is_db:
+                try:
+                    all_entries = cache.all()
+                except Exception as e:
+                    print(f"[WARN] Failed to evict from {cache}: {e}")
+                    continue
+
     

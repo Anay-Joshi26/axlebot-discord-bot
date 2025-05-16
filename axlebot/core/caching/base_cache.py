@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import timedelta
+import asyncio
+
 
 class BaseCache(ABC):
     """
@@ -10,8 +12,9 @@ class BaseCache(ABC):
         Initializes the cache.
         """
         self.priority = priority
-        self.ttl = ttl # Time to live for cache items, if None, the item will never expire
+        self.ttl = None if is_db else ttl # Time to live for cache items, if None, the item will never expire
         self.is_db = is_db # Whether the cache is a database or not, if it is, it will not be deleted from
+        #self.cleanup_task = asyncio.create_task(self._evict_expired(timedelta(minutes=check_freq_time)))
 
     @abstractmethod
     async def get(self, key):
@@ -21,6 +24,14 @@ class BaseCache(ABC):
         :return: The cached item or None if not found.
         """
         raise NotImplementedError("Subclasses must implement this method.")
+    
+    @abstractmethod
+    async def all(self):
+        """
+        Returns every entry within the cache
+        """
+        raise NotImplementedError("Subclasses must implement this method.")
+
 
     @abstractmethod
     async def set(self, key: str, value):
@@ -38,3 +49,11 @@ class BaseCache(ABC):
         :param key: The key of the item to delete.
         """
         raise NotImplementedError("Subclasses must implement this method.")
+    
+    @abstractmethod
+    async def evict_expired(self):
+        """
+        A function which will evict expired entries from storage
+        """
+        raise NotImplementedError("Subclasses must implement this method.")
+

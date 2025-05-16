@@ -29,25 +29,8 @@ class ServerManager:
         
         if client is None:
             print("Client not found in cache, creating new client")
-            # client = await Client.from_guild_id(guild_id)
-            # await self.clients.set(str(guild_id), client)
-            # return client
+            await ctx.send("An error occured, I was not able to get your server information")
             return
-        
-        #client = await Client.from_dict(client)
-
-        #print(client)
-
-        if not client:
-            # if ctx:
-            #     msg = await ctx.send("*Please wait while we fetch your server data...*")
-
-            # client = await Client.from_guild_id(guild_id)
-            # await self.cache.set(str(guild_id), client)
-
-            # if ctx:
-            #     await msg.delete()
-            pass
 
         return client
     

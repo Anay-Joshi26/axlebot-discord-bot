@@ -2,6 +2,7 @@ from core.caching.base_cache import BaseCache
 import redis.asyncio as redis
 import json 
 from datetime import datetime, timedelta
+import asyncio
 
 class RedisCache(BaseCache):
     """
@@ -50,6 +51,10 @@ class RedisCache(BaseCache):
         """
         await self.redis.delete(key)
 
+    async def all(self):
+        pass
+
+
 class InMemoryCache(BaseCache):
     """
     An in-memory cache implementation, which will likely hold actual Client objects.
@@ -64,6 +69,7 @@ class InMemoryCache(BaseCache):
         """
         super().__init__(priority, ttl, is_db)
         self.cache = {}
+        #self.evict_expired_task = asyncio.create_task(self.evict_expired(self.check_freq_time))
 
     def sync_get(self, key: str):
         """
@@ -86,7 +92,7 @@ class InMemoryCache(BaseCache):
         """
         value = self.cache.get(key)
         if value is not None:
-            return json.loads(value)
+            return value#json.loads(value)
         return None
     
     def set(self, key: str, value, ttl: timedelta = None):
@@ -95,15 +101,18 @@ class InMemoryCache(BaseCache):
 
         :param key: The key to store the item under.
         :param value: The item to store.
-        :param ttl: The time to live for the item (optional).
+        :param ttl: The time to live for the item (optional) as a timedelta
         """
         print("huh")
-        self.cache[key] = value
+        expiry = datetime.now() + self.ttl if ttl is None else ttl
+        self.cache[key] = (value, expiry)
+
+    async def all(self):
+        return self.cache.items()
 
     async def delete(self, key: str):
         """
         Deletes an item from the Redis cache.
-
         :param key: The key of the item to delete.
         """
         try:
@@ -111,6 +120,14 @@ class InMemoryCache(BaseCache):
         except KeyError:
             return None
         return None
+    
+    async def evict_expired(self):
+        now = datetime.now()
+        entries_to_delete = [(k,v) for k, (v, exp) in self.cache.items() if exp and now > exp]
+        for k,_ in entries_to_delete:
+            del self.cache[k]
+
+        return entries_to_delete
     
 from core.firebase import FirebaseClient
     
@@ -127,6 +144,7 @@ class FirestoreCache(BaseCache):
         """
         super().__init__(priority, ttl, is_db)
         self.fbc = firestore_client
+        self.evict_expired_task = asyncio.create_task(self._evict_expired(self.check_freq_time))
 
     async def get(self, key: str):
         """
@@ -148,7 +166,13 @@ class FirestoreCache(BaseCache):
         """
         await self.fbc.set_data_for_client(key, value)
 
+    async def all(self):
+        pass
+
     async def delete(self, key: str):
         return
+    
+    async def evict_expired(self, check_every: timedelta):
+        pass
 
         
