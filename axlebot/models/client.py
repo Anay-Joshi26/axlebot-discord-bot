@@ -6,6 +6,8 @@ from models.playlist import Playlist
 from core.extensions.firebase import fbc
 import asyncio
 import discord
+from discord.ext import commands
+from music.utils.message_crafter import craft_bot_music_stopped
 
 class Client:
     def __init__(self, server_id):
@@ -36,6 +38,8 @@ class Client:
         self.playlists : list[Playlist] = []
         self.last_added_playlist: Union[Playlist, None] = None
         self.is_premium : bool | None = None # check this, coz its funky
+        self.exit_after_inactivity = 60 * 2 # 2 minutes
+        self.stop_task = None # used to stop the client after a certain time of inactivity
 
     @staticmethod
     async def from_guild_id(guild_id):
@@ -110,6 +114,54 @@ class Client:
                 return playlist
         
         return None
+    
+    def interupt_inactivity_timer(self):
+        """
+        Interupts the inactivity timer if it is running
+        """
+        if self.stop_task is not None and not self.stop_task.done():
+            self.stop_task.cancel()
+            self.stop_task = None
+    
+    async def start_inactivity_timer(self, ctx: commands.Context, inactivity_time: int = None):
+        """
+        Starts a timer to stop the client after a certain time of inactivity
+        """
+        self.interupt_inactivity_timer()
+
+        if inactivity_time is None:
+            inactivity_time = self.exit_after_inactivity
+
+        async def timer():
+            try:
+                await asyncio.sleep(inactivity_time)
+                print(f"[INFO] Inactivity timer expired. Stopping client in guild {ctx.guild.id}")
+                #await ctx.send("No activity for 2 minutes. Leaving the voice channel.", delete_after=20)
+                await self.stop(ctx, send_embed=False)
+            except asyncio.CancelledError:
+                print(f"[INFO] Inactivity timer for guild {ctx.guild.id} cancelled.")
+                return
+
+        self.stop_task = asyncio.create_task(timer())
+    
+    async def stop(self, ctx: commands.Context, delete_after: int = 10, send_embed: bool = True):
+        """
+        This function stops the client from playing any music, clears the queue, and disconnects from the voice channel.
+        """
+        if send_embed:
+            embed = craft_bot_music_stopped(delete_after=delete_after)
+            await ctx.send(embed=embed, delete_after=delete_after)
+
+        print(self.queue, self.voice_client, self.queue.current_song)
+
+        if self.queue.current_song is not None:
+            self.queue.current_song.stop()
+        if self.voice_client is not None:
+            self.voice_client.stop()
+            await self.voice_client.disconnect(); self.voice_client = None
+        self.queue.clear()
+
+        self.interupt_inactivity_timer()
     
     def __repr__(self):
         """

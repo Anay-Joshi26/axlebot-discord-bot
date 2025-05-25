@@ -71,7 +71,7 @@ class InMemoryCache(BaseCache):
         self.cache = {}
         #self.evict_expired_task = asyncio.create_task(self.evict_expired(self.check_freq_time))
 
-    def sync_get(self, key: str):
+    def get(self, key: str, only_value = True, update_time = True):
         """
         Retrieves an item from the in-memory cache.
 
@@ -79,21 +79,24 @@ class InMemoryCache(BaseCache):
         :return: The cached item or None if not found.
         """
         value = self.cache.get(key)
+
         if value is not None:
-            return value
+            if update_time:
+                self.set(key, value[0])
+            return value[0] if only_value else value  # Return the value or the tuple (value, expiry)
         return None
 
-    async def get(self, key: str):
-        """
-        Retrieves an item from the dictionary cache.
+    # def get(self, key: str):
+    #     """
+    #     Retrieves an item from the dictionary cache.
 
-        :param key: The key of the item to retrieve.
-        :return: The cached item or None if not found.
-        """
-        value = self.cache.get(key)
-        if value is not None:
-            return value#json.loads(value)
-        return None
+    #     :param key: The key of the item to retrieve.
+    #     :return: The cached item or None if not found.
+    #     """
+    #     value = self.cache.get(key)
+    #     if value is not None:
+    #         return value#json.loads(value)
+    #     return None
     
     def set(self, key: str, value, ttl: timedelta = None):
         """
@@ -105,12 +108,12 @@ class InMemoryCache(BaseCache):
         """
         print("huh")
         expiry = datetime.now() + self.ttl if ttl is None else ttl
-        self.cache[key] = (value, expiry)
+        self.cache[key] = (value, expiry.timestamp())
 
-    async def all(self):
+    def all(self):
         return self.cache.items()
 
-    async def delete(self, key: str):
+    def delete(self, key: str):
         """
         Deletes an item from the Redis cache.
         :param key: The key of the item to delete.
@@ -120,14 +123,6 @@ class InMemoryCache(BaseCache):
         except KeyError:
             return None
         return None
-    
-    async def evict_expired(self):
-        now = datetime.now()
-        entries_to_delete = [(k,v) for k, (v, exp) in self.cache.items() if exp and now > exp]
-        for k,_ in entries_to_delete:
-            del self.cache[k]
-
-        return entries_to_delete
     
 from core.firebase import FirebaseClient
     
@@ -144,7 +139,6 @@ class FirestoreCache(BaseCache):
         """
         super().__init__(priority, ttl, is_db)
         self.fbc = firestore_client
-        self.evict_expired_task = asyncio.create_task(self._evict_expired(self.check_freq_time))
 
     async def get(self, key: str):
         """
@@ -171,8 +165,5 @@ class FirestoreCache(BaseCache):
 
     async def delete(self, key: str):
         return
-    
-    async def evict_expired(self, check_every: timedelta):
-        pass
 
         

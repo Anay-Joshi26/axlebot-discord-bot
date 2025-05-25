@@ -151,7 +151,7 @@ class MusicCog(commands.Cog):
     @commands.command(aliases = ['p'])
     @commands.check(in_voice_channel)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
-    async def play(self, ctx, *args):
+    async def play(self, ctx: commands.Context, *args):
         query = ' '.join(args)
         client = await self.server_manager.get_client(ctx.guild.id, ctx)
 
@@ -160,7 +160,9 @@ class MusicCog(commands.Cog):
         print("Playing client id", id(client))
 
         if client.voice_client is None:
+            print("Client voice client is None, connecting to voice channel")
             vc = await ctx.author.voice.channel.connect()
+            print("Connected to voice channel", vc.channel.name)
             client.voice_client = vc
 
         # Schedule the play_song function as a non-blocking task
@@ -174,6 +176,8 @@ class MusicCog(commands.Cog):
         query_type = determine_query_type(query)
 
         queue, voice_client = client.queue, client.voice_client
+
+        client.interupt_inactivity_timer()
 
         if query_type == self.YT_SONG:
             song_task = asyncio.create_task(Song.SongFromYouTubeURL(query))
@@ -234,6 +238,7 @@ class MusicCog(commands.Cog):
         """
         Plays the next song in the queue, or informs the user that the queue is empty
         """
+        print(client)
         queue, voice_client = client.queue, client.voice_client
 
         last_progress_message = queue.current_song.progress_message
@@ -244,8 +249,11 @@ class MusicCog(commands.Cog):
 
         if next_song is None:
             # queue is empty, let them know
+
             embed = craft_queue_empty()
             await ctx.send(embed = embed)
+            if client.voice_client is not None:
+                await client.start_inactivity_timer(ctx) 
             return
         
         await self.send_play_song_embed(ctx, next_song, client)
@@ -383,17 +391,28 @@ class MusicCog(commands.Cog):
             await ctx.send("The bot is not connected to a voice channel")
             return
         
-        delete_after = 10
+        await client.stop(ctx)
+        # delete_after = 10
 
-        embed = craft_bot_music_stopped(delete_after=delete_after)
-        await ctx.send(embed=embed, delete_after=delete_after)
+        # embed = craft_bot_music_stopped(delete_after=delete_after)
+        # await ctx.send(embed=embed, delete_after=delete_after)
 
-        client.queue.current_song.stop()
-        voice_client.stop()
-        await voice_client.disconnect(); client.voice_client = None
-        client.queue.clear()
+        # client.queue.current_song.stop()
+        # voice_client.stop()
+        # await voice_client.disconnect(); client.voice_client = None
+        # client.queue.clear()
 
-   
+    # async def stop(self, ctx: commands.Context, client: Client, delete_after: int = 10):
+    #     """
+    #     Stops the music playback and clears the queue.
+    #     """
+    #     embed = craft_bot_music_stopped(delete_after=delete_after)
+    #     await ctx.send(embed=embed, delete_after=delete_after)
+
+    #     client.queue.current_song.stop()
+    #     client.voice_client.stop()
+    #     await client.voice_client.disconnect(); client.voice_client = None
+    #     client.queue.clear()
 
     @commands.command(aliases = ['lp'])
     @commands.check(in_voice_channel)

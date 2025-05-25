@@ -264,7 +264,7 @@ class Song:
     
     async def fetch_lyrics(self, URL = None, tries = 1):
 
-        words_to_ignore = ["(offical video)", "(offical audio)", "(lyrics)", "(offical music video)", "official", "audio", "video", "lyrics", "music video", \
+        words_to_ignore = ["(offical video)", "(offical audio)", "(lyrics)", "(offical music video)", "[official music video]", "official", "audio", "video", "lyrics", "music video", \
                            "(video)", "(audio)", "(lyric video)", "(lyric)", "(music video)", "(official lyric video)", "(official lyric)", "()", "~", "( )", "( Music )", \
                             "visualiser", "visualizer", "(visualiser)", "(visualizer)", "[]", "[ ]", f"{self.artist}", " - ", "ft.", "feat.", "-", "- ", " -"]
         name_to_use = self.name

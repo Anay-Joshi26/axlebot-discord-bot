@@ -49,11 +49,6 @@ class BaseCache(ABC):
         :param key: The key of the item to delete.
         """
         raise NotImplementedError("Subclasses must implement this method.")
-    
-    @abstractmethod
-    async def evict_expired(self):
-        """
-        A function which will evict expired entries from storage
-        """
-        raise NotImplementedError("Subclasses must implement this method.")
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}"

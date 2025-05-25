@@ -20,19 +20,33 @@ class ServerManager:
         return self.clients.active_cache
 
     async def get_client(self, guild_id: int, ctx: commands.Context = None) -> Client:
-        print("Getting client for guild", guild_id)
-        client = await self.clients.get(str(guild_id))
+        # Start a task to fetch the client
+        fetch_task = asyncio.create_task(self.clients.get(str(guild_id)))
 
-        if isinstance(client, Client):
-            print("Client found in cache")
-            return client
-        
+        await asyncio.sleep(0.1)
+
+        fetch_msg = None
+        if not fetch_task.done() and ctx:
+            fetch_msg = await ctx.send("Please wait, I am fetching your server information...")
+
+        client: Client = await fetch_task
+
+        if fetch_msg:
+            await fetch_msg.delete()
+
+        if ctx and ctx.voice_client is not None and ctx.voice_client.is_connected():
+            print("Voice client is connected, setting voice client in the client object")
+            client.voice_client = ctx.guild.voice_client
+
         if client is None:
             print("Client not found in cache, creating new client")
-            await ctx.send("An error occured, I was not able to get your server information")
-            return
+            if ctx:
+                await ctx.send("An error occurred, I was not able to get your server information")
+            return None
 
+        print("Client found in cache")
         return client
+
     
     
     def remove_client(self, guild_id):

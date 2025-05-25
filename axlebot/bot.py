@@ -60,6 +60,7 @@ from core.extensions.firebase import fbc
 from cogs.music import MusicCog
 from cogs.playlist import PlaylistCog
 from core.commands_handler import RateLimitCheckFailure, NotInVoiceChannelCheckFailure
+from core.extensions import cache_manager
 
 intents = discord.Intents.default()
 
@@ -78,6 +79,8 @@ async def on_ready():
     
     await bot.add_cog(MusicCog(bot, server_manager))
     await bot.add_cog(PlaylistCog(bot, server_manager))
+    cache_manager.start()  # Start the cache manager
+    print("Cache manager started")
 
     print("All cogs loaded")
 

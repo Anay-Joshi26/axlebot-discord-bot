@@ -3,14 +3,17 @@ from core.caching.caches import RedisCache, InMemoryCache, FirestoreCache
 from core.extensions.firebase import fbc
 from datetime import timedelta
 
-
-NUM_CACHES = 3
-
 # create the caches, with priorities (order doesnt matter here, but for readability it is sorted by priority)
+# higher the priority means it will be checked first
+# the value of priority doesnt matter as long as it is ordered correctly
 caches = [
-    InMemoryCache(priority=0, ttl=timedelta(hours=2)),
+    InMemoryCache(priority=10, ttl=timedelta(hours=3)),  # InMemoryCache is the fastest, so it has the highest priority
     #RedisCache(priority=1, ttl=timedelta(days=7)),
-    FirestoreCache(firestore_client=fbc, priority=2, ttl=None, is_db=True) # Firestore is a database, so it will not be deleted from
+    FirestoreCache(firestore_client=fbc, priority=1, ttl=None, is_db=True) # Firestore is a database, so it will not be deleted from
 ]
 
-cache_manager = CacheManager(caches=caches)
+NUM_CACHES = len(caches)
+
+check_freq_time = timedelta(hours=1).seconds
+
+cache_manager = CacheManager(caches=caches, check_freq_time=check_freq_time)
