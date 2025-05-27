@@ -41,7 +41,9 @@ def in_voice_channel(ctx):
 
 def cooldown_time(ctx):
 
-    client = server_manager.active_clients.sync_get(ctx.guild.id)
+    client = server_manager.active_clients.get(ctx.guild.id)
+
+    print("Checking cooldown time for client", client)
 
     if client is None or not client.is_premium:
         print("Not active client or not premium default cooldown")

@@ -17,6 +17,7 @@ import time
 import re
 from async_lru import alru_cache
 from uuid import uuid1
+#from music.song_request_handler import extract_title_and_artist
 
 load_dotenv(find_dotenv())
 
@@ -263,13 +264,19 @@ class Song:
     
     async def fetch_lyrics(self, URL = None, tries = 1):
 
-        words_to_ignore = ["(offical video)", "(offical audio)", "(lyrics)", "(offical music video)", "official", "audio", "video", "lyrics", "music video", \
+        words_to_ignore = ["(offical video)", "(offical audio)", "(lyrics)", "(offical music video)", "[official music video]", "official", "audio", "video", "lyrics", "music video", \
                            "(video)", "(audio)", "(lyric video)", "(lyric)", "(music video)", "(official lyric video)", "(official lyric)", "()", "~", "( )", "( Music )", \
-                            "visualiser", "visualizer", "[]", "[ ]"]
+                            "visualiser", "visualizer", "(visualiser)", "(visualizer)", "[]", "[ ]", f"{self.artist}", " - ", "ft.", "feat.", "-", "- ", " -"]
         name_to_use = self.name
 
         for word in words_to_ignore:
-            name_to_use = re.sub(re.escape(word), "", name_to_use, flags=re.IGNORECASE)
+            name_to_use = re.sub(re.escape(word), "", name_to_use, flags=re.IGNORECASE).strip()
+            if "ft." in name_to_use:
+                name_to_use = name_to_use[:name_to_use.index("ft.")]
+            elif "feat." in name_to_use:
+                name_to_use = name_to_use[:name_to_use.index("feat.")]
+
+        #extract_title_and_artist
         
 
         print(f"Fetching lyrics for {name_to_use} by {self.artist}")

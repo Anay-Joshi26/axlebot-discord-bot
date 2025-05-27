@@ -43,3 +43,19 @@ def convert_to_standard_youtube_url(query):
 
     # Return None if no valid video ID is found
     return None
+
+def extract_title_and_artist(name, artist):
+    words_to_ignore = ["(offical video)", "(offical audio)", "(lyrics)", "(offical music video)", "official", "audio", "video", "lyrics", "music video", \
+                           "(video)", "(audio)", "(lyric video)", "(lyric)", "(music video)", "(official lyric video)", "(official lyric)", "()", "~", "( )", "( Music )", \
+                            "visualiser", "visualizer", "(visualiser)", "(visualizer)", "[]", "[ ]", f"{artist}", " - ", "ft.", "feat.", "-"]
+    name_to_use = name
+
+    for word in words_to_ignore:
+        name_to_use = re.sub(re.escape(word), "", name_to_use, flags=re.IGNORECASE).strip()
+        if "ft." in name_to_use:
+            name_to_use = name_to_use[:name_to_use.index("ft.")]
+        elif "feat." in name_to_use:
+            name_to_use = name_to_use[:name_to_use.index("feat.")]
+
+    return name_to_use, artist
+

@@ -179,7 +179,10 @@ def craft_lyrics_embed(lyrics: str, song_name: str, artist: str, status = Lyrics
     return embed
 
 def craft_queue_empty():
-    embed = discord.Embed(title="The song queue is empty!",description="The queue is empty use `-p [song_name]` to play and add songs to the queue",colour=0x00b0f4)
+    embed = discord.Embed(
+        title="The song queue is empty!",
+        description=f"The queue is empty use `-p [song_name]` to play and add songs to the queue\n\n*Axlebot will leave the voice channel after 2 minutes of inactivity*",
+        colour=0x00b0f4)
     return embed
 
 def craft_queue(queue):
