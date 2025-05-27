@@ -85,6 +85,36 @@ async def on_ready():
     print("All cogs loaded")
 
 @bot.event
+async def on_guild_join(guild: discord.Guild):
+    """
+    When the bot joins a new guild, this function is called
+    This will create a new guild entry in the database and populate it with the default settings.
+    """
+    print(f"Joined a new guild: {guild.name} (ID: {guild.id})")
+
+    is_new = True
+
+    data_dict = await fbc.get_client_dict(guild.id)
+    if not data_dict.get("newly_created", False):
+        print(f"Guild {guild.name} already exists in the database, skipping creation")
+        is_new = False
+    # Optional: send a message to the system channel or first text channel
+    if guild.system_channel and guild.system_channel.permissions_for(guild.me).send_messages:
+        await guild.system_channel.send(f"{'Glad to be back' if not is_new else 'Thank you for adding me to the server'}!\n{'To help you get started see the help command below' if is_new else 'As a returning user, below is a refresher on the help command'}")
+        await guild.system_channel.send(embed=craft_default_help_command(), view=HelpView())
+    else:
+        # Fallback: try first available channel with send permissions
+        for channel in guild.text_channels:
+            if channel.permissions_for(guild.me).send_messages:
+                await guild.system_channel.send(f"{'Glad to be back' if not is_new else 'Thank you for adding me to the server'}!\n{'To help you get started see the help command below' if is_new else 'As a returning user, below is a refresher on the help command'}")
+                await guild.system_channel.send(embed=craft_default_help_command(), view=HelpView())
+                break
+        
+
+    
+
+
+@bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandOnCooldown):
         await ctx.send(f"Slow down there! Wait {round(error.retry_after, 2)} seconds before sending another message")
@@ -95,20 +125,20 @@ async def on_command_error(ctx, error):
     if isinstance(error, NotInVoiceChannelCheckFailure):
         await ctx.send("You must be in a voice channel to use this command")
 
-@bot.event
-async def on_guild_join(guild: discord.Guild):
-    """
-    When the bot joins a new guild, this function is called
-    This will create a new guild entry in the database and populate it with the default settings.
-    """
+# @bot.event
+# async def on_guild_join(guild: discord.Guild):
+#     """
+#     When the bot joins a new guild, this function is called
+#     This will create a new guild entry in the database and populate it with the default settings.
+#     """
 
-    default_data = {
-                "guild_id": guild.id,
-                "max_concurrent_song_loadings": 2,
-                "playlists": [],
-                "acceptable_delay": 5
-            }
-    fbc.set_client(guild.id, default_data)
+#     default_data = {
+#                 "guild_id": guild.id,
+#                 "max_concurrent_song_loadings": 2,
+#                 "playlists": [],
+#                 "acceptable_delay": 5
+#             }
+#     fbc.set_client(guild.id, default_data)
 
 class HelpOptions(discord.ui.Select):
     def __init__(self):
