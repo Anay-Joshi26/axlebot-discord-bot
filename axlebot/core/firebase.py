@@ -11,17 +11,9 @@ from google.cloud.firestore_v1.client import Client
 class FirebaseClient:
     def __init__(self, db: AsyncClient):
         self.guild_ref: CollectionReference = db.collection("guilds")
-
-    async def get_client_dict(self, guild_id: Union[int, str]) -> Dict[str, Any]:
-        if isinstance(guild_id, int):
-            guild_id = str(guild_id)
-
-
-        data: DocumentSnapshot = await self.guild_ref.document(guild_id).get()
-
-
-        if not data.exists:
-            default_data: Dict[str, Any] = {
+        
+    def get_default_data_dict(self, guild_id):
+        return {
                 "guild_id": guild_id,
                 "max_concurrent_song_loadings": 2,
                 "playlists": [],
@@ -29,7 +21,17 @@ class FirebaseClient:
                 "is_premium": False
             }
 
+
+    async def get_client_dict(self, guild_id: Union[int, str]) -> Dict[str, Any]:
+        if isinstance(guild_id, int):
+            guild_id = str(guild_id)
+
+        data: DocumentSnapshot = await self.guild_ref.document(guild_id).get()
+
+        if not data.exists:
+            default_data = self.get_default_data_dict(guild_id)
             await self.set_data_for_client(guild_id, default_data)
+            default_data['newly_created'] = True  # Indicate that this is a newly created document
             return default_data
 
         return data.to_dict()
