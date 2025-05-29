@@ -44,7 +44,7 @@ class ServerManager:
                 await ctx.send("An error occurred, I was not able to get your server information")
             return None
 
-        print("Client found in cache")
+        #print("Client found in cache")
         return client
 
     

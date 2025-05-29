@@ -38,8 +38,9 @@ class Client:
         self.playlists : list[Playlist] = []
         self.last_added_playlist: Union[Playlist, None] = None
         self.is_premium : bool | None = None # check this, coz its funky
-        self.exit_after_inactivity = 60 * 2 # 2 minutes
+        self.exit_after_inactivity = 60 * 3 # 3 minutes
         self.stop_task = None # used to stop the client after a certain time of inactivity
+        self.number_of_playlists_limit = 10
 
     @staticmethod
     async def from_guild_id(guild_id):
@@ -74,7 +75,7 @@ class Client:
         """
         Adds a playlist to the client's list of playlists, within bounds of the max number of playlists allowed
         """
-        if len(self.playlists) >= 10:
+        if len(self.playlists) >= self.number_of_playlists_limit:
             raise ValueError("You have reached the maximum number of playlists allowed. Please delete one to create another.")
         
         for p in self.playlists:
@@ -84,7 +85,9 @@ class Client:
         self.playlists.append(playlist)
         self.last_added_playlist = playlist
 
-        await fbc.set_data_attribute_for_client(self.server_id, "playlists", [playlist.to_dict() for playlist in self.playlists])
+        await self.update_playlist_changes_db()
+
+        #await fbc.set_data_attribute_for_client(self.server_id, "playlists", [playlist.to_dict() for playlist in self.playlists])
 
     async def update_playlist_changes_db(self):
         """

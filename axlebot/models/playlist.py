@@ -10,11 +10,11 @@ class Playlist:
         self.total_duration = 0 
         self.guild_id = guild_id
         self.created_at : float = discord.utils.utcnow().timestamp()
-        
+        self.song_limit = 30
 
     def add_song(self, song : Song):
         
-        if len(self.songs) >= 20:
+        if len(self.songs) >= self.song_limit:
             raise ValueError("You have reached the maximum number of songs allowed in a playlist. Please delete one to add another.")
         
         self.songs.append(song)

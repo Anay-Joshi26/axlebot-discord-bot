@@ -1,99 +1,55 @@
+import aiohttp
+from PIL import Image
+import io
 import asyncio
-from yt_dlp import YoutubeDL
-import random
-import time
+from youtubesearchpython.__future__ import Search, Playlist, Video, VideosSearch
 
-yt_dl_options = {
-    "format": "bestaudio/best",
-    "quiet": True,
-    "extractaudio": True,
-    "postprocessors": [
-        {
-            "key": "FFmpegExtractAudio",
-            "preferredcodec": "mp4",
-            "preferredquality": "320",
-        }
-    ]
-}
+async def extract_embed_color(thumbnail_url):
+    print(f"Extracting color from thumbnail URL: {thumbnail_url}")
 
-ytdl = YoutubeDL(yt_dl_options)
+    async with aiohttp.ClientSession() as session:
+        async with session.get(thumbnail_url) as response:
+            response.raise_for_status()
+            image_data = await response.read()
 
-async def get_audio_url_async(url, retries=3, timeout=10):
-    """Fetches audio URL with retries and a timeout."""
-    loop = asyncio.get_event_loop()
-    for attempt in range(retries):
-        try:
-            # Running yt-dlp extract info inside the executor to avoid blocking event loop
-            info = await asyncio.wait_for(
-                loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False)),
-                timeout=timeout
-            )
-            return info['url']
-        
-        except asyncio.TimeoutError:
-            print(f"Timeout occurred while fetching {url}. Retrying...")
-        except Exception as e:
-            print(f"Error occurred for {url}: {e}")
+    image = Image.open(io.BytesIO(image_data)).convert("RGB")
+    image = image.resize((100, 100))
 
-        # Exponential backoff before retrying
-        await asyncio.sleep(random.uniform(1, 2 ** attempt))  # Exponential backoff
+    left, top = 25, 25
+    right, bottom = 75, 75
 
-    print(f"Failed to fetch {url} after {retries} attempts.")
-    return None
+    cropped_image = image.crop((left, top, right, bottom))
+    print(f"Cropped image size: {cropped_image.size}")
+    print(f"Cropped image mode: {cropped_image.mode}")
 
-async def get_multiple_audio_urls(urls):
-    """Fetch multiple audio URLs concurrently."""
-    tasks = [get_audio_url_async(url) for url in urls]
+    average_color = cropped_image.resize((1, 1)).getpixel((0, 0))
+    print(f"Average color: {average_color}")
 
-    try:
-        # Use asyncio.gather with a timeout to wait for all tasks to finish
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+    hex_color = (average_color[0] << 16) + (average_color[1] << 8) + average_color[2]
 
-        for result in results:
-            if isinstance(result, Exception):
-                print(f"An error occurred: {result}")
-            elif result is None:
-                print("Some task failed or was cancelled.")
-            else:
-                print(f"Successfully fetched URL: {result[:50]}")
-    except asyncio.TimeoutError:
-        print("Timed out waiting for all tasks to complete.")
-    except Exception as e:
-        print(f"Unexpected error: {e}")
+    return hex_color
 
-# urls = [
-#     "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-#     "https://www.youtube.com/watch?v=3JZ_D3ELwOQ",
-#     "https://www.youtube.com/watch?v=fJ9rUzIMcZQ",
-#     "https://www.youtube.com/watch?v=2Vv-BfVoq4g",
-#     "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
-#     "https://www.youtube.com/watch?v=RgKAFK5djSk",
-#     "https://www.youtube.com/watch?v=YykjpeuMNEk",
-#     "https://www.youtube.com/watch?v=tt2k8PGm-TI",
-#     "https://www.youtube.com/watch?v=6Mgqbai3fKo",
-#     "https://www.youtube.com/watch?v=UceaB4D0jpo",
-#     "https://www.youtube.com/watch?v=LsoLEjrDogU",
-#     "https://www.youtube.com/watch?v=PMivT7MJ41M",
-#     "https://www.youtube.com/watch?v=SlPhMPnQ58k",
-#     "https://www.youtube.com/watch?v=apJ1T_olYjQ",
-#     "https://www.youtube.com/watch?v=hT_nvWreIhg",
-#     "https://www.youtube.com/watch?v=OPf0YbXqDm0",
-#     "https://www.youtube.com/watch?v=nfWlot6h_JM",
-#     "https://www.youtube.com/watch?v=E07s5ZYygMg",
-#     "https://www.youtube.com/watch?v=LpYgI1LLNVM",
-#     "https://www.youtube.com/watch?v=KtlgYxa6BMU"
-# ]
+async def search_youtube_video_by_url(url):
+    video = await Video.getInfo(url)
+    title = video['title']
 
-urls = [
-    "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    "https://www.youtube.com/watch?v=3JZ_D3ELwOQ",
-    "https://www.youtube.com/watch?v=LsoLEjrDogU",
-    "https://www.youtube.com/watch?v=E07s5ZYygMg",
-    "https://www.youtube.com/watch?v=KtlgYxa6BMU",
-    "https://www.youtube.com/watch?v=PMivT7MJ41M",
-    "https://www.youtube.com/watch?v=OPf0YbXqDm0",
-    "https://www.youtube.com/watch?v=kJQP7kiw5Fk"
-]
+    if 'secondsText' in video['duration']:
+        video_length = int(video['duration']['secondsText'])
+    # else:
+    #     video_length = Song._time_string_to_seconds(video['duration'])
+
+    return title, video_length
+
+async def run():
+    # thumbnail_url = "https://i.scdn.co/image/ab67616d0000b273806c160566580d6335d1f16c"
+    # color = await extract_embed_color(thumbnail_url)
+    # print(f"Extracted color: {color:#06x}")
+
+    url = 'https://www.youtube.com/watch?v=XXYuWEuKI&pp=ygUWc2F2ZSB5b3VyIHRlYXJzIHdlZWtuZA%3D%3D'
+    title, video_length = await search_youtube_video_by_url(url)
+    print(f"Title: {title}, Video Length: {video_length} seconds")
+
+if __name__ == "__main__":
+    asyncio.run(run())
 
 
-asyncio.run(get_multiple_audio_urls(urls))

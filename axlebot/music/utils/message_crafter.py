@@ -14,6 +14,7 @@ from models.song import Song, LyricsStatus
 from discord.ext import commands
 from models.playlist import Playlist
 from datetime import datetime
+import aiohttp
 
 # Colours for the embeds
 COLOURS = {
@@ -22,7 +23,23 @@ COLOURS = {
     "warning": 0xff9e42,
 }
 
-def craft_now_playing(song: Song, is_looping = False):
+def craft_general_error(error: str = None) -> discord.Embed:
+    """
+    Creates an embed message to inform the user that an error has occured.
+    If `error` is provided, it will be displayed in the embed.
+    If `error` is not provided, a generic error message will be displayed.
+
+    :param error: (Optional) The error message to display
+    :return: A discord.Embed object
+    """
+    
+    embed = discord.Embed(title="An error occurred",
+                      description=f"{error if error else 'An *unknown* error occurred while processing your request'}",
+                      colour=COLOURS["error"])
+    
+    return embed
+
+async def craft_now_playing(song: Song, is_looping = False):
     embed = discord.Embed(
     title=(
         f"Now playing{' from YouTube Playlist' if song.is_playlist else ''}..." 
@@ -30,7 +47,7 @@ def craft_now_playing(song: Song, is_looping = False):
         else f"Now playing from Spotify{' from Spotify Playlist' if song.is_playlist else ''}..."
     ),
     description=song.name,
-    colour=extract_embed_color(song.thumbnail_url),
+    colour=await extract_embed_color(song.thumbnail_url),
     )
     
     embed.set_thumbnail(url=song.thumbnail_url)
@@ -51,7 +68,7 @@ def craft_now_playing(song: Song, is_looping = False):
 
 def craft_playlist_added(type_of_playlist):
     embed = discord.Embed(title = f"{'Spotify' if type_of_playlist == 'spot' else 'YouTube'} Playlist Queued",
-                    description=f"You have just queued a playlist in the default order.\n\nIt may take some time to queue every song in the playlist. There are some playlist specific commands you can use while a playlist is being played.\n\n**The first song should start to be queued shortly...**\n\nYou can inspect the queue to see the added songs via `-queue` or `q`.\n\n`-skip {'spot' if type_of_playlist == 'spot' else 'yt'}` skips the **current playing** {'Spotify' if type_of_playlist == 'spot' else 'YouTube'} playlist\n`-shuffle {'spot' if type_of_playlist == 'spot' else 'yt'}` will shuffle the **current playing** {'Spotify' if type_of_playlist == 'spot' else 'YouTube'} playlist",
+                    description=f"You have just queued a playlist.\n\nIt may take some time to queue every song in the playlist. There are some playlist specific commands you can use while a playlist is being played.\n\n**The first song should start to be queued shortly...**\n\nYou can inspect the queue to see the added songs via `-queue` or `q` (the songs will be added slowly).",
                     colour=0x1ED760 if type_of_playlist == "spot" else 0xFF0033)
 
     return embed
@@ -86,15 +103,23 @@ async def update_progress_bar_embed(song: Song, progress_embed: discord.Embed, s
     if update_interval is None:
         update_interval = max(1, (song.duration/bar_length) * 0.5)
 
+    progress_bar: str = None # str
 
     while progress < 95:
-        progress = calculate_progress(song)
-        progress_embed.set_field_at(0, name="Progress", value=update_progress_bar(progress, bar_length = bar_length))
-        await song_message.edit(embed=progress_embed)
+        if song.is_playing:
+            progress = calculate_progress(song)
+            new_progress_bar: str = update_progress_bar(progress, bar_length = bar_length)
+            if progress_bar is None or new_progress_bar != progress_bar:
+                progress_embed.set_field_at(0, name="Progress", value=new_progress_bar)
+                progress_embed.set_footer(text='🔂 Looped') if song.is_looping else progress_embed.set_footer(text='')
+                await song_message.edit(embed=progress_embed)
+                progress_bar = new_progress_bar
         await asyncio.sleep(update_interval)
+        #print(f"Progress: {progress}%")
 
-        if progress > (bar_length-2)/bar_length:
-            update_interval = 1.1
+        if song.is_playing:
+            if progress > (bar_length-2)/bar_length:
+                update_interval = 1.1
 
     progress_embed.set_field_at(0, name="Progress", value=update_progress_bar(100, bar_length = bar_length))
     await song_message.edit(embed=progress_embed)
@@ -159,7 +184,7 @@ def craft_lyrics_embed(lyrics: str, song_name: str, artist: str, status = Lyrics
     elif status == LyricsStatus.NO_LYRICS_FOUND:
         embed = discord.Embed(
             title="Lyrics not found for this song",
-            description="No close matching lyrics were found for this song with the name and artist",
+            description="No lyrics were found for this song with that title and artist",
             colour=0xff0000,
         )
         return embed
@@ -181,7 +206,7 @@ def craft_lyrics_embed(lyrics: str, song_name: str, artist: str, status = Lyrics
 def craft_queue_empty():
     embed = discord.Embed(
         title="The song queue is empty!",
-        description=f"The queue is empty use `-p [song_name]` to play and add songs to the queue\n\n*Axlebot will leave the voice channel after 2 minutes of inactivity*",
+        description=f"The queue is empty use `-p [song_name]` to play and add songs to the queue\n\n*Axlebot will leave the voice channel after 3 minutes of inactivity*",
         colour=0x00b0f4)
     return embed
 
@@ -213,19 +238,22 @@ def craft_queue(queue):
             colour=0xFFA500,
         )
 
-def extract_embed_color(thumbnail_url):
+async def extract_embed_color(thumbnail_url):
+    print(f"Extracting color from thumbnail URL: {thumbnail_url}")
 
-    response = requests.get(thumbnail_url)
-    image_data = response.content
+    async with aiohttp.ClientSession() as session:
+        async with session.get(thumbnail_url) as response:
+            response.raise_for_status()
+            image_data = await response.read()
 
-    image = Image.open(io.BytesIO(image_data))
-
+    image = Image.open(io.BytesIO(image_data)).convert("RGB")
     image = image.resize((100, 100))
 
     left, top = 25, 25
     right, bottom = 75, 75
 
     cropped_image = image.crop((left, top, right, bottom))
+
     average_color = cropped_image.resize((1, 1)).getpixel((0, 0))
 
     hex_color = (average_color[0] << 16) + (average_color[1] << 8) + average_color[2]
@@ -235,7 +263,7 @@ def extract_embed_color(thumbnail_url):
 def craft_playlist_created(name: str) -> discord.Embed:
 
     embed = discord.Embed(title=f"{name}",
-                      description=f"A playlist named \"{name}\" has been created and currently has `0` songs inside it. \n\nTo add your own songs you use the command:\n\n`-add_songs <Optional: Playlist name> <url 1> <url 2> <url 3> ...`\n\n OR\n\n Use the button below to add songs to this newly created playlist\n\nIf you choose to not provide a playlist name the songs will be added to the **last created playlist** which was created.\n\nYou can add up to 20 songs in one playlist, if you enter more than 20 links only the first 20 will be added.\n\nThe urls can be YouTube links or Spotify links (to individual songs), they **cannot** be Spotify or YouTube Playlist links.",
+                      description=f"A playlist named \"{name}\" has been created and currently has `0` songs inside it. \n\nTo add your own songs you use the command:\n\n`-add_songs <Optional: Playlist name> <url 1> <url 2> <url 3> ...`\n\n OR\n\n Use the button below to add songs to this newly created playlist\n\nIf you choose to not provide a playlist name the songs will be added to the **last created playlist** which was created.\n\nYou can add up to 30 songs in one playlist, if you enter more than 30 songs only the first 30 will be added.\n\nThe urls can be YouTube links or Spotify links (to individual songs), they **cannot** be Spotify or YouTube Playlist links.",
                       colour=0x00b0f4)
 
     #embed.set_author(name=f"Created By {author.display_name}")
@@ -302,6 +330,26 @@ def craft_playlist_deleted(name: str) -> discord.Embed:
     
     return embed
 
+def craft_song_deleted_from_playlist(name: str, song: Song) -> discord.Embed:
+    """
+    Creates an embed message to show that a song has been deleted from a playlist.
+
+    :param name: The name of the playlist
+    :param song_name: The name of the song that was deleted
+
+    :return: A discord.Embed object
+    """
+    
+    embed = discord.Embed(
+        title=f"{song.name} deleted from {name}",
+        description=f'The song named **{song.name}** has been successfully deleted from **{name}**',
+        colour=COLOURS["success"]
+    )
+
+    embed.set_thumbnail(url=song.thumbnail_url)
+    
+    return embed
+
 def craft_songs_not_added(urls: list):
     """
     Creates an embed message to show the URLs that could not be converted into songs.
@@ -331,14 +379,20 @@ def craft_view_all_playlists(playlists: list) -> discord.Embed:
     """
 
     n = len(playlists)
+    description = "\n".join([f"{i+1}. {playlist.name}" for i, playlist in enumerate(playlists)])
 
-    description = "\n".join([f"{i+1}. {playlist.name}" for i,playlist in enumerate(playlists)])
+    header = f"The server currently has `{n}` playlists"
+    middle = f", they are:\n\n{description}\n\n" if n != 0 else ".\n\n"
+    footer = f"Run `-playlists <Playlist Name>` to see the songs for a particular playlist" if n > 0 else "Run `-new_playlist <Playlist Name>` to create a new playlist"
 
-    embed = discord.Embed(title="All Playlists",
-                      description=f"The server currently has `{n}` playlists, they are:\n\n{description}\n\nRun `-playlists <Playlist Name>` to see the songs for a particular playlist",
-                      colour=COLOURS["success"])
+    embed = discord.Embed(
+        title="All Playlists",
+        description=header + middle + footer,
+        colour=COLOURS["success"]
+    )
 
     return embed
+
 
 def craft_songs_in_playlist(playlist_name: str, songs: list) -> discord.Embed:
     """
@@ -356,7 +410,7 @@ def craft_songs_in_playlist(playlist_name: str, songs: list) -> discord.Embed:
     description = "\n".join([f"{i+1}. {song.name}" for i,song in enumerate(songs)])
 
     embed = discord.Embed(title=f"Songs in {playlist_name}",
-                      description=f"The playlist named `{playlist_name}` currently has `{n}` songs, they are:\n\n{description}",
+                      description=f"The playlist named `{playlist_name}` currently has `{n}` songs{', they are:' if n != 0 else '.'}\n\n{description}",
                       colour=0x00b0f4)
 
     return embed
@@ -425,9 +479,42 @@ def craft_music_playback_controls_help_command():
     return embed
 
 def craft_custom_playlist_help_command():
-    embed = discord.Embed(title="Custom Playlist Commands",
-                      description="AxleBot lets you create **your own custom playlists** and will save them for you. A custom playlist is a playlist of songs which you choose. Simply pick which songs you want to add and then we will store your music choice. **We will refer to \"custom playlists\" as just \"playlists\" for this help message**\n\n__To create a playlist__\n`-new_playlist <Name of Playlist>`\n\nAll the below aliases will also work:\n`\"np\", \"newplaylist\", \"newpl\", \"createplaylist\", \"createpl\", \"create_playlist\"`\n\nThis will bring up a message with instructions and a button to add songs. You must add YouTube or Spotify track URLs.\n\n__To add songs to playlist__\nIf you want to add more songs into a playlist you can run\n`-add_songs <Optional: Playlist name> <url 1> <url 2> <url 3> ...`\n\n*Note: If a playlist name is not provided the **last created playlist** will be chosen*\n\n__To queue/play a playlist__\nTo add all of a playlist's songs to the queue run:\n`-queue_playlist <Playlist name>`\n\nAll the below aliases will also work:\n`'qp', 'queuepl', 'queueplaylist', 'qpl', 'pp', 'playplaylist', 'playpl'`\n\n__To add the current playing song to a playlist__\nTo add **the current playing song** to a playlist run:\n`-add_song <Playlist name>`\n(`-addsong` will also work)\n\n__To delete a playlist__\n`-delete_playlist <Playlist name>`\n\nAll the below aliases will also work:\n`'dp', 'deletepl', 'deleteplaylist`",
-                      colour=0x00b0f4)
+    # embed = discord.Embed(title="Custom Playlist Commands",
+    #                   description="AxleBot lets you create **your own custom playlists** and will save them for you. A custom playlist is a playlist of songs which you choose. Simply pick which songs you want to add and then we will store your music choice. **We will refer to \"custom playlists\" as just \"playlists\" for this help message**\n\nYou can create up to **10** playlists, each can have a max of **30** songs within it\n\n__To create a playlist__\n`-new_playlist <Name of Playlist>`\n\nAll the below aliases will also work:\n`\"np\", \"newplaylist\", \"newpl\", \"createplaylist\", \"createpl\", \"create_playlist\"`\n\nThis will bring up a message with instructions and a button to add songs. You can add YouTube or Spotify track URLs or just type a query for the song name.\n\n__To add songs to playlist__\nIf you want to add more songs into a playlist you can run\n`-add_songs \"<Playlist name>\" <url 1> <url 2> \"<Song name>\" ...`\nThe playlist name should be wrapped in double quotes. If you enter a song name which is **not** a URL wrap the name in double quotes also.\n\n__To queue/play a playlist__\nTo add all of a playlist's songs to the queue run:\n`-queue_playlist <Playlist name>`\n\nAll the below aliases will also work:\n`'qp', 'queuepl', 'queueplaylist', 'qpl', 'pp', 'playplaylist', 'playpl'`\n\n__To add the current playing song to a playlist__\nTo add **the current playing song** to a playlist run:\n`-add_song <Playlist name>`\n(`-addsong` will also work)\n\n__To delete a playlist__\n`-delete_playlist <Playlist name>`\n\nAll the below aliases will also work:\n`'dp', 'deletepl', 'deleteplaylist`",
+    #                   colour=0x00b0f4)
+    embed = discord.Embed(
+    title="Custom Playlist Commands",
+    description=(
+        "AxleBot lets you create **your own custom playlists** and will save them for you. A custom playlist is a playlist of songs which you choose. "
+        "Simply pick which songs you want to add and we'll store your music choices. "
+        "**We will refer to \"custom playlists\" as just \"playlists\" for this help message.**\n\n"
+
+        "You can create up to **10** playlists, and each can have a maximum of **30** songs.\n\n"
+
+        "__To create a playlist__\n"
+        "`-new_playlist <Name of Playlist>`\n"
+        "Aliases: `np`, `newplaylist`, `newpl`, `createplaylist`, `createpl`, `create_playlist`\n\n"
+        "This will bring up a message with instructions and a button to add songs. "
+        "You can add YouTube or Spotify track URLs, or just type a query for the song name.\n\n"
+
+        "__To add songs to a playlist__\n"
+        "`-add_songs \"<Playlist name>\" <url 1> <url 2> \"<Song name>\" ...`\n"
+        "Wrap the playlist name in double quotes. If the song is **not** a URL, wrap the name in double quotes as well.\n\n"
+
+        "__To queue/play a playlist__\n"
+        "`-queue_playlist <Playlist name>`\n"
+        "Aliases: `qp`, `queuepl`, `queueplaylist`, `qpl`, `pp`, `playplaylist`, `playpl`, `queue_pl`\n\n"
+
+        "__To add the current playing song to a playlist__\n"
+        "`-add_song <Playlist name>` (`-addsong` also works)\n\n"
+
+        "__To delete a playlist__\n"
+        "`-delete_playlist <Playlist name>`\n"
+        "Aliases: `dp`, `deletepl`, `deleteplaylist`"
+        ),
+        colour=0x00b0f4
+    )
+
 
     embed.set_author(name="AxleBot Help Commands")
 
@@ -440,6 +527,40 @@ def craft_custom_playlist_help_command():
     embed.add_field(name="^",
                     value="For playlist info relatd commands (above two) these aliases will work\n`'playlists', 'playlist_info', 'playlistinfo'`",
                     inline=False)
+    
+    return embed
+
+def craft_custom_playlist_help_command_page_2():
+    embed = discord.Embed(
+    title="Custom Playlist Commands (cont.)",
+    description=(
+        "__Delete a song from a playlist__\n"
+        "`-del_from_pl <Playlist name> <position>`\n"
+        "e.g `-del_from_pl Test 3` would **delete the third song** from a playlist named \"Test\"\n\n"
+        
+        "__Rename playlist__\n"
+        "`-rename_pl \"<Old Name>\" \"<New Name>\"`\n"
+        "e.g `-rename_pl \"Test\" \"New Test\"` will rename a playlist to \"New Test\" from \"Test\""
+        )
+    )
+    
+    return embed
+
+def craft_playlist_renamed(old_name: str, new_name: str) -> discord.Embed:
+    """
+    Creates an embed message to show that a playlist has been renamed.
+
+    :param old_name: The old name of the playlist
+    :param new_name: The new name of the playlist
+
+    :return: A discord.Embed object
+    """
+    
+    embed = discord.Embed(
+        title=f"Playlist renamed",
+        description=f'The playlist named "{old_name}" has been successfully renamed to "{new_name}"',
+        colour=COLOURS["success"]
+    )
     
     return embed
 
