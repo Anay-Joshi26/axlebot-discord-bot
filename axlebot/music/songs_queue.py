@@ -39,6 +39,8 @@ class SongQueue:
 
         self.loop_current = not self.loop_current
 
+        self.current_song.is_looping = self.loop_current
+
         return self.loop_current
 
     async def repeat(self, num = 1) -> None:
@@ -94,6 +96,7 @@ class SongQueue:
             if Song.has_audio_url_expired(await next_song.audio_url, next_song.duration):
                 await next_song.refresh_audio_url_and_player()
 
+            next_song.is_looping = self.loop_current # True
             return next_song
 
         self.pop()

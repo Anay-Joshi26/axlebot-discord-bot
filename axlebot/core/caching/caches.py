@@ -106,7 +106,7 @@ class InMemoryCache(BaseCache):
         :param value: The item to store.
         :param ttl: The time to live for the item (optional) as a timedelta
         """
-        print("huh")
+        #print("huh")
         expiry = datetime.now() + self.ttl if ttl is None else ttl
         self.cache[key] = (value, expiry.timestamp())
 

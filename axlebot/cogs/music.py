@@ -108,7 +108,7 @@ class MusicCog(commands.Cog):
 
 
     async def send_play_song_embed(self, ctx, song: Song, client, is_looping = False):
-        embed = craft_now_playing(song, is_looping)
+        embed = await craft_now_playing(song, is_looping)
         song.play()
         progress_message = await ctx.send(embed = embed, view = MusicPlaybackButtons(ctx, client), silent = True)
         song.progress_message = progress_message
@@ -152,21 +152,25 @@ class MusicCog(commands.Cog):
     @commands.check(in_voice_channel)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def play(self, ctx: commands.Context, *args):
-        query = ' '.join(args)
-        client = await self.server_manager.get_client(ctx.guild.id, ctx)
+        try:
+            query = ' '.join(args)
+            client = await self.server_manager.get_client(ctx.guild.id, ctx)
 
-        print("Client for guild found", client)
-        print("Client queue", client.queue.queue)
-        print("Playing client id", id(client))
+            print("Client for guild found", client)
+            print("Client queue", client.queue.queue)
+            print("Playing client id", id(client))
 
-        if client.voice_client is None:
-            print("Client voice client is None, connecting to voice channel")
-            vc = await ctx.author.voice.channel.connect()
-            print("Connected to voice channel", vc.channel.name)
-            client.voice_client = vc
+            if client.voice_client is None:
+                print("Client voice client is None, connecting to voice channel")
+                vc = await ctx.author.voice.channel.connect()
+                print("Connected to voice channel", vc.channel.name)
+                client.voice_client = vc
 
-        # Schedule the play_song function as a non-blocking task
-        asyncio.create_task(self.play_song(ctx, client, query))
+            # Schedule the play_song function as a non-blocking task
+            asyncio.create_task(self.play_song(ctx, client, query))
+        except Exception as e:
+            print(f"Error in play command: {e}")
+            await ctx.send(embed=craft_general_error())
 
 
     async def play_song(self, ctx, client: Client, query: str, position : int = None):
@@ -198,6 +202,7 @@ class MusicCog(commands.Cog):
                 song_generator = Song.YouTubePlaylistSongList(query, max_concurrent_song_loadings=client.max_concurrent_song_loadings)
 
             # Start the generator to populate the queue
+            position = len(queue) if position is None else position
             async for song in song_generator:
                 if song:
                     queue.append(song, position)
@@ -210,14 +215,26 @@ class MusicCog(commands.Cog):
 
                     voice_client.play(
                         await song.player,
-                        after = lambda e : asyncio.ensure_future(self.play_next(ctx, client), loop = self.bot.loop)
+                        after = lambda e: self.bot.loop.call_soon_threadsafe(
+                                    lambda: asyncio.ensure_future(self.play_next(ctx, client))
+                                )
+
                     )
 
             return        
         elif query_type == self.STD_YT_QUERY:
             song_task = asyncio.create_task(Song.CreateSong(query))
-
-        song = await song_task
+        error_occured = False
+        try:
+            song = await song_task
+            if song is None:
+                error_occured = True
+        except Exception as e:
+            error_occured = True
+        
+        if error_occured:
+            await ctx.send(embed = craft_general_error("The song could not be found with the provided query"))
+            return
 
         queue.append(song, position)
 
@@ -226,7 +243,9 @@ class MusicCog(commands.Cog):
 
             voice_client.play(
                 await song.player,
-                after = lambda e : asyncio.ensure_future(self.play_next(ctx, client), loop = self.bot.loop)
+                after = lambda e: self.bot.loop.call_soon_threadsafe(
+                                    lambda: asyncio.ensure_future(self.play_next(ctx, client))
+                                )
             )
         else:
             if position is None:
@@ -240,6 +259,9 @@ class MusicCog(commands.Cog):
         """
         print(client)
         queue, voice_client = client.queue, client.voice_client
+
+        print(queue.current_song.progress_message)
+        print(queue.current_song.name)
 
         last_progress_message = queue.current_song.progress_message
 
@@ -258,7 +280,9 @@ class MusicCog(commands.Cog):
         
         await self.send_play_song_embed(ctx, next_song, client)
         
-        voice_client.play(await next_song.player, after = lambda e : asyncio.ensure_future(self.play_next(ctx, client), loop = self.bot.loop))
+        voice_client.play(await next_song.player, after = lambda e: self.bot.loop.call_soon_threadsafe(
+                                    lambda: asyncio.ensure_future(self.play_next(ctx, client))
+                                ))
         # embed = craft_now_playing(next_song)
         # progress_message = await ctx.send(embed = embed)
         # next_song.progress_message = progress_message
@@ -350,10 +374,7 @@ class MusicCog(commands.Cog):
             vc = await ctx.author.voice.channel.connect()
             client.voice_client = vc
 
-        if len(client.queue) == 0:
-            position = None
-        else:
-            position = 1
+        position = None if len(client.queue) == 0 else 1
 
         # Schedule the play_song function as a non-blocking task
         asyncio.create_task(self.play_song(ctx, client, query, position = position))
@@ -371,7 +392,7 @@ class MusicCog(commands.Cog):
         if voice_client is None:
             await ctx.send("The bot is not connected to a voice channel")
 
-        if voice_client.is_playing() and len(queue) > 0:
+        if "voice_client.is_playing()" and len(queue) > 0:
             voice_client.stop()
             queue.current_song.stop()
 

@@ -19,7 +19,7 @@ class CreatePlaylistModal(discord.ui.Modal, title='Create a Playlist'):
         self.playlist_name: str = name
         self.ctx = ctx
         self.name_input = discord.ui.TextInput(label='Playlist Name', style=discord.TextStyle.short, default=f"{self.playlist_name}", required=True)
-        self.song_links_input = discord.ui.TextInput(label='Songs', required=False, style=discord.TextStyle.paragraph, placeholder="https://www.youtube.com/watch?v=video_id\nhttps://open.spotify.com/track/track_id\n...")
+        self.song_links_input = discord.ui.TextInput(label='Songs', required=False, style=discord.TextStyle.paragraph, placeholder="https://www.youtube.com/watch?v=video_id\nhttps://open.spotify.com/track/track_id\nRick Roll\n...")
 
         self.add_item(self.name_input)
         self.add_item(self.song_links_input)
@@ -126,6 +126,8 @@ class PlaylistCog(commands.Cog):
                 song = await Song.SongFromYouTubeURL(url)
             elif type_of_query == self.SPOT_SONG:
                 song = await Song.SongFromSpotifyURL(url)
+            elif type_of_query == self.STD_YT_QUERY:
+                song = await Song.CreateSong(url)
             else:
                 error_songs.append(url)
                 errors = True
@@ -163,33 +165,22 @@ class PlaylistCog(commands.Cog):
 
         client = await self.server_manager.get_client(ctx.guild.id, ctx)
 
-        if args:
-            if args[0].startswith("http"):
-                playlist_name = None
-                urls = args
-            else:
-                playlist_name = ""
-                i = 0
-
-                while i < len(args) and not args[i].startswith("http"):
-                    playlist_name += args[i] + " "
-                    i += 1
-
-                playlist_name = playlist_name.strip()
-                urls = args[i:]
-                if not urls:
-                    await ctx.send("You didn't provide any songs to add", silent = True)
-                    return
-                
-        else:
+        if not args:
             await ctx.send("You didn't provide any songs to add", silent = True)
+            return
+        
+        playlist_name = args[0]; 
+        urls = args[1:]
 
+        playlist = client.get_playlist_by_name(playlist_name)
+
+        if playlist is None:
+            no_pl_found = craft_no_playlist_found(playlist_name)
+            await ctx.send(embed = no_pl_found)
+            return
+                
         try:
-            if playlist_name:
-                await self.add_songs_to_playlist(playlist_name, urls, ctx, client = client) 
-            else:
-                print("Adding songs to last added playlist", client.last_added_playlist)
-                await self.add_songs_to_playlist(None, urls, ctx, client = client, playlist = client.last_added_playlist)
+            await self.add_songs_to_playlist(playlist_name, urls, ctx, client = client) 
         except ValueError as e:
             await ctx.send(str(e))
 
@@ -231,7 +222,7 @@ class PlaylistCog(commands.Cog):
         song_added_embed = craft_songs_added_to_playlist(playlist.name, [current_song])
         await ctx.send(embed = song_added_embed)
     
-    @commands.command(aliases = ['qp', 'queuepl', 'queueplaylist', 'qpl', 'pp', 'playplaylist', 'playpl'])
+    @commands.command(aliases = ['qp', 'queuepl', 'queueplaylist', 'qpl', 'pp', 'playplaylist', 'playpl', 'queue_pl'])
     @commands.check(in_voice_channel)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def queue_playlist(self, ctx: commands.Context, *args):
@@ -276,9 +267,9 @@ class PlaylistCog(commands.Cog):
         """
         client = await self.server_manager.get_client(ctx.guild.id, ctx)
 
-        if len(client.playlists) == 0:
-            await ctx.send("You haven't created any playlists yet")
-            return
+        # if len(client.playlists) == 0:
+        #     await ctx.send("You haven't created any playlists yet")
+        #     return
         
         if args:
             playlist_name = " ".join(args)
@@ -325,44 +316,75 @@ class PlaylistCog(commands.Cog):
 
 
         
-    @commands.command(aliases = ['remove_song', 'removesong', 'rs'])
+    @commands.command(aliases = ['remove_song', 'removesong', 'rs', "del_from_playlist","deletefromplaylist", "dfp", "del_from_pl"])
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def delete_song_from_playlist(self, ctx: commands.Context, *args):
-        pass
-        # """
-        # Deletes the song at the given index from the playlist with the given name
-        # """
-        # if not args:
-        #     await ctx.send("You didn't provide a playlist name and song index")
-        #     return
+        """
+        Deletes the song at the given position from the playlist with the given name
+        """
+        if not args:
+            await ctx.send("You didn't provide a playlist name and song index")
+            return
         
-        # name = " ".join(args[:-1])
-        # index = args[-1]
+        name = " ".join(args[:-1])
+        index = args[-1]
 
-        # client = await self.server_manager.get_client(ctx.guild.id, ctx)
-        # playlist = client.get_playlist_by_name(name)
+        client = await self.server_manager.get_client(ctx.guild.id, ctx)
+        playlist = client.get_playlist_by_name(name)
 
-        # if not playlist:
-        #     no_pl_found = craft_no_playlist_found(name)
-        #     await ctx.send(embed = no_pl_found)
-        #     return
+        if not playlist:
+            no_pl_found = craft_no_playlist_found(name)
+            await ctx.send(embed = no_pl_found)
+            return
         
-        # try:
-        #     index = int(index)
-        # except ValueError:
-        #     await ctx.send("Invalid index")
-        #     return
+        try:
+            index = int(index)
+        except ValueError:
+            await ctx.send(f"`{index}` is not a valid position. Please provide a valid position (1-{len(playlist.songs)})")
+            return
 
-        # if index < 0 or index >= len(playlist.songs):
-        #     await ctx.send("Invalid index")
-        #     return
+        if index < 1 or index > len(playlist.songs):
+            await ctx.send(f"Position `{index}` is out of range. Please provide a valid position between 1 and {len(playlist.songs)}")
+            return
         
-        # song = playlist.remove_song(index)
+        song = playlist.remove_song(index-1)
 
-        # await client.update_playlist_changes_db()
+        await client.update_playlist_changes_db()
 
-        # song_deleted = craft_song_deleted_from_playlist(name, song)
-        # await ctx.send(embed = song_deleted)
+        song_deleted = craft_song_deleted_from_playlist(name, song)
+        await ctx.send(embed = song_deleted)
+
+    @commands.command(aliases = ["renameplaylist", "renamepl", "rename_pl"])
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    async def rename_playlist(self, ctx: commands.Context, *args):
+        """
+        `-rename_pl "<Old Name>" "<New Name>"`
+
+        e.g `-rename_pl "Test" "New Test"` will rename a playlist to "New Test" from "Test"
+        """
+        if len(args) < 2:
+            await ctx.send("You didn't provide a playlist name and a new name")
+            return
+        
+        old_name = args[0]
+        new_name = " ".join(args[1:])
+
+        client = await self.server_manager.get_client(ctx.guild.id, ctx)
+        playlist = client.get_playlist_by_name(old_name)
+
+        if not playlist:
+            no_pl_found = craft_no_playlist_found(old_name)
+            await ctx.send(embed = no_pl_found)
+            return
+        
+        playlist.name = new_name
+
+        await client.update_playlist_changes_db()
+
+        pl_renamed_embed = craft_playlist_renamed(old_name, new_name)
+        await ctx.send(embed = pl_renamed_embed)
+
+
         
 
 

@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 import time
 import re
 from async_lru import alru_cache
+from functools import lru_cache
 from uuid import uuid1
 #from music.song_request_handler import extract_title_and_artist
 
@@ -96,6 +97,7 @@ class Song:
         self.is_playlist = is_playlist
         self.song_colour = None # probably for spotify
         self.belongs_to = belongs_to # belonging to a playlist
+        self.is_looping = False
 
     @property
     async def player(self) -> discord.FFmpegPCMAudio:
@@ -112,6 +114,13 @@ class Song:
             return self._audio_url
 
         return self._audio_url
+    
+    @property
+    def is_playing(self) -> bool:
+        """
+        Returns True if the song is currently playing, False otherwise.
+        """
+        return not(self._play_task is None)
 
     def _time_string_to_seconds(time_str: str) -> int:
         # Try parsing the time string in either MM:SS or HH:MM:SS format
@@ -171,9 +180,16 @@ class Song:
 
         return song
     
+    @lru_cache(maxsize=64)
+    def _cached_spotify_track(url: str):
+        return sp.track(url)
+    
     @classmethod
     async def SongFromSpotifyURL(cls, spotify_track_url):
-        track_info = sp.track(spotify_track_url)
+        track_info = cls._cached_spotify_track(spotify_track_url)
+        if track_info is None:
+            print(f"Failed to fetch track info for URL: {spotify_track_url}")
+            return None
         name, artist, thumbnail_url = (
             track_info["name"],
             track_info["artists"][0]["name"],
@@ -242,6 +258,9 @@ class Song:
     @classmethod
     async def SongFromYouTubeURL(cls, yt_url):
         name, duration = await Song.search_youtube_video_by_url(yt_url)
+        if name is None or duration is None:
+            print(f"Failed to fetch song info for URL: {yt_url}")
+            return None
         loop = asyncio.get_event_loop()
         data = await loop.run_in_executor(
             None, lambda: yt_dl.extract_info(yt_url, download=False)
@@ -286,26 +305,42 @@ class Song:
             
 
         self._lyrics_status = LyricsStatus.FETCHING
+        self.lyrics = None
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(URL) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    res_lyrics = data.get('lyrics', None)
-                    if res_lyrics is None:
-                        self.lyrics = None
-                        self._lyrics_status = LyricsStatus.NO_LYRICS_FOUND
-                        # if self.artist and tries == 1:
-                        #     await self.fetch_lyrics(
-                        #         f"https://lyrist.vercel.app/api/{urllib.parse.quote(name_to_use)}", tries + 1
-                        #     )
+                    content_type = response.headers.get("Content-Type", "")
+
+                    if response.status == 200:
+                        # Expected: valid lyrics data
+                        data = await response.json()
+                        res_lyrics = data.get('lyrics')
+                        if res_lyrics:
+                            self.lyrics = res_lyrics.replace('\n\n', '\n')
+                            self._lyrics_status = LyricsStatus.FETCHED
+                        else:
+                            self._lyrics_status = LyricsStatus.NO_LYRICS_FOUND
+
+                    elif response.status == 404 and "application/json" in content_type:
+                        # 404 but still a valid JSON with an error message
+                        data = await response.json()
+                        if data.get("error") == "No lyrics found":
+                            self._lyrics_status = LyricsStatus.NO_LYRICS_FOUND
+                        else:
+                            self._lyrics_status = LyricsStatus.ERROR
+
                     else:
-                        self.lyrics = res_lyrics.replace('\n\n', '\n')
-                        self._lyrics_status = LyricsStatus.FETCHED
+                        # Unexpected response or non-JSON 404
+                        self._lyrics_status = LyricsStatus.ERROR
+
+                    print(f"Lyrics status for {name_to_use} by {self.artist}: {self._lyrics_status.name}")
+
         except Exception as e:
-            print("Error fetching lyrics", e)
-            self.lyrics = None
+            print("Error fetching lyrics:", e)
             self._lyrics_status = LyricsStatus.ERROR
+            self.lyrics = None
+
             # if self.artist and tries == 1:
             #     await self.fetch_lyrics(
             #         f"https://lyrist.vercel.app/api/{urllib.parse.quote(name_to_use)}", tries + 1
@@ -340,6 +375,7 @@ class Song:
                 yield song
 
     @staticmethod
+    @lru_cache(maxsize=64)
     def get_spotify_info(query):
         playlist_tracks = sp.playlist_tracks(query)
         track_info = [
@@ -375,6 +411,7 @@ class Song:
 
     
     @staticmethod
+    @alru_cache(maxsize=128, ttl=86400)
     async def search_youtube_video(query: str):
         videos_search = VideosSearch(query, limit=1)
         results = await videos_search.next()
@@ -394,8 +431,14 @@ class Song:
         return None, None, None
     
     @staticmethod
+    @alru_cache(maxsize=128, ttl=86400)
     async def search_youtube_video_by_url(url):
-        video = await Video.getInfo(url)
+        try:
+            video = await Video.getInfo(url)
+        except TypeError as _:
+            print(f"Error fetching video info for URL {url}")
+            return None, None
+        
         title = video['title']
 
         if 'secondsText' in video['duration']:
