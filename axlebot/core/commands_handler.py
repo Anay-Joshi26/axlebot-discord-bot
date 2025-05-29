@@ -9,6 +9,9 @@ class RateLimitCheckFailure(commands.CheckFailure):
 class NotInVoiceChannelCheckFailure(commands.CheckFailure):
     pass
 
+class NoPermissionsCheckFailure(commands.CheckFailure):
+    pass
+
 def audio_command_check(ctx):
     in_voice_channel(ctx)
     return True
@@ -33,10 +36,27 @@ def rate_limit(ctx):
     
     # return True
     
-def in_voice_channel(ctx):
+async def in_voice_channel(ctx):
     if ctx.author.voice is None:
         raise NotInVoiceChannelCheckFailure("You must be in a voice channel to use this command")
     
+    return True
+
+async def permissions(ctx):
+    """
+    Check if the user has the required permissions to execute the command.
+
+    Returns True if the user has the required permissions, otherwise False.
+    """
+
+    # client = await server_manager.get_client(ctx.guild.id)
+
+
+
+    # if ctx.author.guild_permissions.administrator:
+    #     return True
+    
+    # raise NoPermissionsCheckFailure("You do not have the required permissions to use this command.")
     return True
 
 def cooldown_time(ctx):

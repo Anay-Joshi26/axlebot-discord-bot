@@ -18,3 +18,8 @@ class AdminCog(commands.Cog):
     def __init__(self, bot, server_manager):
         self.bot = bot
         self.server_manager : ServerManager = server_manager
+
+    @commands.command(aliases = [])
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    async def set_use_role(self, ctx, *args):
+        pass
