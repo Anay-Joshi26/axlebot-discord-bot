@@ -84,8 +84,8 @@ async def on_ready():
 
     print("All cogs loaded")
 
-    asyncio.get_running_loop().set_debug(True)
-    asyncio.get_running_loop().slow_callback_duration = 0.05
+    # asyncio.get_running_loop().set_debug(True)
+    # asyncio.get_running_loop().slow_callback_duration = 0.05
 
 @bot.event
 async def on_guild_join(guild: discord.Guild):

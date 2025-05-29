@@ -140,7 +140,7 @@ class MusicCog(commands.Cog):
             return
 
         try:
-            queue.move(current_pos, new_pos)
+            await queue.move(current_pos, new_pos)
         except ValueError as e:
             await ctx.send(e)
             return
@@ -160,98 +160,113 @@ class MusicCog(commands.Cog):
             print("Client queue", client.queue.queue)
             print("Playing client id", id(client))
 
-            if client.voice_client is None:
-                print("Client voice client is None, connecting to voice channel")
-                vc = await ctx.author.voice.channel.connect()
-                print("Connected to voice channel", vc.channel.name)
-                client.voice_client = vc
+            async with client.client_lock:
+                if client.voice_client is None:
+                    print("Client voice client is None, connecting to voice channel")
+                    vc = await ctx.author.voice.channel.connect()
+                    print("Connected to voice channel", vc.channel.name)
+                    client.voice_client = vc
 
             # Schedule the play_song function as a non-blocking task
             asyncio.create_task(self.play_song(ctx, client, query))
         except Exception as e:
             print(f"Error in play command: {e}")
-            await ctx.send(embed=craft_general_error())
+            await ctx.send(embed=craft_general_error(e))
 
 
-    async def play_song(self, ctx, client: Client, query: str, position : int = None):
+    async def play_song(self, ctx: commands.Context, client: Client, query: str, position : int = None):
         """
         Plays a song (or adds to queue), given a client and query
         """
-        query_type = determine_query_type(query)
-
-        queue, voice_client = client.queue, client.voice_client
-
-        client.interupt_inactivity_timer()
-
-        if query_type == self.YT_SONG:
-            song_task = asyncio.create_task(Song.SongFromYouTubeURL(query))
-        elif query_type == self.SPOT_SONG:
-            song_task = asyncio.create_task(Song.SongFromSpotifyURL(query))
-        elif query_type == self.YT_PLAYLIST or query_type == self.SPOT_PLAYLIST:
-
-            qt = "yt" if query_type == self.YT_PLAYLIST else "spot"
-
-            embed = craft_playlist_added(qt)
-
-            await ctx.send(embed = embed)
-
-
-            if query_type == self.SPOT_PLAYLIST:
-                song_generator = Song.SpotifyPlaylistSongList(query, max_concurrent_song_loadings=client.max_concurrent_song_loadings)
-            else:
-                song_generator = Song.YouTubePlaylistSongList(query, max_concurrent_song_loadings=client.max_concurrent_song_loadings)
-
-            # Start the generator to populate the queue
-            position = len(queue) if position is None else position
-            async for song in song_generator:
-                if song:
-                    queue.append(song, position)
-                    print(f"Added to queue: {song.name}")
-                    position += 1
-
-                # Start playing the first song if it's not already playing
-                if len(queue) == 1:
-                    await self.send_play_song_embed(ctx, song, client)
-
-                    voice_client.play(
-                        await song.player,
-                        after = lambda e: self.bot.loop.call_soon_threadsafe(
-                                    lambda: asyncio.ensure_future(self.play_next(ctx, client))
-                                )
-
-                    )
-
-            return        
-        elif query_type == self.STD_YT_QUERY:
-            song_task = asyncio.create_task(Song.CreateSong(query))
-        error_occured = False
         try:
-            song = await song_task
-            if song is None:
+            query_type = determine_query_type(query)
+
+            queue, voice_client = client.queue, client.voice_client
+
+            client.interupt_inactivity_timer()
+
+            if query_type == self.YT_SONG:
+                song_task = asyncio.create_task(Song.SongFromYouTubeURL(query))
+            elif query_type == self.SPOT_SONG:
+                song_task = asyncio.create_task(Song.SongFromSpotifyURL(query))
+            elif query_type == self.YT_PLAYLIST or query_type == self.SPOT_PLAYLIST:
+
+                qt = "yt" if query_type == self.YT_PLAYLIST else "spot"
+
+
+                if query_type == self.SPOT_PLAYLIST:
+                    song_generator = Song.SpotifyPlaylistSongList(query, max_concurrent_song_loadings=client.max_concurrent_song_loadings)
+                else:
+                    song_generator = Song.YouTubePlaylistSongList(query, max_concurrent_song_loadings=client.max_concurrent_song_loadings)
+
+                
+
+                # embed = craft_playlist_added(qt)
+                # await ctx.send(embed = embed)
+
+                # Start the generator to populate the queue
+                position = len(queue) if position is None else position
+                i = 0
+                async for song in song_generator:
+                    if song:
+                        if i == 0:
+                            # if we are here, it means that no error has occured, and so the yt url is valid
+                            embed = craft_playlist_added(qt)
+                            await ctx.send(embed = embed)
+
+                        await queue.append(song, position)
+                        print(f"Added to queue: {song.name}")
+                        position += 1
+
+                    # Start playing the first song if it's not already playing
+                    if len(queue) == 1:
+                        await self.send_play_song_embed(ctx, song, client)
+
+                        voice_client.play(
+                            await song.player,
+                            after = lambda e: self.bot.loop.call_soon_threadsafe(
+                                        lambda: asyncio.ensure_future(self.play_next(ctx, client))
+                                    )
+
+                        )
+
+                    i += 1
+
+                return        
+            elif query_type == self.STD_YT_QUERY:
+                song_task = asyncio.create_task(Song.CreateSong(query))
+            error_occured = False
+            try:
+                song = await song_task
+                if song is None:
+                    error_occured = True
+            except Exception as e:
                 error_occured = True
-        except Exception as e:
-            error_occured = True
-        
-        if error_occured:
-            await ctx.send(embed = craft_general_error("The song could not be found with the provided query"))
-            return
+            
+            if error_occured:
+                await ctx.send(embed = craft_general_error("The song could not be found with the provided query"))
+                return
 
-        queue.append(song, position)
+            await queue.append(song, position)
 
-        if len(queue) == 1:
-            await self.send_play_song_embed(ctx, song, client)
+            if len(queue) == 1:
+                await self.send_play_song_embed(ctx, song, client)
 
-            voice_client.play(
-                await song.player,
-                after = lambda e: self.bot.loop.call_soon_threadsafe(
-                                    lambda: asyncio.ensure_future(self.play_next(ctx, client))
-                                )
-            )
-        else:
-            if position is None:
-                await ctx.send(f"**{song.name}** has been added to the queue in position `{len(queue)}`", silent = True)
+                voice_client.play(
+                    await song.player,
+                    after = lambda e: self.bot.loop.call_soon_threadsafe(
+                                        lambda: asyncio.ensure_future(self.play_next(ctx, client))
+                                    )
+                )
             else:
-                await ctx.send(f"**{song.name}** will play next after the current song", silent = True)
+                if position is None:
+                    await ctx.send(f"**{song.name}** has been added to the queue in position `{len(queue)}`", silent = True)
+                else:
+                    await ctx.send(f"**{song.name}** will play next after the current song", silent = True)
+        except Exception as e:
+            print(f"Error in play command: {e}")
+            await ctx.send(embed=craft_general_error(e))
+
         
     async def play_next(self, ctx, client : Client):
         """
@@ -473,10 +488,25 @@ class MusicCog(commands.Cog):
             await ctx.send(f"Invalid position, the queue has `{len(queue)}` songs")
             return
 
-        song = queue.pop(pos-1)
+        song = await queue.pop(pos-1)
         embed = craft_delete_song(song)
         await ctx.send(embed=embed, silent = True)
+    
+    @commands.command(aliases = ['shuf', 'sh', 'shuff'])
+    @commands.check(in_voice_channel)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    async def shuffle(self, ctx):
+        client = await self.server_manager.get_client(ctx.guild.id)
+
+        if client.voice_client is None:
+            await ctx.send("The bot is not connected to a voice channel")
+            return
         
+        try:
+            await client.queue.shuffle()
+            await ctx.send(f"The queue has been shuffled, run `-q` to see the updated queue")
+        except ValueError as e:
+            await ctx.send(e)
 
     @commands.command(aliases = ['rep'])
     @commands.check(in_voice_channel)

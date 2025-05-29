@@ -203,7 +203,7 @@ class Song:
 
     @classmethod
     async def SpotifyPlaylistSongList(cls, spotify_playlist_url, max_concurrent_song_loadings: int = 5):
-        all_tracks_info = cls.get_spotify_info(spotify_playlist_url)
+        all_tracks_info = await cls.get_spotify_info(spotify_playlist_url)
 
         semaphore = asyncio.Semaphore(max_concurrent_song_loadings)
 
@@ -373,22 +373,59 @@ class Song:
             song = await next_loaded_song
             if song:
                 yield song
+    @classmethod
+    @alru_cache(maxsize=64, ttl=86400)
+    async def get_spotify_info(cls, spotify_url):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, cls.sync_get_spotify_info, spotify_url)
 
     @staticmethod
     @lru_cache(maxsize=64)
-    def get_spotify_info(query):
-        playlist_tracks = sp.playlist_tracks(query)
-        track_info = [
-            (
-                track["track"]["name"],
-                track["track"]["artists"][0]["name"],
-                track["track"]["album"]["images"][0]["url"]
-                or track["track"]["artist"]["images"][0]["url"],
-            )
-            for track in playlist_tracks["items"]
-        ]
-        print(track_info)
-        return track_info
+    def sync_get_spotify_info(query):
+        list_type = None
+        if "open.spotify.com/album/" in query:
+            list_type = "album"
+        elif "open.spotify.com/playlist/" in query:
+            list_type = "playlist"
+        else:
+            raise ValueError("Invalid Spotify URL. Must be an album or playlist.")
+
+        if list_type == 'playlist':
+            try:
+                playlist_tracks = sp.playlist_tracks(query)
+            except spotipy.exceptions.SpotifyException as e:
+                raise ValueError("Invalid Spotify URL. Must be a valid album or playlist.")
+            track_info = [
+                (
+                    track["track"]["name"],
+                    track["track"]["artists"][0]["name"],
+                    track["track"]["album"]["images"][0]["url"]
+                    or track["track"]["artist"]["images"][0]["url"],
+                )
+                for track in playlist_tracks["items"]
+            ]
+            return track_info
+        elif list_type == 'album':
+            try:
+                album = sp.album(query)
+            except spotipy.exceptions.SpotifyException as e:
+                raise ValueError("Invalid Spotify URL. Must be a valid album or playlist.")
+            album_thumbnail = album['images'][0]['url']
+
+            tracks = album['tracks']['items']
+
+            track_info = []
+            for track in tracks:
+                track_name = track['name']
+                artist_name = track['artists'][0]['name']
+                track_info.append((
+                    track_name,
+                    artist_name,
+                    album_thumbnail
+                ))
+            return track_info
+        
+        return None
     
     @staticmethod
     async def get_youtube_playlist_info(playlist_url: str) -> list:
@@ -402,7 +439,7 @@ class Song:
     @staticmethod
     @alru_cache(maxsize=128, ttl=86400)
     async def get_youtube_video_info(query: str) -> dict:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         data = await loop.run_in_executor(
             None, lambda: yt_dl.extract_info(f"ytsearch1:{query}", download=False)
         )
