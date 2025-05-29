@@ -41,6 +41,7 @@ class Client:
         self.exit_after_inactivity = 60 * 3 # 3 minutes
         self.stop_task = None # used to stop the client after a certain time of inactivity
         self.number_of_playlists_limit = 10
+        self.client_lock = asyncio.Lock()  # Lock to prevent concurrent modifications to the client
 
     @staticmethod
     async def from_guild_id(guild_id):
@@ -162,7 +163,7 @@ class Client:
         if self.voice_client is not None:
             self.voice_client.stop()
             await self.voice_client.disconnect(); self.voice_client = None
-        self.queue.clear()
+        await self.queue.clear()
 
         self.interupt_inactivity_timer()
     

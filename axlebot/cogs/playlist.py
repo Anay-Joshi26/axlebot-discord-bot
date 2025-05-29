@@ -249,12 +249,13 @@ class PlaylistCog(commands.Cog):
         await ctx.send(embed = pl_added)
 
         for song in playlist.songs:
-            queue.append(song)
+            await queue.append(song)
 
             if len(queue) == 1:
                 client.voice_client.play(
                     await song.player,
-                    after = lambda e : asyncio.ensure_future(self.music_cog.play_next(ctx, client), loop = self.bot.loop)
+                    after = lambda e: self.bot.loop.call_soon_threadsafe(
+                                    lambda: asyncio.ensure_future(self.music_cog.play_next(ctx, client)))
                 )
 
                 await self.music_cog.send_play_song_embed(ctx, song, client)
