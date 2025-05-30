@@ -19,7 +19,7 @@ import requests
 import io
 import random
 from dotenv import load_dotenv, find_dotenv
-from music.utils.message_crafter import *
+from utils.message_crafter import *
 
 load_dotenv(find_dotenv())
 
@@ -59,6 +59,7 @@ from core.extensions.server_manager import server_manager
 from core.extensions.firebase import fbc
 from cogs.music import MusicCog
 from cogs.playlist import PlaylistCog
+from cogs.admin import AdminCog
 from core.commands_handler import RateLimitCheckFailure, NotInVoiceChannelCheckFailure
 from core.extensions import cache_manager
 
@@ -77,8 +78,10 @@ bot = commands.Bot(command_prefix='-', intents=intents, help_command = None)
 async def on_ready():
     print(f"We have logged in as {bot.user}")
     
+
     await bot.add_cog(MusicCog(bot, server_manager))
     await bot.add_cog(PlaylistCog(bot, server_manager))
+    await bot.add_cog(AdminCog(bot, server_manager))
     cache_manager.start()  # Start the cache manager
     print("Cache manager started")
 

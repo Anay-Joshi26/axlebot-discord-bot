@@ -4,7 +4,7 @@ from core.commands_handler import rate_limit, audio_command_check, in_voice_chan
 from music.song_request_handler import determine_query_type
 from models.song import Song, LyricsStatus
 import asyncio
-from music.utils.message_crafter import *
+from utils.message_crafter import *
 from core.server_manager import ServerManager
 from models.client import Client
 from music.songs_queue import SongQueue
@@ -107,12 +107,15 @@ class MusicCog(commands.Cog):
         self.YT_SONG, self.SPOT_SONG, self.YT_PLAYLIST, self.SPOT_PLAYLIST, self.STD_YT_QUERY = range(5)
 
 
-    async def send_play_song_embed(self, ctx, song: Song, client, is_looping = False):
+    async def send_play_song_embed(self, ctx, song: Song, client, is_looping = False, play = True):
         embed = await craft_now_playing(song, is_looping)
-        song.play()
+        if play:
+            song.play()
         progress_message = await ctx.send(embed = embed, view = MusicPlaybackButtons(ctx, client), silent = True)
         song.progress_message = progress_message
-        asyncio.create_task(update_progress_bar_embed(song, embed, progress_message)) # function updates the progress bar in the embed (every set interval seconds)
+        #asyncio.create_task(update_progress_bar_embed(song, embed, progress_message)) # function updates the progress bar in the embed (every set interval seconds)
+        asyncio.create_task(update_progress_bar_embed(song, embed, "progress_message")) # function updates the progress bar in the embed (every set interval seconds)
+
 
     @commands.command(aliases = ['mv'])
     @commands.check(in_voice_channel)
@@ -220,6 +223,7 @@ class MusicCog(commands.Cog):
 
                     # Start playing the first song if it's not already playing
                     if len(queue) == 1:
+                        song.is_first_in_queue = True
                         await self.send_play_song_embed(ctx, song, client)
 
                         voice_client.play(
@@ -250,6 +254,7 @@ class MusicCog(commands.Cog):
             await queue.append(song, position)
 
             if len(queue) == 1:
+                song.is_first_in_queue = True
                 await self.send_play_song_embed(ctx, song, client)
 
                 voice_client.play(
@@ -282,7 +287,7 @@ class MusicCog(commands.Cog):
 
         await last_progress_message.edit(view=None)
 
-        next_song = await queue.next()
+        next_song: Song = await queue.next()
 
         if next_song is None:
             # queue is empty, let them know
@@ -520,9 +525,28 @@ class MusicCog(commands.Cog):
         
         try:
             await client.queue.repeat(num)
-            await ctx.send(f"Repeating the current song {num} times, run `-q` to see the updated queue")
+            await ctx.send(f"Repeating the current song **{num}** times, run `-q` to see the updated queue")
         except ValueError as e:
             await ctx.send(e)
+
+    @commands.command(aliases = ['nowplaying'])
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    async def now_playing(self, ctx):
+        client = await self.server_manager.get_client(ctx.guild.id)
+
+        if client.voice_client is None or client.queue.current_song is None:
+            await ctx.send("No song is currently playing, `-p <song name>` to play a song")
+            return
+        
+        current_song: Song = client.queue.current_song
+        if current_song.progress_message is not None:
+            await current_song.progress_message.delete()
+            current_song.progress_message = None # to avoud errors for proress message being invalid
+
+        embed = await craft_now_playing(current_song)
+        progress_message = await ctx.send(embed = embed, view = MusicPlaybackButtons(ctx, client), silent = True)
+        current_song.progress_message = progress_message
+
 
         
         

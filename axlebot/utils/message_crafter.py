@@ -15,6 +15,7 @@ from discord.ext import commands
 from models.playlist import Playlist
 from datetime import datetime
 import aiohttp
+from utils import convert_duration
 
 # Colours for the embeds
 COLOURS = {
@@ -56,7 +57,7 @@ async def craft_now_playing(song: Song, is_looping = False):
 
     # Add the progress bar field to the embed
 
-    progress = 0
+    progress = calculate_progress(song)
     embed.add_field(name="Progress", value=update_progress_bar(progress), inline=True)
 
     embed.add_field(name="By", value=f"{song.artist}", inline=True)
@@ -103,26 +104,32 @@ async def update_progress_bar_embed(song: Song, progress_embed: discord.Embed, s
     if update_interval is None:
         update_interval = max(1, (song.duration/bar_length) * 0.5)
 
+    print(f"Update interval: {update_interval} seconds")
+
     progress_bar: str = None # str
 
-    while progress < 95:
+    while progress < 97:
+        print("tick", song.name)
         if song.is_playing:
             progress = calculate_progress(song)
             new_progress_bar: str = update_progress_bar(progress, bar_length = bar_length)
-            if progress_bar is None or new_progress_bar != progress_bar:
+            if progress_bar is None or new_progress_bar != progress_bar and song.progress_message:
                 progress_embed.set_field_at(0, name="Progress", value=new_progress_bar)
                 progress_embed.set_footer(text='🔂 Looped') if song.is_looping else progress_embed.set_footer(text='')
-                await song_message.edit(embed=progress_embed)
+                await song.progress_message.edit(embed=progress_embed)
                 progress_bar = new_progress_bar
         await asyncio.sleep(update_interval)
+
+        if not song.is_first_in_queue:
+            asyncio.current_task().cancel()
         #print(f"Progress: {progress}%")
 
         if song.is_playing:
-            if progress > (bar_length-2)/bar_length:
+            if progress > ((bar_length-2)/bar_length)*100:
                 update_interval = 1.1
 
     progress_embed.set_field_at(0, name="Progress", value=update_progress_bar(100, bar_length = bar_length))
-    await song_message.edit(embed=progress_embed)
+    await song.progress_message.edit(embed=progress_embed)
 
 def craft_delete_song(song: Song) -> discord.Embed:
     embed = discord.Embed(title=song.name,
@@ -151,13 +158,6 @@ def update_progress_bar(progress, bar_length=18):
 def calculate_progress(song):
     progress = (song.seconds_played / song.duration) * 100
     return min(progress, 100)  # Ensure progress doesn't exceed 100%
-
-def convert_duration(duration):
-    hours = duration // 3600
-    minutes = (duration % 3600) // 60
-    seconds = duration % 60
-
-    return f"{hours:02d}:{minutes:02d}:{seconds:02d}" if hours > 0 else f"{minutes:02d}:{seconds:02d}"
 
 def craft_lyrics_embed(lyrics: str, song_name: str, artist: str, status = LyricsStatus.FETCHED):
     if status == LyricsStatus.FETCHING:
@@ -437,6 +437,9 @@ def craft_playing_music_help_command():
                     inline=True)
     embed.add_field(name="Queue",
                     value="AxleBot uses a queue \nsystem to add songs.\nTo view the queue run\n`-q` or `-queue`",
+                    inline=True)
+    embed.add_field(name="Now Playing",
+                    value="To see the song playing right now \n run `-nowplaying`",
                     inline=True)
     
     return embed

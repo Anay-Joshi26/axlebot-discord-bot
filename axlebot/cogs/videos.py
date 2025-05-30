@@ -4,7 +4,7 @@ from core.commands_handler import rate_limit, audio_command_check, in_voice_chan
 from music.song_request_handler import determine_query_type
 from models.song import Song, LyricsStatus
 import asyncio
-from music.utils.message_crafter import *
+from utils.message_crafter import *
 from core.server_manager import ServerManager
 from models.client import Client
 from music.songs_queue import SongQueue

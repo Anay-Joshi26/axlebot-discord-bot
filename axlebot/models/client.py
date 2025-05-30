@@ -7,7 +7,7 @@ from core.extensions.firebase import fbc
 import asyncio
 import discord
 from discord.ext import commands
-from music.utils.message_crafter import craft_bot_music_stopped
+from utils.message_crafter import craft_bot_music_stopped
 
 class Client:
     def __init__(self, server_id):
@@ -42,6 +42,7 @@ class Client:
         self.stop_task = None # used to stop the client after a certain time of inactivity
         self.number_of_playlists_limit = 10
         self.client_lock = asyncio.Lock()  # Lock to prevent concurrent modifications to the client
+        self.permitted_channels_of_use: set = set()  # List of channels where the bot is allowed to be used
 
     @staticmethod
     async def from_guild_id(guild_id):
@@ -89,6 +90,12 @@ class Client:
         await self.update_playlist_changes_db()
 
         #await fbc.set_data_attribute_for_client(self.server_id, "playlists", [playlist.to_dict() for playlist in self.playlists])
+
+    async def update_changes_by_attribute(self, attribute: str, value: any):
+        """
+        Updates a specific attribute of the client in the database
+        """
+        await fbc.set_data_attribute_for_client(self.server_id, attribute, value)
 
     async def update_playlist_changes_db(self):
         """
@@ -182,7 +189,8 @@ class Client:
             "max_concurrent_song_loadings": self.max_concurrent_song_loadings,
             "acceptable_delay": self.acceptable_delay,
             "playlists": [playlist.to_dict() for playlist in self.playlists],
-            "is_premium": self.is_premium
+            "is_premium": self.is_premium,
+            "permitted_channels_of_use": list(self.permitted_channels_of_use)
         }
     
     @staticmethod
@@ -206,6 +214,7 @@ class Client:
         client.is_premium = data["is_premium"]
         if len(list_of_playlists) > 0:
             client.last_added_playlist = max(list_of_playlists, key=lambda pl: pl.created_at)
+        client.permitted_channels_of_use = set(data.get("permitted_channels_of_use", []))
             
         return client
     

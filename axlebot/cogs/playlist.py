@@ -4,13 +4,14 @@ from core.commands_handler import rate_limit, audio_command_check, in_voice_chan
 from music.song_request_handler import determine_query_type, convert_to_standard_youtube_url
 from models.song import Song, LyricsStatus
 import asyncio
-from music.utils.message_crafter import *
+from utils.message_crafter import *
 from core.server_manager import ServerManager
 from models.client import Client
 from music.songs_queue import SongQueue
 from models.playlist import Playlist
 from cogs.music import MusicCog
 from discord.ext.commands import BucketType
+from copy import deepcopy
 
 class CreatePlaylistModal(discord.ui.Modal, title='Create a Playlist'):
 
@@ -248,17 +249,18 @@ class PlaylistCog(commands.Cog):
 
         await ctx.send(embed = pl_added)
 
-        for song in playlist.songs:
+        for song in deepcopy(playlist.songs):
             await queue.append(song)
 
             if len(queue) == 1:
+                song.is_first_in_queue = True
+                await self.music_cog.send_play_song_embed(ctx, song, client)
+
                 client.voice_client.play(
                     await song.player,
                     after = lambda e: self.bot.loop.call_soon_threadsafe(
                                     lambda: asyncio.ensure_future(self.music_cog.play_next(ctx, client)))
                 )
-
-                await self.music_cog.send_play_song_embed(ctx, song, client)
 
     @commands.command(aliases = ['pls', 'playlist_info', 'playlistinfo'])
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)

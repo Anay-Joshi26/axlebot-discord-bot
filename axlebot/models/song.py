@@ -98,6 +98,7 @@ class Song:
         self.song_colour = None # probably for spotify
         self.belongs_to = belongs_to # belonging to a playlist
         self.is_looping = False
+        self.is_first_in_queue = False  # Indicates if the song is currently active in the queue
 
     @property
     async def player(self) -> discord.FFmpegPCMAudio:

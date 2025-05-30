@@ -103,6 +103,7 @@ class SongQueue:
             return None
         
         self.current_song.stop()
+        self.current_song.is_first_in_queue = False
         
         if self.loop_current:
             await self.repeat()
@@ -114,6 +115,7 @@ class SongQueue:
                 await next_song.refresh_audio_url_and_player()
 
             next_song.is_looping = self.loop_current # True
+            next_song.is_first_in_queue = True
             return next_song
 
         await self.pop()
@@ -125,7 +127,8 @@ class SongQueue:
         
         if Song.has_audio_url_expired(await next_song.audio_url, next_song.duration):
             await next_song.refresh_audio_url_and_player()
-        
+
+        next_song.is_first_in_queue = True
         return next_song
     
     async def clear(self) -> None:
