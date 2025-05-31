@@ -277,35 +277,45 @@ class MusicCog(commands.Cog):
         """
         Plays the next song in the queue, or informs the user that the queue is empty
         """
-        print(client)
-        queue, voice_client = client.queue, client.voice_client
+        try:
+            print(client)
+            queue, voice_client = client.queue, client.voice_client
 
-        print(queue.current_song.progress_message)
-        print(queue.current_song.name)
+            print(queue.current_song.progress_message)
+            print(queue.current_song.name)
 
-        last_progress_message = queue.current_song.progress_message
+            last_progress_message = queue.current_song.progress_message
 
-        await last_progress_message.edit(view=None)
+            await last_progress_message.edit(view=None)
 
-        next_song: Song = await queue.next()
+            if client.server_config.delete_message_after_play:
+                try:
+                    await last_progress_message.delete()
+                except discord.NotFound:
+                    print("Progress message not found, it might have been deleted already")
 
-        if next_song is None:
-            # queue is empty, let them know
+            next_song: Song = await queue.next()
 
-            embed = craft_queue_empty()
-            await ctx.send(embed = embed)
-            if client.voice_client is not None:
-                await client.start_inactivity_timer(ctx) 
-            return
-        
-        await self.send_play_song_embed(ctx, next_song, client)
-        
-        voice_client.play(await next_song.player, after = lambda e: self.bot.loop.call_soon_threadsafe(
-                                    lambda: asyncio.ensure_future(self.play_next(ctx, client))
-                                ))
-        # embed = craft_now_playing(next_song)
-        # progress_message = await ctx.send(embed = embed)
-        # next_song.progress_message = progress_message
+            if next_song is None:
+                # queue is empty, let them know
+
+                embed = craft_queue_empty()
+                await ctx.send(embed = embed)
+                if client.voice_client is not None:
+                    await client.start_inactivity_timer(ctx) 
+                return
+            
+            await self.send_play_song_embed(ctx, next_song, client)
+            
+            voice_client.play(await next_song.player, after = lambda e: self.bot.loop.call_soon_threadsafe(
+                                        lambda: asyncio.ensure_future(self.play_next(ctx, client))
+                                    ))
+            # embed = craft_now_playing(next_song)
+            # progress_message = await ctx.send(embed = embed)
+            # next_song.progress_message = progress_message
+        except Exception as e:
+            print(f"Error in play_next: {e}")
+            await ctx.send(embed=craft_general_error(e))
 
 
     @commands.command(aliases = ['ps'])

@@ -289,7 +289,7 @@ class Song:
                             "visualiser", "visualizer", "(visualiser)", "(visualizer)", "[]", "[ ]", f"{self.artist}", " - ", "ft.", "feat.", "-", "- ", " -"]
         name_to_use = self.name
 
-        for word in words_to_ignore:
+        for word in words_to_ignore*2: # to make sure we remove all instances we do it twice
             name_to_use = re.sub(re.escape(word), "", name_to_use, flags=re.IGNORECASE).strip()
             if "ft." in name_to_use:
                 name_to_use = name_to_use[:name_to_use.index("ft.")]

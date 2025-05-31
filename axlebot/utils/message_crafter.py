@@ -109,7 +109,7 @@ async def update_progress_bar_embed(song: Song, progress_embed: discord.Embed, s
     progress_bar: str = None # str
 
     while progress < 97:
-        print("tick", song.name)
+        #print("tick", song.name)
         if song.is_playing:
             progress = calculate_progress(song)
             new_progress_bar: str = update_progress_bar(progress, bar_length = bar_length)

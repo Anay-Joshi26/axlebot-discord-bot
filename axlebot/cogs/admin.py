@@ -22,8 +22,36 @@ class AdminCog(commands.Cog):
 
     @commands.command(aliases = [])
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
-    async def set_use_role(self, ctx, *args):
-        pass
+    async def set_music_playback_role(self, ctx, *args):
+        """
+        Sets the roles that can use the bot for music playback and related commands.
+        """
+        if not args:
+            await ctx.send("Please provide a role name or ID.")
+            return
+        
+        role_name = ' '.join(args)
+
+        try:
+            discord_id, tag_type = parse_tag(role_name, "role")
+        except ValueError as e:
+            await ctx.send(str(e))
+            return
+
+        client: Client = await self.server_manager.get_client(ctx.guild.id)
+
+        role: discord.Role = ctx.guild.get_role(discord_id)
+
+        if role is None:
+            await ctx.send(f"'{role_name}' role not found in this server.")
+            return
+        
+        if role.id in client.permitted_roles_of_use:
+            pass
+        else:
+            client.permitted_roles_of_use.add(role.id)
+            await client.update_changes_by_attribute("permitted_roles_of_use", list(client.permitted_roles_of_use))
+        
 
     @commands.command(aliases = [])
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
@@ -54,15 +82,32 @@ class AdminCog(commands.Cog):
         if channel.name in client.permitted_channels_of_use:
             pass
         else:
-            client.permitted_channels_of_use.add(channel.name)
+            client.permitted_channels_of_use.add(channel.id)
             await client.update_changes_by_attribute("permitted_channels_of_use", list(client.permitted_channels_of_use))
-
-
-
-        
 
         print(f"Setting use channel for {ctx.guild.name} to {args}")
 
+    @commands.command(aliases = [])
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    async def delete_message_after_play(self, ctx: commands.Context, *args):
+        """
+        Deletes the message after playing if the setting is enabled.
+        """
+        if not args:
+            await ctx.send("Please provide 'true' or 'false'.")
+            return
+        
+        value: str = args[0].lower()
 
+        if value not in ["true", "false"]:
+            await ctx.send("Please provide 'true' or 'false'.")
+            return
+        
+        client: Client = await self.server_manager.get_client(ctx.guild.id)
+
+        await client.server_config.set_delete_message_after_play(value == "true")
+
+        await ctx.send(f"Delete message after play set to `{value.capitalize()}`.")
+        
 
         
