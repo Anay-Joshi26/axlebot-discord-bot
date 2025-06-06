@@ -173,6 +173,34 @@ class Client:
         await self.queue.clear()
 
         self.interupt_inactivity_timer()
+
+    @staticmethod
+    def get_base_client_dict(server_id: int) -> dict:
+        """
+        Returns a base client dictionary with default values for a new client.
+        This is used to create a new client in the database.
+        """
+        return {
+            "guild_id": server_id,
+            "max_concurrent_song_loadings": 3,
+            "acceptable_delay": 5,
+            "playlists": [],
+            "is_premium": False,
+            "server_config": ServerConfig.get_default_config_dict()
+        }
+
+    def __dict__(self):
+        """
+        Converts the client object to a dictionary, exact same as to_dict()
+        """
+        return {
+            "guild_id": self.server_id,
+            "max_concurrent_song_loadings": self.max_concurrent_song_loadings,
+            "acceptable_delay": self.acceptable_delay,
+            "playlists": [playlist.to_dict() for playlist in self.playlists],
+            "is_premium": self.is_premium,
+            "server_config": self.server_config.to_dict()
+        }
     
     def __repr__(self):
         """

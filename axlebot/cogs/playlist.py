@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from core.commands_handler import rate_limit, audio_command_check, in_voice_channel, cooldown_time
+from core.commands_handler import audio_command_check, in_voice_channel, cooldown_time
 from music.song_request_handler import determine_query_type, convert_to_standard_youtube_url
 from models.song import Song, LyricsStatus
 import asyncio
@@ -12,6 +12,7 @@ from models.playlist import Playlist
 from cogs.music import MusicCog
 from discord.ext.commands import BucketType
 from copy import deepcopy
+import random
 
 class CreatePlaylistModal(discord.ui.Modal, title='Create a Playlist'):
 
@@ -230,7 +231,16 @@ class PlaylistCog(commands.Cog):
         """
         Queues the playlist with the given name.
         """
-        name = " ".join(args)
+        if not args:
+            await ctx.send("You didn't provide a playlist name")
+            return
+        
+        if args[-1] == "-s" or args[-1] == "--shuffle" or args[-1] == "-sh" or args[-1] == "-shuffle" \
+            or args[-1] == "--shuffled" or args[-1] == "-shuffled":
+            shuffle = True
+            print("Shuffling playlist before playing")
+
+        name = " ".join(args[:-1]) if shuffle else " ".join(args)
         client = await self.server_manager.get_client(ctx.guild.id, ctx)
         playlist = client.get_playlist_by_name(name)
 
@@ -245,11 +255,16 @@ class PlaylistCog(commands.Cog):
 
         queue = client.queue
 
-        pl_added = craft_custom_playlist_queued(name, playlist)
+        playlist = deepcopy(playlist)
+
+        if shuffle:
+            random.shuffle(playlist.songs)
+
+        pl_added = craft_custom_playlist_queued(name, playlist, shuffle=shuffle)
 
         await ctx.send(embed = pl_added)
 
-        for song in deepcopy(playlist.songs):
+        for song in playlist.songs:
             await queue.append(song)
 
             if len(queue) == 1:
@@ -340,17 +355,22 @@ class PlaylistCog(commands.Cog):
             await ctx.send(embed = no_pl_found)
             return
         
+        # Try to interpret index as an integer position
         try:
-            index = int(index)
-        except ValueError:
-            await ctx.send(f"`{index}` is not a valid position. Please provide a valid position (1-{len(playlist.songs)})")
-            return
+            position = int(index)
+            if position < 1 or position > len(playlist.songs):
+                await ctx.send(f"Position `{position}` is out of range. Please provide a valid position between 1 and {len(playlist.songs)}")
+                return
+            song = playlist.remove_song(position - 1)
 
-        if index < 1 or index > len(playlist.songs):
-            await ctx.send(f"Position `{index}` is out of range. Please provide a valid position between 1 and {len(playlist.songs)}")
-            return
-        
-        song = playlist.remove_song(index-1)
+        except ValueError:
+            # If index is not an integer, try treating it as a song name
+            song_idx = playlist.get_song(index, return_index = True)
+            if song_idx is None:
+                await ctx.send(f"Could not find a song with the name `{index}` in the playlist.")
+                return
+            song = playlist.remove_song(song_idx)
+
 
         await client.update_playlist_changes_db()
 

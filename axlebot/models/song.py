@@ -159,12 +159,10 @@ class Song:
     
     @classmethod
     async def CreateSong(cls, youtube_query):
-        import pprint
         print("searching song")
         #yt_url, name, duration = await Song.search_youtube_video(youtube_query)
         #print("song search finished, got url, getting info")
         data = await Song.get_youtube_video_info(youtube_query)
-        print("got info")
         artist = data.get("artist") or data.get("uploader") or data.get("channel") or "Unknown Artist"
         thumbnail_url = data["thumbnail"]
         audio_url = data["url"]
@@ -175,10 +173,6 @@ class Song:
         print("SONG CREATED")
         # Create the song instance
         song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url)
-        
-        # Start fetching lyrics concurrently
-        
-
         return song
     
     @lru_cache(maxsize=64)

@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from core.commands_handler import rate_limit, audio_command_check, in_voice_channel, cooldown_time
+from core.commands_handler import *
 from music.song_request_handler import determine_query_type
 from models.song import Song, LyricsStatus
 import asyncio
@@ -20,7 +20,14 @@ class MusicPlaybackButtons(discord.ui.View):
         self.client = client
 
     @discord.ui.button(style=discord.ButtonStyle.gray, label='⏯ Pause/Resume')
+    @commands.check(in_voice_channel)
     async def pause_resume_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            await in_voice_channel_interaction(interaction)
+        except NotInVoiceChannelCheckFailure as e:
+            await interaction.response.send_message(str(e), ephemeral=True)
+            return
+
         voice_client = self.client.voice_client
 
         if voice_client is None:
@@ -37,13 +44,19 @@ class MusicPlaybackButtons(discord.ui.View):
             voice_client.resume()
             self.client.queue.current_song.play()
             #await interaction.message.add_reaction('▶️')
-            await interaction.message.clear_reaction('⏸️')
+            await interaction.message.remove_reaction('⏸️', interaction.guild.me)
             await interaction.response.defer()
         else:
             await self.ctx.send("Cannot pause/resume song, due to some complications", ephemeral = True)
 
     @discord.ui.button(style=discord.ButtonStyle.gray, label='⏭️ Skip')
+    @commands.check(in_voice_channel)
     async def skip_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            await in_voice_channel_interaction(interaction)
+        except NotInVoiceChannelCheckFailure as e:
+            await interaction.response.send_message(str(e), ephemeral=True)
+            return
 
         await interaction.response.defer()
 
@@ -54,13 +67,19 @@ class MusicPlaybackButtons(discord.ui.View):
             self.client.voice_client.stop()
             self.client.queue.current_song.stop()
 
-            await interaction.message.clear_reaction('⏭️')
+            await interaction.message.remove_reaction('⏭️', interaction.guild.me)
             # await ctx.send("Skipped the song...")
         else:
             await self.ctx.send("No song is currently playing", ephemeral = True)
 
     @discord.ui.button(style=discord.ButtonStyle.gray, label='🔁 Repeat')
+    @commands.check(in_voice_channel)
     async def repeat_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            await in_voice_channel_interaction(interaction)
+        except NotInVoiceChannelCheckFailure as e:
+            await interaction.response.send_message(str(e), ephemeral=True)
+            return
 
         await interaction.response.defer()
 
@@ -76,7 +95,13 @@ class MusicPlaybackButtons(discord.ui.View):
         
 
     @discord.ui.button(style=discord.ButtonStyle.gray, label='🔂 Loop')
+    @commands.check(in_voice_channel)
     async def loop_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            await in_voice_channel_interaction(interaction)
+        except NotInVoiceChannelCheckFailure as e:
+            await interaction.response.send_message(str(e), ephemeral=True)
+            return
 
         await interaction.response.defer()
 
@@ -86,7 +111,7 @@ class MusicPlaybackButtons(discord.ui.View):
                 await interaction.message.add_reaction('🔂')
             else:
                 try:
-                    await interaction.message.clear_reaction('🔂')
+                    await interaction.message.remove_reaction('🔂', interaction.guild.me)
                 except discord.NotFound:
                     print("Reaction not found")
 
@@ -108,6 +133,7 @@ class MusicCog(commands.Cog):
 
 
     async def send_play_song_embed(self, ctx, song: Song, client, is_looping = False, play = True):
+        client.interupt_inactivity_timer()
         embed = await craft_now_playing(song, is_looping)
         if play:
             song.play()
@@ -153,6 +179,7 @@ class MusicCog(commands.Cog):
 
     @commands.command(aliases = ['p'])
     @commands.check(in_voice_channel)
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def play(self, ctx: commands.Context, *args):
         try:
@@ -333,7 +360,7 @@ class MusicCog(commands.Cog):
             client.queue.current_song.stop()
 
             await ctx.message.add_reaction('⏸️')
-            await ctx.message.clear_reaction('▶️')
+            await ctx.message.remove_reaction('▶️', ctx.me)#clear_reaction('▶️')
 
             #await ctx.send("Paused the music...")
         elif voice_client.is_paused():
@@ -356,11 +383,11 @@ class MusicCog(commands.Cog):
             client.queue.current_song.play()
 
             await ctx.message.add_reaction('▶️')
-            await ctx.message.clear_reaction('⏸️')
+            await ctx.message.remove_reaction('⏸️', ctx.me)
 
             # await ctx.send("Resumed the music...")
         elif voice_client.is_playing():
-            await ctx.send("The music is already playing")
+            await ctx.send("Music is already playing")
         else:
             await ctx.send("Cannot resume song, due to some complications")
 
@@ -476,7 +503,7 @@ class MusicCog(commands.Cog):
                 await ctx.message.add_reaction('🔁')
             else:
                 try:
-                    await ctx.message.clear_reaction('🔁')
+                    await ctx.message.remove_reaction('🔁', ctx.me)
                 except discord.NotFound:
                     pass
         except Exception as e:
@@ -531,6 +558,20 @@ class MusicCog(commands.Cog):
 
         if client.voice_client is None:
             await ctx.send("The bot is not connected to a voice channel")
+            return
+        
+        # try:
+        #     num = int(num)
+        #     print(f"Repeating the current song {num} times")
+        # except ValueError as e:
+        #     await ctx.send("Please provide a valid number (between 1 and 20)")
+        #     return
+        
+        if num < 1:
+            await ctx.send("A song cannot be repeated less than 1 time, please provide a valid number (1-20)")
+            return
+        if num > 100:
+            await ctx.send("A limit of 20 repetitions has been set, please provide a valid number (1-20)")
             return
         
         try:

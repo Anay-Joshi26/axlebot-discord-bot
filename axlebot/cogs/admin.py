@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from core.commands_handler import rate_limit, audio_command_check, in_voice_channel, cooldown_time
+from core.commands_handler import audio_command_check, in_voice_channel, cooldown_time, has_manage_guild
 from music.song_request_handler import determine_query_type
 from models.song import Song, LyricsStatus
 import asyncio
@@ -20,75 +20,130 @@ class AdminCog(commands.Cog):
         self.bot = bot
         self.server_manager : ServerManager = server_manager
 
-    @commands.command(aliases = [])
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
-    async def set_music_playback_role(self, ctx, *args):
-        """
-        Sets the roles that can use the bot for music playback and related commands.
-        """
+    async def _process_entities(self, ctx: commands.Context, args, client, entity_type, fetch_fn, allowed_list, change_fn, action):
         if not args:
-            await ctx.send("Please provide a role name or ID.")
-            return
-        
-        role_name = ' '.join(args)
-
-        try:
-            discord_id, tag_type = parse_tag(role_name, "role")
-        except ValueError as e:
-            await ctx.send(str(e))
+            await ctx.send(f"Please provide valid {entity_type}(s).")
             return
 
-        client: Client = await self.server_manager.get_client(ctx.guild.id)
+        successful, failed = [], []
 
-        role: discord.Role = ctx.guild.get_role(discord_id)
+        for name in args:
+            print(f"Processing {entity_type}: {name}")   
+            discord_id, tag = discord_tag_to_id(name)
+            if discord_id is None or tag != entity_type:
+                if name == "@everyone" and entity_type == "role":
+                    discord_id = ctx.guild.id # Role ID for @everyone is the guild ID itself
+                else:
+                    failed.append(name)
+                    continue
 
-        if role is None:
-            await ctx.send(f"'{role_name}' role not found in this server.")
-            return
-        
-        if role.id in client.permitted_roles_of_use:
-            pass
-        else:
-            client.permitted_roles_of_use.add(role.id)
-            await client.update_changes_by_attribute("permitted_roles_of_use", list(client.permitted_roles_of_use))
-        
+            entity = fetch_fn(discord_id)
+            if not entity:
+                failed.append(name)
+                continue
 
-    @commands.command(aliases = [])
+            is_already_present = discord_id in allowed_list
+            should_update = (action == "add" and not is_already_present) or (action == "remove" and is_already_present)
+
+            if should_update:
+                await change_fn(client, discord_id, action)
+                successful.append(entity.name)
+
+        if successful:
+            embed = craft_update_access_embed(entity_type, successful, action)
+            await ctx.send(embed = embed) #, allowed_mentions = discord.AllowedMentions.none()
+        if failed:
+            embed = craft_update_access_embed(entity_type, failed, action, added=False)
+            await ctx.send(embed = embed)
+
+
+    @commands.command()
+    @commands.dynamic_cooldown(cooldown_time, type=BucketType.user)
+    @commands.check(has_manage_guild)
+    async def add_use_role(self, ctx: commands.Context, *args):
+        client = await self.server_manager.get_client(ctx.guild.id)
+        await self._process_entities(
+            ctx, args, client, "role",
+            ctx.guild.get_role,
+            client.server_config.permitted_roles_of_use,
+            self.change_use_role,
+            "add"
+        )
+
+    @commands.command()
+    @commands.dynamic_cooldown(cooldown_time, type=BucketType.user)
+    @commands.check(has_manage_guild)
+    async def remove_use_role(self, ctx: commands.Context, *args):
+        client = await self.server_manager.get_client(ctx.guild.id)
+        await self._process_entities(
+            ctx, args, client, "role",
+            ctx.guild.get_role,
+            client.server_config.permitted_roles_of_use,
+            self.change_use_role,
+            "remove"
+        )
+
+    @commands.command()
+    @commands.dynamic_cooldown(cooldown_time, type=BucketType.user)
+    @commands.check(has_manage_guild)
+    async def add_use_channel(self, ctx: commands.Context, *args):
+        client = await self.server_manager.get_client(ctx.guild.id)
+        await self._process_entities(
+            ctx, args, client, "channel",
+            ctx.guild.get_channel,
+            client.server_config.permitted_channels_of_use,
+            self.change_use_channel,
+            "add"
+        )
+
+    @commands.command()
+    @commands.dynamic_cooldown(cooldown_time, type=BucketType.user)
+    @commands.check(has_manage_guild)
+    async def remove_use_channel(self, ctx: commands.Context, *args):
+        client = await self.server_manager.get_client(ctx.guild.id)
+        await self._process_entities(
+            ctx, args, client, "channel",
+            ctx.guild.get_channel,
+            client.server_config.permitted_channels_of_use,
+            self.change_use_channel,
+            "remove"
+        )
+
+
+    async def change_use_channel(self, client: Client, channel_id, action: str):
+        await getattr(client.server_config, f"{action}_permitted_channel")(channel_id)
+
+    async def change_use_role(self, client: Client, role_id, action: str):
+        await getattr(client.server_config, f"{action}_permitted_role")(role_id)
+
+    @commands.command()
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
-    async def set_use_channel(self, ctx: commands.Context, *args):
-        """
-        Sets the channel where the bot will listen to commands
-        """
-        if not args:
-            await ctx.send("Please provide a channel name or ID.")
-            return
-        
-        channel_name = ' '.join(args)
-
-        try:
-            discord_id, tag_type = parse_tag(channel_name, "channel")
-        except ValueError as e:
-            await ctx.send(str(e))
-            return
-
+    @commands.check(has_manage_guild)
+    async def see_access_channels(self, ctx: commands.Context):
         client: Client = await self.server_manager.get_client(ctx.guild.id)
-
-        channel: discord.abc.GuildChannel = ctx.guild.get_channel(discord_id)
-
-        if channel is None and not isinstance(channel, discord.TextChannel):
-            await ctx.send(f"'{channel.name}' text channel not found in in this server.")
+        channels = client.server_config.permitted_channels_of_use
+        if not channels:
+            await ctx.send(embed = craft_see_access_embed("channel", []))
             return
+        channel_names = [ctx.guild.get_channel(channel_id).name for channel_id in channels if ctx.guild.get_channel(channel_id)]
+        await ctx.send(embed = craft_see_access_embed("channel", channel_names))
         
-        if channel.name in client.permitted_channels_of_use:
-            pass
-        else:
-            client.permitted_channels_of_use.add(channel.id)
-            await client.update_changes_by_attribute("permitted_channels_of_use", list(client.permitted_channels_of_use))
-
-        print(f"Setting use channel for {ctx.guild.name} to {args}")
-
-    @commands.command(aliases = [])
+    @commands.command()
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.check(has_manage_guild)
+    async def see_access_roles(self, ctx: commands.Context):
+        client: Client = await self.server_manager.get_client(ctx.guild.id)
+        roles = client.server_config.permitted_roles_of_use
+        if not roles:
+            await ctx.send(embed = craft_see_access_embed("role", []))
+            return
+        role_names = [ctx.guild.get_role(role_id).name for role_id in roles if ctx.guild.get_role(role_id)]
+        await ctx.send(embed = craft_see_access_embed("role", role_names))
+
+
+    @commands.command(aliases = ['del_message_after_play', 'del_msg_after_play', 'dmap'])
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.check(has_manage_guild)
     async def delete_message_after_play(self, ctx: commands.Context, *args):
         """
         Deletes the message after playing if the setting is enabled.

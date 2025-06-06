@@ -58,8 +58,8 @@ class SongQueue:
         """
         Repeats the current song a specified number of times (default is 1)
         """
-        if num < 1 or num > 10:
-            raise ValueError("Number of repeats must be between 1 and 10")
+        if num < 1 or num > 20:
+            raise ValueError("Number of repeats must be between 1 and 20")
         async with self.lock:
             current_song = await self.queue[0].copy()
             for _ in range(num):

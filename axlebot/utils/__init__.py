@@ -2,7 +2,9 @@
 A file for utility functions
 """
 
-def discord_tag_to_id(tag: str) -> int:
+from typing import Tuple
+
+def discord_tag_to_id(tag: str) -> Tuple[int, str] | Tuple[None, None]:
     """
     Discord tags allow you to mention users, channels, roles, etc. in a specific format.
     This function extracts the ID from a Discord tag.
@@ -11,7 +13,11 @@ def discord_tag_to_id(tag: str) -> int:
     Returns:
         (int, type): The extracted ID as an integer, and the type of the tag (user, channel).
     """
-    if tag.startswith("<@") and tag.endswith(">"):
+    if tag.startswith("<@&") and tag.endswith(">"):
+        # Role mention
+        role_id = int(tag[3:-1])
+        return role_id, "role"
+    elif tag.startswith("<@") and tag.endswith(">"):
         # User mention
         user_id = int(tag[2:-1])
         return user_id, "user"
@@ -19,10 +25,6 @@ def discord_tag_to_id(tag: str) -> int:
         # Channel mention
         channel_id = int(tag[2:-1])
         return channel_id, "channel"
-    elif tag.startswith("<@&") and tag.endswith(">"):
-        # Role mention
-        role_id = int(tag[3:-1])
-        return role_id, "role"
     else:
         return None, None
     

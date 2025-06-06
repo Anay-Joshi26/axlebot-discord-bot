@@ -19,7 +19,7 @@ class ServerManager:
         print("Active clients", self.clients.active_cache)
         return self.clients.active_cache
 
-    async def get_client(self, guild_id: int, ctx: commands.Context = None) -> Client:
+    async def get_client(self, guild_id: int, ctx: commands.Context = None, wait_msg = True) -> Client:
         # Start a task to fetch the client
         fetch_task = asyncio.create_task(self.clients.get(str(guild_id)))
 
@@ -27,7 +27,8 @@ class ServerManager:
 
         fetch_msg = None
         if not fetch_task.done() and ctx:
-            fetch_msg = await ctx.send("Please wait, I am fetching your server information...")
+            if wait_msg:
+                fetch_msg = await ctx.send("Please wait, I am fetching your server information...")
 
         client: Client = await fetch_task
 

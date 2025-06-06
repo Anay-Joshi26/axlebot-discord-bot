@@ -60,7 +60,7 @@ from core.extensions.firebase import fbc
 from cogs.music import MusicCog
 from cogs.playlist import PlaylistCog
 from cogs.admin import AdminCog
-from core.commands_handler import RateLimitCheckFailure, NotInVoiceChannelCheckFailure
+from core.commands_handler import RateLimitCheckFailure, NotInVoiceChannelCheckFailure, has_manage_guild
 from core.extensions import cache_manager
 
 intents = discord.Intents.default()
@@ -87,9 +87,6 @@ async def on_ready():
 
     print("All cogs loaded")
 
-    # asyncio.get_running_loop().set_debug(True)
-    # asyncio.get_running_loop().slow_callback_duration = 0.05
-
 @bot.event
 async def on_guild_join(guild: discord.Guild):
     """
@@ -100,7 +97,9 @@ async def on_guild_join(guild: discord.Guild):
 
     is_new = True
 
-    data_dict = await fbc.get_client_dict(guild.id)
+    data_dict = await server_manager.get_client(guild.id, wait_msg=False)
+
+    #data_dict = await fbc.get_client_dict(guild.id)
     if not data_dict.get("newly_created", False):
         print(f"Guild {guild.name} already exists in the database, skipping creation")
         is_new = False
@@ -123,14 +122,28 @@ async def on_guild_join(guild: discord.Guild):
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandOnCooldown):
-        await ctx.send(f"Slow down there! Wait {round(error.retry_after, 2)} seconds before sending another message")
+        await ctx.send(f"Slow down there! Wait {round(error.retry_after, 2)} seconds before sending another message.", 
+                       delete_after=6,
+                       silent = True)
+    elif isinstance(error, commands.BadArgument):
+        await ctx.send("Invalid argument provided.", 
+                       delete_after=6,
+                       silent = True)
+    elif isinstance(error, commands.CommandNotFound):
+        pass  # Ignore command not found errors
+    else:
+        #raise error
+        await ctx.send(f"{error}", delete_after=15, silent = True)
 
-    if isinstance(error, RateLimitCheckFailure):
-        await ctx.send(f"Slow down there! Wait {ctx.kwargs['waiting_time']} seconds before sending another message")
+    # if isinstance(error, RateLimitCheckFailure):
+    #     await ctx.send(f"Slow down there! Wait {ctx.kwargs['waiting_time']} seconds before sending another message")
 
-    if isinstance(error, NotInVoiceChannelCheckFailure):
-        await ctx.send("You must be in a voice channel to use this command")
+    # if isinstance(error, NotInVoiceChannelCheckFailure):
+    #     await ctx.send("You must be in a voice channel to use this command")
 
+    #await ctx.send(f"{error}", delete_after=15)
+
+    
 # @bot.event
 # async def on_guild_join(guild: discord.Guild):
 #     """
@@ -215,8 +228,19 @@ class HelpView(discord.ui.View):
 
 @bot.command()
 @commands.dynamic_cooldown(lambda x: commands.Cooldown(1,1), type=commands.BucketType.user)
-async def help(ctx):
-    await ctx.send(embed=craft_default_help_command(), view=HelpView())
+async def help(ctx: commands.Context, *args):
+    """
+    Displays the help command with options to navigate through different sections.
+    If no arguments are provided, it shows the default help command.
+
+    if `-help admin` is provided, it will show the admin help command.
+    """
+    if not args:
+        await ctx.send(embed=craft_default_help_command(), view=HelpView())
+    elif args[0].lower() == "admin":
+        if has_manage_guild(ctx):
+            await ctx.author.send(embed=craft_admin_help_command())
+            await ctx.message.add_reaction("✅")
     
     
 bot.run(os.getenv("SECRET_KEY"))

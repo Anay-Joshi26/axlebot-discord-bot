@@ -108,7 +108,7 @@ async def update_progress_bar_embed(song: Song, progress_embed: discord.Embed, s
 
     progress_bar: str = None # str
 
-    while progress < 97:
+    while progress < 98:
         #print("tick", song.name)
         if song.is_playing:
             progress = calculate_progress(song)
@@ -206,7 +206,7 @@ def craft_lyrics_embed(lyrics: str, song_name: str, artist: str, status = Lyrics
 def craft_queue_empty():
     embed = discord.Embed(
         title="The song queue is empty!",
-        description=f"The queue is empty use `-p [song_name]` to play and add songs to the queue\n\n*Axlebot will leave the voice channel after 3 minutes of inactivity*",
+        description=f"The queue is empty use `-p [song_name]` to play and add songs to the queue\n\n*AxleBot will leave the voice channel after 3 minutes of inactivity*",
         colour=0x00b0f4)
     return embed
 
@@ -294,13 +294,16 @@ def craft_songs_added_to_playlist(name: str, songs_added: list) -> discord.Embed
         description=f"The following songs were successfully added:\n\n{songs_description}",
         colour=COLOURS["success"]
     )
+
+    if len(songs_added) == 1:
+        embed.set_thumbnail(url=songs_added[0].thumbnail_url)
     
     return embed
 
-def craft_custom_playlist_queued(name: str, playlist: Playlist) -> discord.Embed:
+def craft_custom_playlist_queued(name: str, playlist: Playlist, shuffle = False) -> discord.Embed:
     embed = discord.Embed(
         title=f'"{name}" Playlist Queued',
-        description="A custom playlist has been queued. \n\nEvery song inside the playlist has been added to the queue in the order shown below:\n\n",
+        description=f"A custom playlist has been queued{' in a shuffled order' if shuffle else ''}. \n\nEvery song inside the playlist has been added to the queue:\n\n",
         colour=COLOURS["success"]
     )
 
@@ -417,7 +420,9 @@ def craft_songs_in_playlist(playlist_name: str, songs: list) -> discord.Embed:
 
 def craft_default_help_command():
     embed = discord.Embed(title="Help commands",
-                      description="AxleBot can do many things, scroll through and select the option which you would like to see the help commands for.\n\n**Message spamming**\nEvery command has cooldown to prevent spamming. This is `5` seconds per message for most people with `1` second for premium guilds/servers. The `-help` command has a `1` second cooldown **for all**.\n\n**Other things to note**\nThe bot keeps some persistent info about a server such as whether it is premium and the playlists created. Sometimes this info can take a few seconds to retrieve if you have been inactive for a while. **Premium users will benefit from this rarely being a problem.** These measures are necessary for the bot to be accessible by everyone and to not crash the bot itself.\n\nPremium users also have other benefits, soon to come!",
+                      description="AxleBot can do many things, scroll through and select the option which you would like to see the help commands for.\n\n**Message spamming**\nEvery command has cooldown to prevent spamming. " \
+                      "This is `5` seconds per message. The `-help` command has a `1` second cooldown.\n\n**Other things to note**\nThe bot keeps some persistent info about a server such as playlists created. Sometimes this info can take a few seconds to retrieve if you have been inactive for a while. " \
+                      "\n\n**For Admins**\nFor admins with Manage Server permissions, you can configure the bot to only work in certain channels and with certain roles. Run `-help admin` to see how to do that.",
                       colour=0x00b0f4)
 
     embed.set_author(name="AxleBot Help Commands")
@@ -464,7 +469,7 @@ def craft_music_playback_controls_help_command():
                     value="`-loop` or `-lp`\nWill toggle looping\nof the current playing song.\nIf on the song will be stuck on loop.\nRun `-loop` to toggle it off",
                     inline=True)
     embed.add_field(name="Repeat",
-                    value="`-rep` or `-repeat`\nWill repeat the current playing song\nonce",
+                    value="`-rep <Optional: number>` or `-repeat`\nWill repeat the current playing song\n`number` times.\nIf no number is provided it will repeat the song once.",
                     inline=True)
     embed.add_field(name="Play Next",
                     value="`-pn <any -p param>`\nWill take in anything `-p` \ncan play, and will queue it next up\n(right after the current song)",
@@ -535,19 +540,22 @@ def craft_custom_playlist_help_command():
 
 def craft_custom_playlist_help_command_page_2():
     embed = discord.Embed(
-    title="Custom Playlist Commands (cont.)",
-    description=(
-        "__Delete a song from a playlist__\n"
-        "`-del_from_pl <Playlist name> <position>`\n"
-        "e.g `-del_from_pl Test 3` would **delete the third song** from a playlist named \"Test\"\n\n"
-        
-        "__Rename playlist__\n"
-        "`-rename_pl \"<Old Name>\" \"<New Name>\"`\n"
-        "e.g `-rename_pl \"Test\" \"New Test\"` will rename a playlist to \"New Test\" from \"Test\""
+        title="Custom Playlist Commands (cont.)",
+        description=(
+            "__Delete a song from a playlist__\n"
+            "`-del_from_pl \"<Playlist name>\" \"<position or song name>\"`\n"
+            "e.g. `-del_from_pl \"Test\" \"3\"` would **delete the third song** from a playlist named \"Test\"\n"
+            "e.g. `-del_from_pl \"Test\" \"Rick Roll\"` would **delete the song named 'Shape of You'** from the playlist\n"
+            "*Note: Use double quotes around names and positions to avoid formatting issues*"
+            "\n\n"
+            "__Rename playlist__\n"
+            "`-rename_pl \"<Old Name>\" \"<New Name>\"`\n"
+            "e.g. `-rename_pl \"Test\" \"New Test\"` will rename a playlist to \"New Test\" from \"Test\""
         )
     )
-    
+
     return embed
+
 
 def craft_playlist_renamed(old_name: str, new_name: str) -> discord.Embed:
     """
@@ -567,8 +575,92 @@ def craft_playlist_renamed(old_name: str, new_name: str) -> discord.Embed:
     
     return embed
 
+def craft_admin_help_command():
+    embed = discord.Embed(title="AxleBot Admin Commands",
+                      description="AxleBot has some admin commands which can be used to manage the bot and its settings.\n\n**Any user which has the 'Manage Guild' permission will *always* be able to use all commands**",
+                      colour=0x00b0f4,
+                      timestamp=datetime.now())
 
-    
-    
+    embed.add_field(name="Add role",
+                    value="To add a role which can \nexecute music commands run:\n`-add_use_role @Role`",
+                    inline=True)
+    embed.add_field(name="Remove role",
+                    value="To disallow a role to use music\ncommands run:\n`-remove_use_role @Role`",
+                    inline=True)
+    embed.add_field(name="See all access roles",
+                    value="To see all roles which have\naccess to music commands run:\n`-see_access_roles`",
+                    inline=True)
+    embed.add_field(name="Add channel",
+                    value="To add a channel which can \nexecute music commands run:\n`-add_use_channel #text-channel`",
+                    inline=True)
+    embed.add_field(name="Remove channel",
+                    value="To disallow a channel to use music\ncommands run:\n`-remove_use_channel #text-channel`",
+                    inline=True)
+    embed.add_field(name="See all access channels",
+                    value="To see all channels which have access to music commands run:\n`-see_access_channels`",
+                    inline=True)
+    embed.add_field(name="Delete message after playing",
+                    value="To delete song message after \nplaying run:\n`-delete_message_after_play \n<true or false>`\n*This can help to de-clutter song\nmessages*\n\nAliases: `del_message_after_play`, `del_msg_after_play`, `dmap`",
+                    inline=True)
+
+    embed.set_footer(text="This information has been sent to you personally")
+
+    return embed
+
+def craft_see_access_embed(access_type: str, entities: list[str]) -> discord.Embed:
+    """
+    Creates an embed listing the configured roles or channels for bot access.
+
+    Parameters:
+    - access_type (str): Either "role" or "channel".
+    - entities (list[str]): A list of role/channel names.
+
+    Returns:
+    - discord.Embed: The generated embed object.
+    """
+    title = f"Configured {access_type.capitalize()}s"
+
+    if not entities:
+        if access_type == "role":
+            description = (
+                "No roles are currently configured. The bot will only work for users "
+                "with the **Manage Server** permission."
+            )
+        elif access_type == "channel":
+            description = (
+                "No channels are currently configured. The bot will not work in any channel."
+            )
+    else:
+        description = "\n".join(f"{i+1}. {name}" for i, name in enumerate(entities))
+
+    return discord.Embed(
+        title=title,
+        description=description,
+        color=COLOURS["success"]
+    )
+
+def craft_update_access_embed(access_type: str, entities: list[str], action: str, added: bool = True) -> discord.Embed:
+    access_type_title = access_type.capitalize()
+    action_title = "Add" if action == "add" else "Remove"
+
+    if added:
+        title = f"{action_title}ed {access_type_title} Access"
+        if not entities:
+            description = f"No {access_type}s were {action}ed."
+        else:
+            description = "\n".join(f"{i+1}. `{entity}`" for i, entity in enumerate(entities))
+        color = COLOURS["success"]
+    else:
+        title = f"Failed to {action_title} {access_type_title} Access"
+        if not entities:
+            description = f"No {access_type}s were provided."
+        else:
+            description = f"An error occurred while trying to {action} the following {access_type}(s):\n" + \
+                          "\n".join(f"{i+1}. `{entity}`" for i, entity in enumerate(entities))
+        color = COLOURS["error"]  # You can replace this with `discord.Color.red()` if needed
+
+    embed = discord.Embed(title=title, description=description, color=color)
+    return embed
+
     
 

@@ -1,4 +1,5 @@
 from core.extensions.server_manager import server_manager
+import discord
 from discord.ext import commands
 from discord import app_commands
 import asyncio
@@ -16,57 +17,82 @@ def audio_command_check(ctx):
     in_voice_channel(ctx)
     return True
 
-
-def rate_limit(ctx):
-
-    # ENABLED FOR NOW
-    # if ctx.author.id == 253477867717918721:
-    #     return True # if its me, then low it always
+def has_manage_guild(ctx: commands.Context):
+    if not ctx.author.guild_permissions.manage_guild:
+        raise NoPermissionsCheckFailure("You do not have the required permissions to use this command.")
     return True
-    
-    # server_id = ctx.guild.id
-    # if server_id not in server_manager.active_clients: return True
 
-    # client = await server_manager.get_client(server_id, ctx)
-    # ok, waiting_time = client.poke()
-    # ctx.kwargs['waiting_time'] = waiting_time
-    # if not ok:
-    #     raise RateLimitCheckFailure("Sent too many messages")
-    # print("Passed the rate limit", client.last_message_time)
-    
-    # return True
     
 async def in_voice_channel(ctx):
-    if ctx.author.voice is None:
-        raise NotInVoiceChannelCheckFailure("You must be in a voice channel to use this command")
-    
+    return True
+    user_vc = ctx.author.voice
+    bot_vc = ctx.voice_client
+
+    if user_vc is None:
+        raise NotInVoiceChannelCheckFailure("You must be in a voice channel to use this command.")
+
+    if bot_vc and user_vc.channel != bot_vc.channel:
+        raise NotInVoiceChannelCheckFailure("You must be in the same voice channel as the bot to use this command.")
+
     return True
 
-async def permissions(ctx):
+
+async def in_voice_channel_interaction(interaction: discord.Interaction):
+    user = interaction.user
+    if isinstance(user, discord.Member) and user.voice is None:
+        raise NotInVoiceChannelCheckFailure("You must be in a voice channel to use this command")
+    return True
+
+async def fetch_client(ctx):
     """
-    Check if the user has the required permissions to execute the command.
-
-    Returns True if the user has the required permissions, otherwise False.
+    Fetch the client for the given context and will store it.
+    The function only needs to be called at the start to fetch the client to store in memory
     """
+    await server_manager.get_client(ctx.guild.id, ctx)
+    return True
 
-    # client = await server_manager.get_client(ctx.guild.id)
+async def bot_use_permissions(ctx: commands.Context, client = None):
+    """
+    Check if the user has the required permissions to execute playback commands.
+    This is a more specific check than the general permissions check.
+    """
+    if client is None:
+        client = await server_manager.get_client(ctx.guild.id, ctx)
 
+    config = client.server_config
 
-
-    # if ctx.author.guild_permissions.administrator:
-    #     return True
+    print([(ctx.author.name ,role.name, role.id) for role in ctx.author.roles], config.permitted_roles_of_use)
     
-    # raise NoPermissionsCheckFailure("You do not have the required permissions to use this command.")
+    if config.permitted_channels_of_use is None or len(config.permitted_channels_of_use) == 0:
+        raise NoPermissionsCheckFailure("No channels are configured to use this command.")
+    
+    if ctx.channel.id not in config.permitted_channels_of_use:
+        raise NoPermissionsCheckFailure("You cannot use this command in this channel.")
+    
+    if config.permitted_roles_of_use is None or len(config.permitted_roles_of_use) == 0:
+        if has_manage_guild(ctx):
+            return True
+        raise NoPermissionsCheckFailure("No roles are configured to use this command.")
+    
+    if has_manage_guild(ctx):
+        return True
+        
+    user_role_ids = {role.id for role in ctx.author.roles}
+
+    print("User roles:", user_role_ids)
+
+    print(config.permitted_roles_of_use.isdisjoint(user_role_ids))
+
+    if config.permitted_roles_of_use.isdisjoint(user_role_ids):
+        raise NoPermissionsCheckFailure("You do not have the required role to use this command.")
+    
     return True
 
 def cooldown_time(ctx):
 
     client = server_manager.active_clients.get(ctx.guild.id)
 
-    print("Checking cooldown time for client", client)
-
     if client is None or not client.is_premium:
-        print("Not active client or not premium default cooldown")
         return commands.Cooldown(1, 5)
     
     print("Active client and premium cooldown")
