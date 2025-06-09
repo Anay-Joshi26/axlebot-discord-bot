@@ -5,7 +5,7 @@ YT_SONG, SPOT_SONG, YT_PLAYLIST, SPOT_PLAYLIST, STD_YT_QUERY = range(5)
 
 def determine_query_type(query):
     # Check for Spotify Playlist
-    if "open.spotify.com/playlist/" in query or "open.spotify.com/album/":
+    if "open.spotify.com/playlist/" in query or "open.spotify.com/album/" in query:
         return SPOT_PLAYLIST
     
     # Check for YouTube Playlist

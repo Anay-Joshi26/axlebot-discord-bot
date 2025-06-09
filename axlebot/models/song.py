@@ -18,6 +18,7 @@ import re
 from async_lru import alru_cache
 from functools import lru_cache
 from uuid import uuid1
+from utils import time_string_to_seconds
 #from music.song_request_handler import extract_title_and_artist
 
 load_dotenv(find_dotenv())
@@ -32,33 +33,61 @@ client_credentials_manager = SpotifyClientCredentials(
 )
 sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
+# yt_dl_options = {
+#     "format": "bestaudio/best",
+#     "postprocessors": [
+#         {
+#             "key": "FFmpegExtractAudio",
+#             "preferredcodec": "mp4",
+#             "preferredquality": "320",
+#         }
+#     ],
+#     "extractaudio": True,
+#     "audioformat": "mp4",
+#     "outtmpl": "%(extractor)s-%(id)s-%(title)s.%(ext)s",
+#     "restrictfilenames": True,
+#     "noplaylist": False,
+#     "nocheckcertificate": True,
+#     "ignoreerrors": False,
+#     "logtostderr": False,
+#     "quiet": True,
+#     "no_warnings": True,
+#     "default_search": "auto",
+#     "source_address": "0.0.0.0",
+# }
+# yt_dl = YoutubeDL(yt_dl_options)
+# ffmpeg_options = {
+#     "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
+#     "options": "-vn", 
+# }
+
 yt_dl_options = {
     "format": "bestaudio/best",
-    "postprocessors": [
-        {
-            "key": "FFmpegExtractAudio",
-            "preferredcodec": "mp4",
-            "preferredquality": "320",
-        }
-    ],
-    "extractaudio": True,
-    "audioformat": "mp4",
-    "outtmpl": "%(extractor)s-%(id)s-%(title)s.%(ext)s",
-    "restrictfilenames": True,
-    "noplaylist": False,
-    "nocheckcertificate": True,
-    "ignoreerrors": False,
-    "logtostderr": False,
+    "noplaylist": True,
     "quiet": True,
     "no_warnings": True,
     "default_search": "auto",
     "source_address": "0.0.0.0",
+    # Add these critical headers:
+    "http_headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Accept-Encoding": "gzip, deflate",
+        "Referer": "https://www.youtube.com/",
+        "Origin": "https://www.youtube.com",
+        "DNT": "1"
+    }
 }
-yt_dl = YoutubeDL(yt_dl_options)
+
 ffmpeg_options = {
-    "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-    "options": "-vn", 
+    "before_options": (
+        "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 "
+    ),
+    "options": "-vn -headers 'Referer: https://www.youtube.com/\r\nOrigin: https://www.youtube.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'"
 }
+
+yt_dl = YoutubeDL(yt_dl_options)
 
 class LyricsStatus(Enum):
     NOT_STARTED = auto()
@@ -86,7 +115,7 @@ class Song:
                 self.type = "spot"
             else:
                 self.type = "yt" 
-        self.thumbnail_url = thumbnail_url
+        self.thumbnail_url = thumbnail_url if thumbnail_url else "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/eb777e7a-7d3c-487e-865a-fc83920564a1/d7kpm65-437b2b46-06cd-4a86-9041-cc8c3737c6f0.jpg/v1/fill/w_800,h_800,q_75,strp/no_album_art__no_cover___placeholder_picture_by_cmdrobot_d7kpm65-fullview.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9ODAwIiwicGF0aCI6IlwvZlwvZWI3NzdlN2EtN2QzYy00ODdlLTg2NWEtZmM4MzkyMDU2NGExXC9kN2twbTY1LTQzN2IyYjQ2LTA2Y2QtNGE4Ni05MDQxLWNjOGMzNzM3YzZmMC5qcGciLCJ3aWR0aCI6Ijw9ODAwIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmltYWdlLm9wZXJhdGlvbnMiXX0.8yjX5CrFjxVH06LB59TpJLu6doZb0wz8fGQq4tM64mg"
         self.duration = duration
         self._audio_url = audio_url
         self.lyrics = None
@@ -98,20 +127,24 @@ class Song:
         self.song_colour = None # probably for spotify
         self.belongs_to = belongs_to # belonging to a playlist
         self.is_looping = False
+        self.is_first_in_queue = False  # Indicates if the song is currently active in the queue
 
     @property
     async def player(self) -> discord.FFmpegPCMAudio:
         audio_url = await self.audio_url
+        if audio_url is None:
+            return None
         return discord.FFmpegOpusAudio(audio_url, **ffmpeg_options)  
     
     @property
-    async def audio_url(self) -> str:
+    async def audio_url(self) -> str | None:
         if self._audio_url is None:
             self._audio_url = await Song.get_audio_url(self.yt_url)
-            return self._audio_url
         elif Song.has_audio_url_expired(self._audio_url, self.duration):
             self._audio_url = await Song.get_audio_url(self.yt_url)
-            return self._audio_url
+        
+        if not await Song.is_url_valid(self._audio_url):
+            return None
 
         return self._audio_url
     
@@ -121,17 +154,6 @@ class Song:
         Returns True if the song is currently playing, False otherwise.
         """
         return not(self._play_task is None)
-
-    def _time_string_to_seconds(time_str: str) -> int:
-        # Try parsing the time string in either MM:SS or HH:MM:SS format
-        if len(time_str.split(":")) == 2:  # MM:SS format
-            time_obj = datetime.strptime(time_str, "%M:%S")
-            return time_obj.minute * 60 + time_obj.second
-        elif len(time_str.split(":")) == 3:  # HH:MM:SS format
-            time_obj = datetime.strptime(time_str, "%H:%M:%S")
-            return time_obj.hour * 3600 + time_obj.minute * 60 + time_obj.second
-        else:
-            raise ValueError("Time format not recognized. Use MM:SS or HH:MM:SS")
 
     @classmethod
     async def CreateSong_old(cls, youtube_query):
@@ -158,12 +180,13 @@ class Song:
     
     @classmethod
     async def CreateSong(cls, youtube_query):
-        import pprint
         print("searching song")
         #yt_url, name, duration = await Song.search_youtube_video(youtube_query)
         #print("song search finished, got url, getting info")
         data = await Song.get_youtube_video_info(youtube_query)
-        print("got info")
+        if data is None:
+            print(f"Failed to fetch song info for query: {youtube_query}")
+            return None
         artist = data.get("artist") or data.get("uploader") or data.get("channel") or "Unknown Artist"
         thumbnail_url = data["thumbnail"]
         audio_url = data["url"]
@@ -174,10 +197,6 @@ class Song:
         print("SONG CREATED")
         # Create the song instance
         song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url)
-        
-        # Start fetching lyrics concurrently
-        
-
         return song
     
     @lru_cache(maxsize=64)
@@ -234,7 +253,7 @@ class Song:
     @staticmethod
     def has_audio_url_expired(audio_url, duration) -> bool:
         expire_value = urllib.parse.parse_qs(urllib.parse.urlparse(audio_url).query).get('expire', [None])[0]
-        if expire_value is None or time.time() + duration + 60 > float(expire_value):
+        if expire_value is None or time.time() + duration + 3*60*60 > float(expire_value):
             print("AUDIO URL EXPIRED")
             return True
 
@@ -288,7 +307,7 @@ class Song:
                             "visualiser", "visualizer", "(visualiser)", "(visualizer)", "[]", "[ ]", f"{self.artist}", " - ", "ft.", "feat.", "-", "- ", " -"]
         name_to_use = self.name
 
-        for word in words_to_ignore:
+        for word in words_to_ignore*2: # to make sure we remove all instances we do it twice
             name_to_use = re.sub(re.escape(word), "", name_to_use, flags=re.IGNORECASE).strip()
             if "ft." in name_to_use:
                 name_to_use = name_to_use[:name_to_use.index("ft.")]
@@ -391,19 +410,47 @@ class Song:
             raise ValueError("Invalid Spotify URL. Must be an album or playlist.")
 
         if list_type == 'playlist':
-            try:
-                playlist_tracks = sp.playlist_tracks(query)
-            except spotipy.exceptions.SpotifyException as e:
-                raise ValueError("Invalid Spotify URL. Must be a valid album or playlist.")
-            track_info = [
-                (
-                    track["track"]["name"],
-                    track["track"]["artists"][0]["name"],
-                    track["track"]["album"]["images"][0]["url"]
-                    or track["track"]["artist"]["images"][0]["url"],
-                )
-                for track in playlist_tracks["items"]
-            ]
+            playlist_tracks = []
+            limit = 100
+            offset = 0
+
+            while True:
+                try:
+                    results = sp.playlist_tracks(query, limit=limit, offset=offset)
+                except spotipy.exceptions.SpotifyException as e:
+                    raise ValueError("Invalid Spotify URL. Must be a valid album or playlist.")
+                items = results["items"]
+                print(limit, offset, len(items))
+                playlist_tracks.extend(items)
+                if len(items) < limit:
+                    break
+                offset += limit
+
+            print(f"Total tracks fetched: {len(playlist_tracks)}")
+            track_info = []
+
+            for track in playlist_tracks:
+                track_data = track.get("track", {})
+                name = track_data.get("name")
+
+                if not name:
+                    continue  # Skip if track name is None or missing
+
+                artists = track_data.get("artists", [])
+                artist_name = artists[0]["name"] if artists else "Artist Unknown"
+
+                album = track_data.get("album", {})
+                album_images = album.get("images", [])
+                if album_images:
+                    image_url = album_images[0].get("url")
+                else:
+                    artist_images = track_data.get("artist", {}).get("images", [])
+                    image_url = artist_images[0].get("url") if artist_images else None
+
+                track_info.append((name, artist_name, image_url))
+
+
+            print(f"Total track info fetched: {len(track_info)}")
             return track_info
         elif list_type == 'album':
             try:
@@ -437,12 +484,15 @@ class Song:
         return [f"https://www.youtube.com/watch?v={video['id']}" for video in playlist.videos]
     
     @staticmethod
-    @alru_cache(maxsize=128, ttl=86400)
+    #@alru_cache(maxsize=128, ttl=86400)
     async def get_youtube_video_info(query: str) -> dict:
         loop = asyncio.get_running_loop()
         data = await loop.run_in_executor(
             None, lambda: yt_dl.extract_info(f"ytsearch1:{query}", download=False)
         )
+        if not data or "entries" not in data or len(data["entries"]) == 0:
+            print(f"No results found for query: {query}")
+            return None
         data = data["entries"][0]
         return data
 
@@ -461,7 +511,7 @@ class Song:
             if 'secondsText' in first_result['duration']:
                 video_length = int(first_result['duration']['secondsText'])
             else:
-                video_length = Song._time_string_to_seconds(first_result['duration'])
+                video_length = time_string_to_seconds(first_result['duration'])
             
             return video_url, video_title, video_length
         
@@ -481,7 +531,7 @@ class Song:
         if 'secondsText' in video['duration']:
             video_length = int(video['duration']['secondsText'])
         else:
-            video_length = Song._time_string_to_seconds(video['duration'])
+            video_length = time_string_to_seconds(video['duration'])
 
         return title, video_length
     
@@ -519,6 +569,17 @@ class Song:
             audio_url = None
         print("NEW URL")
         return audio_url
+
+    @staticmethod
+    async def is_url_valid(url):
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.head(url) as resp:
+                    print(f"URL check returned status {resp.status}")
+                    return resp.status == 200
+        except Exception as e:
+            print(f"URL check failed with exception: {e}")
+            return False
     
     async def refresh_audio_url_and_player(self):
         self.audio_url = await self.get_audio_url(self.yt_url)

@@ -7,7 +7,8 @@ from core.extensions.firebase import fbc
 import asyncio
 import discord
 from discord.ext import commands
-from music.utils.message_crafter import craft_bot_music_stopped
+from utils.message_crafter import craft_bot_music_stopped
+from models.server_config import ServerConfig
 
 class Client:
     def __init__(self, server_id):
@@ -34,7 +35,7 @@ class Client:
             "yt_skip": ["skip yt"],
             "spot_skip": ["skip spot"]
         }
-        self.max_concurrent_song_loadings = 2 # will increase to 5 if paid for premium
+        self.max_concurrent_song_loadings = 3 # will increase to 6 if paid for premium
         self.playlists : list[Playlist] = []
         self.last_added_playlist: Union[Playlist, None] = None
         self.is_premium : bool | None = None # check this, coz its funky
@@ -42,6 +43,7 @@ class Client:
         self.stop_task = None # used to stop the client after a certain time of inactivity
         self.number_of_playlists_limit = 10
         self.client_lock = asyncio.Lock()  # Lock to prevent concurrent modifications to the client
+        self.server_config: ServerConfig = ServerConfig(self)
 
     @staticmethod
     async def from_guild_id(guild_id):
@@ -64,13 +66,6 @@ class Client:
         data = await fbc.get_client_dict(server_id) 
         print(data, server_id) 
         await Client.from_dict(data, server_id)
-
-        # list_of_playlists : list[Playlist] = [Playlist.from_dict(playlist_dict, server_id) for playlist_dict in data["playlists"]]
-        # self.server_id = data["guild_id"]
-        # self.max_concurrent_song_loadings = data["max_concurrent_song_loadings"]
-        # self.acceptable_delay = data["acceptable_delay"]
-        # self.playlists = list_of_playlists
-        # self.last_added_playlist = max(list_of_playlists, key=lambda pl: pl.created_at)
     
     async def add_playlist(self, playlist : Playlist):
         """
@@ -89,6 +84,18 @@ class Client:
         await self.update_playlist_changes_db()
 
         #await fbc.set_data_attribute_for_client(self.server_id, "playlists", [playlist.to_dict() for playlist in self.playlists])
+
+    async def update_changes_by_attribute(self, attribute: str, value: any):
+        """
+        Updates a specific attribute of the client in the database
+        """
+        await fbc.set_data_attribute_for_client(self.server_id, attribute, value)
+
+    async def update_entire_client(self):
+        """
+        Updates the entire client in the database
+        """
+        await fbc.set_data_for_client(self.server_id, self.to_dict())
 
     async def update_playlist_changes_db(self):
         """
@@ -166,6 +173,34 @@ class Client:
         await self.queue.clear()
 
         self.interupt_inactivity_timer()
+
+    @staticmethod
+    def get_base_client_dict(server_id: int) -> dict:
+        """
+        Returns a base client dictionary with default values for a new client.
+        This is used to create a new client in the database.
+        """
+        return {
+            "guild_id": server_id,
+            "max_concurrent_song_loadings": 3,
+            "acceptable_delay": 5,
+            "playlists": [],
+            "is_premium": False,
+            "server_config": ServerConfig.get_default_config_dict()
+        }
+
+    def __dict__(self):
+        """
+        Converts the client object to a dictionary, exact same as to_dict()
+        """
+        return {
+            "guild_id": self.server_id,
+            "max_concurrent_song_loadings": self.max_concurrent_song_loadings,
+            "acceptable_delay": self.acceptable_delay,
+            "playlists": [playlist.to_dict() for playlist in self.playlists],
+            "is_premium": self.is_premium,
+            "server_config": self.server_config.to_dict()
+        }
     
     def __repr__(self):
         """
@@ -182,32 +217,42 @@ class Client:
             "max_concurrent_song_loadings": self.max_concurrent_song_loadings,
             "acceptable_delay": self.acceptable_delay,
             "playlists": [playlist.to_dict() for playlist in self.playlists],
-            "is_premium": self.is_premium
+            "is_premium": self.is_premium,
+            "server_config": self.server_config.to_dict()
         }
     
-    @staticmethod
-    async def from_dict(data: dict, server_id: int | None = None):
+    @classmethod
+    async def from_dict(cls, data: dict, server_id: int | None = None) -> "Client":
         """
-        Creates a client object from data dictionary
-        This client is a client which has just began using the bot and has an empty queue
+        Creates a client object from data dictionary.
+        This client is a client which has just begun using the bot and has an empty queue.
         """
         if server_id is None:
-            server_id = data["guild_id"]
+            server_id = data.get("guild_id")
 
-        client = Client(server_id)
-        # list_of_playlists = await asyncio.gather(
-        #     *[Playlist.from_dict(playlist_dict, server_id) for playlist_dict in data["playlists"]],
-        #     return_exceptions=True
-        # )
-        list_of_playlists = [await Playlist.from_dict(playlist_dict, server_id) for playlist_dict in data["playlists"]]
-        client.max_concurrent_song_loadings = data["max_concurrent_song_loadings"]
-        client.acceptable_delay = data["acceptable_delay"]
+        client = cls(server_id)
+
+        playlists_data = data.get("playlists", [])
+        list_of_playlists = [
+            await Playlist.from_dict(playlist_dict, server_id)
+            for playlist_dict in playlists_data
+        ]
+
+        client.max_concurrent_song_loadings = data.get("max_concurrent_song_loadings", 3)
+        client.acceptable_delay = data.get("acceptable_delay", 5)
         client.playlists = list_of_playlists
-        client.is_premium = data["is_premium"]
-        if len(list_of_playlists) > 0:
+        client.is_premium = data.get("is_premium", False)
+
+        if list_of_playlists:
             client.last_added_playlist = max(list_of_playlists, key=lambda pl: pl.created_at)
-            
+
+        server_config_data = data.get("server_config", {})
+        client.server_config = ServerConfig.from_dict(server_config_data, client)
+
+        
+
         return client
+
     
 
 

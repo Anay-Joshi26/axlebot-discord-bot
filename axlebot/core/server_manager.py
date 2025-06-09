@@ -19,17 +19,31 @@ class ServerManager:
         print("Active clients", self.clients.active_cache)
         return self.clients.active_cache
 
-    async def get_client(self, guild_id: int, ctx: commands.Context = None) -> Client:
-        # Start a task to fetch the client
-        fetch_task = asyncio.create_task(self.clients.get(str(guild_id)))
+    async def get_client(self, guild_id: int, ctx: commands.Context = None, wait_msg = True, return_newly_created = False) -> Client:
+        """
+        Fetches the client for the given guild ID. If the client is not found in the cache, it creates a new one.
+        :param guild_id: The ID of the guild to fetch the client for.
+        :param ctx: The context of the command, used to send messages if needed.
+        :param wait_msg: Whether to send a message indicating that the client is being fetched.
+        :param return_newly_created: Whether to return a tuple of (client, is_new) or just the client. This is useful for determining if a new client was created.
+        :return: The client for the given guild ID, or None if it could not be fetched or created.
+        """
 
-        await asyncio.sleep(0.1)
+        # Start a task to fetch the client
+        fetch_task = asyncio.create_task(self.clients.get(str(guild_id), return_newly_created=return_newly_created))
+
+        await asyncio.sleep(0.0075)
 
         fetch_msg = None
         if not fetch_task.done() and ctx:
-            fetch_msg = await ctx.send("Please wait, I am fetching your server information...")
+            if wait_msg:
+                fetch_msg = await ctx.send("Please wait, I am fetching your server information...")
 
-        client: Client = await fetch_task
+        is_new = False
+        if return_newly_created:
+            client, is_new = await fetch_task
+        else:
+            client: Client = await fetch_task
 
         if fetch_msg:
             await fetch_msg.delete()
@@ -44,9 +58,10 @@ class ServerManager:
                 await ctx.send("An error occurred, I was not able to get your server information")
             return None
 
-        #print("Client found in cache")
+        if return_newly_created:
+            return client, is_new
+        
         return client
-
     
     
     def remove_client(self, guild_id):

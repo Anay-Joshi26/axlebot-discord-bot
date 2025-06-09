@@ -15,6 +15,7 @@ from discord.ext import commands
 from models.playlist import Playlist
 from datetime import datetime
 import aiohttp
+from utils import convert_duration
 
 # Colours for the embeds
 COLOURS = {
@@ -56,7 +57,7 @@ async def craft_now_playing(song: Song, is_looping = False):
 
     # Add the progress bar field to the embed
 
-    progress = 0
+    progress = calculate_progress(song)
     embed.add_field(name="Progress", value=update_progress_bar(progress), inline=True)
 
     embed.add_field(name="By", value=f"{song.artist}", inline=True)
@@ -103,33 +104,40 @@ async def update_progress_bar_embed(song: Song, progress_embed: discord.Embed, s
     if update_interval is None:
         update_interval = max(1, (song.duration/bar_length) * 0.5)
 
+    print(f"Update interval: {update_interval} seconds")
+
     progress_bar: str = None # str
 
-    while progress < 95:
+    while progress < 98:
+        #print("tick", song.name)
         if song.is_playing:
             progress = calculate_progress(song)
             new_progress_bar: str = update_progress_bar(progress, bar_length = bar_length)
-            if progress_bar is None or new_progress_bar != progress_bar:
+            if progress_bar is None or new_progress_bar != progress_bar and song.progress_message:
                 progress_embed.set_field_at(0, name="Progress", value=new_progress_bar)
                 progress_embed.set_footer(text='🔂 Looped') if song.is_looping else progress_embed.set_footer(text='')
-                await song_message.edit(embed=progress_embed)
+                await song.progress_message.edit(embed=progress_embed)
                 progress_bar = new_progress_bar
         await asyncio.sleep(update_interval)
+
+        if not song.is_first_in_queue:
+            asyncio.current_task().cancel()
+            return
         #print(f"Progress: {progress}%")
 
         if song.is_playing:
-            if progress > (bar_length-2)/bar_length:
+            if progress > ((bar_length-2)/bar_length)*100:
                 update_interval = 1.1
 
     progress_embed.set_field_at(0, name="Progress", value=update_progress_bar(100, bar_length = bar_length))
-    await song_message.edit(embed=progress_embed)
+    await song.progress_message.edit(embed=progress_embed)
 
 def craft_delete_song(song: Song) -> discord.Embed:
-    embed = discord.Embed(title=song.name,
+    embed = discord.Embed(title=f"Deleted: {song.name}",
                       description="The song has been **deleted** from the queue, and will not be played.\n\nYou can view the updated queue via `-queue` or `q`.",
                       colour=0x00b0f4)
 
-    embed.set_author(name=song.artist)
+    #embed.set_author(name=song.artist)
 
     embed.set_thumbnail(url=song.thumbnail_url)
 
@@ -151,13 +159,6 @@ def update_progress_bar(progress, bar_length=18):
 def calculate_progress(song):
     progress = (song.seconds_played / song.duration) * 100
     return min(progress, 100)  # Ensure progress doesn't exceed 100%
-
-def convert_duration(duration):
-    hours = duration // 3600
-    minutes = (duration % 3600) // 60
-    seconds = duration % 60
-
-    return f"{hours:02d}:{minutes:02d}:{seconds:02d}" if hours > 0 else f"{minutes:02d}:{seconds:02d}"
 
 def craft_lyrics_embed(lyrics: str, song_name: str, artist: str, status = LyricsStatus.FETCHED):
     if status == LyricsStatus.FETCHING:
@@ -206,37 +207,27 @@ def craft_lyrics_embed(lyrics: str, song_name: str, artist: str, status = Lyrics
 def craft_queue_empty():
     embed = discord.Embed(
         title="The song queue is empty!",
-        description=f"The queue is empty use `-p [song_name]` to play and add songs to the queue\n\n*Axlebot will leave the voice channel after 3 minutes of inactivity*",
+        description=f"The queue is empty use `-p [song_name]` to play and add songs to the queue\n\n*AxleBot will leave the voice channel after 3 minutes of inactivity*",
         colour=0x00b0f4)
     return embed
 
-def craft_queue(queue):
+def craft_queue(queue, num = None):
     if len(queue) == 0:
         return craft_queue_empty()
-    
-    print("Crafting queue")
-
+    nums_to_show = num if num is not None else len(queue)
     opt = ""
-    for i in range(len(queue)):
+    for i in range(nums_to_show):
         if i == 0:
             opt += f"[{i+1}] **{queue[i].name}** => Now playing...{' [LOOPED]' if queue.loop_current else ''}\n"
         else:
             opt += f"[{i+1}] **{queue[i].name}**\n"
     opt += "\n(If a playlist has been added the tracks will be added slowly, so they wont all show up at once)"
 
-
-    try:
-        return discord.Embed(
-            title="Queue of Songs",
-            description=opt,
-            colour=0x00b0f4,
-        )
-    except Exception as e:
-        return discord.Embed(
-            title="Too many songs in queue",
-            description="The queue will be managed internally, it is too long to send via Discord",
-            colour=0xFFA500,
-        )
+    return discord.Embed(
+        title=f"Queue of Songs{f' (first {num})'if num is not None and num < len(queue) and num > 0 else ''}",
+        description=opt,
+        colour=0x00b0f4,
+    )
 
 async def extract_embed_color(thumbnail_url):
     print(f"Extracting color from thumbnail URL: {thumbnail_url}")
@@ -294,13 +285,16 @@ def craft_songs_added_to_playlist(name: str, songs_added: list) -> discord.Embed
         description=f"The following songs were successfully added:\n\n{songs_description}",
         colour=COLOURS["success"]
     )
+
+    if len(songs_added) == 1:
+        embed.set_thumbnail(url=songs_added[0].thumbnail_url)
     
     return embed
 
-def craft_custom_playlist_queued(name: str, playlist: Playlist) -> discord.Embed:
+def craft_custom_playlist_queued(name: str, playlist: Playlist, shuffle = False) -> discord.Embed:
     embed = discord.Embed(
-        title=f'"{name}" Playlist Queued',
-        description="A custom playlist has been queued. \n\nEvery song inside the playlist has been added to the queue in the order shown below:\n\n",
+        title=f'{name} - Playlist Queued',
+        description=f"A custom playlist has been queued{' in a shuffled order' if shuffle else ''}. \n\nEvery song inside the playlist has been added to the queue:\n\n",
         colour=COLOURS["success"]
     )
 
@@ -417,7 +411,9 @@ def craft_songs_in_playlist(playlist_name: str, songs: list) -> discord.Embed:
 
 def craft_default_help_command():
     embed = discord.Embed(title="Help commands",
-                      description="AxleBot can do many things, scroll through and select the option which you would like to see the help commands for.\n\n**Message spamming**\nEvery command has cooldown to prevent spamming. This is `5` seconds per message for most people with `1` second for premium guilds/servers. The `-help` command has a `1` second cooldown **for all**.\n\n**Other things to note**\nThe bot keeps some persistent info about a server such as whether it is premium and the playlists created. Sometimes this info can take a few seconds to retrieve if you have been inactive for a while. **Premium users will benefit from this rarely being a problem.** These measures are necessary for the bot to be accessible by everyone and to not crash the bot itself.\n\nPremium users also have other benefits, soon to come!",
+                      description="AxleBot can do many things, scroll through and select the option which you would like to see the help commands for.\n\n**Message spamming**\nEvery command has cooldown to prevent spamming. " \
+                      "This is `5` seconds per message. The `-help` command has a `1` second cooldown.\n\n**Other things to note**\nThe bot keeps some persistent info about a server such as playlists created. Sometimes this info can take a few seconds to retrieve if you have been inactive for a while. " \
+                      "\n\n**For Admins**\nFor admins with Manage Server permissions, you can configure the bot to only work in certain channels and with certain roles. Run `-help admin` to see how to do that.",
                       colour=0x00b0f4)
 
     embed.set_author(name="AxleBot Help Commands")
@@ -437,6 +433,9 @@ def craft_playing_music_help_command():
                     inline=True)
     embed.add_field(name="Queue",
                     value="AxleBot uses a queue \nsystem to add songs.\nTo view the queue run\n`-q` or `-queue`",
+                    inline=True)
+    embed.add_field(name="Now Playing",
+                    value="To see the song playing right now \n run `-nowplaying`",
                     inline=True)
     
     return embed
@@ -461,7 +460,7 @@ def craft_music_playback_controls_help_command():
                     value="`-loop` or `-lp`\nWill toggle looping\nof the current playing song.\nIf on the song will be stuck on loop.\nRun `-loop` to toggle it off",
                     inline=True)
     embed.add_field(name="Repeat",
-                    value="`-rep` or `-repeat`\nWill repeat the current playing song\nonce",
+                    value="`-rep <Optional: number>` or `-repeat`\nWill repeat the current playing song\n`number` times.\nIf no number is provided it will repeat the song once.",
                     inline=True)
     embed.add_field(name="Play Next",
                     value="`-pn <any -p param>`\nWill take in anything `-p` \ncan play, and will queue it next up\n(right after the current song)",
@@ -532,19 +531,22 @@ def craft_custom_playlist_help_command():
 
 def craft_custom_playlist_help_command_page_2():
     embed = discord.Embed(
-    title="Custom Playlist Commands (cont.)",
-    description=(
-        "__Delete a song from a playlist__\n"
-        "`-del_from_pl <Playlist name> <position>`\n"
-        "e.g `-del_from_pl Test 3` would **delete the third song** from a playlist named \"Test\"\n\n"
-        
-        "__Rename playlist__\n"
-        "`-rename_pl \"<Old Name>\" \"<New Name>\"`\n"
-        "e.g `-rename_pl \"Test\" \"New Test\"` will rename a playlist to \"New Test\" from \"Test\""
+        title="Custom Playlist Commands (cont.)",
+        description=(
+            "__Delete a song from a playlist__\n"
+            "`-del_from_pl \"<Playlist name>\" \"<position or song name>\"`\n"
+            "e.g. `-del_from_pl \"Test\" \"3\"` would **delete the third song** from a playlist named \"Test\"\n"
+            "e.g. `-del_from_pl \"Test\" \"Rick Roll\"` would **delete the song named 'Rick Roll'** from the playlist\n"
+            "*Note: Use double quotes around names and positions to avoid formatting issues*"
+            "\n\n"
+            "__Rename playlist__\n"
+            "`-rename_pl \"<Old Name>\" \"<New Name>\"`\n"
+            "e.g. `-rename_pl \"Test\" \"New Test\"` will rename a playlist to \"New Test\" from \"Test\""
         )
     )
-    
+
     return embed
+
 
 def craft_playlist_renamed(old_name: str, new_name: str) -> discord.Embed:
     """
@@ -564,8 +566,104 @@ def craft_playlist_renamed(old_name: str, new_name: str) -> discord.Embed:
     
     return embed
 
+def craft_admin_help_command():
+    description = """
+    AxleBot has some admin commands which can be used to manage the bot and its settings. Any user which has the 'Manage Guild' permission will be able to use these commands.
 
-    
-    
+    Out of the box AxleBot will work in any text channel named "music" (if the server has one). Aside from that, it will work in **no other** text channels. Initally only users with the **Manage Server** permission will be able to use the bot. A maximum of `10` roles and `10` text channels can be configured to have access to the bot.
+
+    You can configure the bot to work in any text channel and with any role you want. This is done by using the commands below.
+    """
+    embed = discord.Embed(title="AxleBot Admin Commands",
+                      description=description,
+                      colour=0x00b0f4,
+                      timestamp=datetime.now())
+
+    embed.add_field(name="Add role",
+                    value="To add a role which can \nexecute music commands run:\n`-add_use_role @Role`\n*Note: You can use @everyone here aswell*",
+                    inline=True)
+    embed.add_field(name="Remove role",
+                    value="To disallow a role to use music\ncommands run:\n`-remove_use_role @Role`\n*Note: You can use @everyone here aswell*",
+                    inline=True)
+    embed.add_field(name="See all access roles",
+                    value="To see all roles which have\naccess to music commands run:\n`-see_access_roles`",
+                    inline=True)
+    embed.add_field(name="Add channel",
+                    value="To add a channel which can \nexecute music commands run:\n`-add_use_channel #text-channel`",
+                    inline=True)
+    embed.add_field(name="Remove channel",
+                    value="To disallow a channel to use music\ncommands run:\n`-remove_use_channel #text-channel`",
+                    inline=True)
+    embed.add_field(name="See all access channels",
+                    value="To see all channels which have access to music commands run:\n`-see_access_channels`",
+                    inline=True)
+    embed.add_field(name="Delete message after playing",
+                    value="To delete song message after \nplaying run:\n`-delete_message_after_play \n<true or false>`\n*This can help to de-clutter song\nmessages*\n\nAliases: `del_message_after_play`, `del_msg_after_play`, `dmap`",
+                    inline=True)
+    embed.add_field(name="See all config",
+                    value="To see the bots entire configuration run:\n`-see_all_config` (or `-sac`)",
+                    inline=True)
+
+    embed.set_footer(text="This information has been sent to you privately")
+
+    return embed
+
+def craft_see_access_embed(access_type: str, entities: list[str]) -> discord.Embed:
+    """
+    Creates an embed listing the configured roles or channels for bot access.
+
+    Parameters:
+    - access_type (str): Either "role" or "channel".
+    - entities (list[str]): A list of role/channel names.
+
+    Returns:
+    - discord.Embed: The generated embed object.
+    """
+    title = f"Configured {access_type.capitalize()}s"
+
+    if not entities:
+        if access_type == "role":
+            description = (
+                "No roles are currently configured. The bot will only work for users "
+                "with the **Manage Server** permission."
+            )
+        elif access_type == "channel":
+            description = (
+                "No channels are currently configured. The bot will not work in any channel."
+            )
+    else:
+        description = "\n".join(f"{i+1}. {name}" for i, name in enumerate(entities))
+        if access_type == "role":
+            description += "\n\n*Note: Those with 'Manage Server' permissions will also be able to use the bot*"
+
+    return discord.Embed(
+        title=title,
+        description=description,
+        color=COLOURS["success"]
+    )
+
+def craft_update_access_embed(access_type: str, entities: list[str], action: str, added: bool = True) -> discord.Embed:
+    access_type_title = access_type.capitalize()
+    action_title = "Add" if action == "add" else "Remove"
+
+    if added:
+        title = f"{action_title}ed {access_type_title} Access"
+        if not entities:
+            description = f"No {access_type}s were {action}ed."
+        else:
+            description = "\n".join(f"{i+1}. `{entity}`" for i, entity in enumerate(entities))
+        color = COLOURS["success"]
+    else:
+        title = f"Failed to {action_title} {access_type_title} Access"
+        if not entities:
+            description = f"No {access_type}s were provided."
+        else:
+            description = f"An error occurred while trying to {action} the following {access_type}(s):\n" + \
+                          "\n".join(f"{i+1}. `{entity}`" for i, entity in enumerate(entities))
+        color = COLOURS["error"]  # You can replace this with `discord.Color.red()` if needed
+
+    embed = discord.Embed(title=title, description=description, color=color)
+    return embed
+
     
 

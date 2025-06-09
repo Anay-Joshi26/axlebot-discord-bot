@@ -1,16 +1,18 @@
 import discord
 from discord.ext import commands
-from core.commands_handler import rate_limit, audio_command_check, in_voice_channel, cooldown_time
+from core.commands_handler import audio_command_check, in_voice_channel, cooldown_time, bot_use_permissions
 from music.song_request_handler import determine_query_type, convert_to_standard_youtube_url
 from models.song import Song, LyricsStatus
 import asyncio
-from music.utils.message_crafter import *
+from utils.message_crafter import *
 from core.server_manager import ServerManager
 from models.client import Client
 from music.songs_queue import SongQueue
 from models.playlist import Playlist
 from cogs.music import MusicCog
 from discord.ext.commands import BucketType
+from copy import deepcopy
+import random
 
 class CreatePlaylistModal(discord.ui.Modal, title='Create a Playlist'):
 
@@ -68,6 +70,7 @@ class PlaylistCog(commands.Cog):
         self.music_cog : MusicCog = self.bot.get_cog('MusicCog')
 
     @commands.command(aliases = ['np', "newplaylist", "newpl", "createplaylist", "createpl", "create_playlist"])
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def new_playlist(self, ctx: commands.Context, *args):
         """
@@ -160,6 +163,7 @@ class PlaylistCog(commands.Cog):
             await ctx.send(embed=error_urls_embed)
 
     @commands.command(aliases = ['as', 'addsongs'])
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def add_songs(self, ctx: commands.Context, *args):
 
@@ -186,6 +190,7 @@ class PlaylistCog(commands.Cog):
 
     @commands.command(aliases = ['addsong'])
     @commands.check(in_voice_channel)
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def add_song(self, ctx: commands.Context, *args) -> None:
         """
@@ -224,12 +229,22 @@ class PlaylistCog(commands.Cog):
     
     @commands.command(aliases = ['qp', 'queuepl', 'queueplaylist', 'qpl', 'pp', 'playplaylist', 'playpl', 'queue_pl'])
     @commands.check(in_voice_channel)
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def queue_playlist(self, ctx: commands.Context, *args):
         """
         Queues the playlist with the given name.
         """
-        name = " ".join(args)
+        if not args:
+            await ctx.send("You didn't provide a playlist name")
+            return
+        shuffle = False
+        if args[-1] == "-s" or args[-1] == "--shuffle" or args[-1] == "-sh" or args[-1] == "-shuffle" \
+            or args[-1] == "--shuffled" or args[-1] == "-shuffled":
+            shuffle = True
+            print("Shuffling playlist before playing")
+
+        name = " ".join(args[:-1]) if shuffle else " ".join(args)
         client = await self.server_manager.get_client(ctx.guild.id, ctx)
         playlist = client.get_playlist_by_name(name)
 
@@ -244,7 +259,12 @@ class PlaylistCog(commands.Cog):
 
         queue = client.queue
 
-        pl_added = craft_custom_playlist_queued(name, playlist)
+        playlist = deepcopy(playlist)
+
+        if shuffle:
+            random.shuffle(playlist.songs)
+
+        pl_added = craft_custom_playlist_queued(name, playlist, shuffle=shuffle)
 
         await ctx.send(embed = pl_added)
 
@@ -252,15 +272,24 @@ class PlaylistCog(commands.Cog):
             await queue.append(song)
 
             if len(queue) == 1:
+                song.is_first_in_queue = True
+                await self.music_cog.send_play_song_embed(ctx, song, client)
+
+                player = await song.player
+
+                if player is None:
+                    await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), silent = True)
+                    asyncio.create_task(self.music_cog.play_next(ctx, client))
+                    return
+
                 client.voice_client.play(
-                    await song.player,
+                    player,
                     after = lambda e: self.bot.loop.call_soon_threadsafe(
                                     lambda: asyncio.ensure_future(self.music_cog.play_next(ctx, client)))
                 )
 
-                await self.music_cog.send_play_song_embed(ctx, song, client)
-
     @commands.command(aliases = ['pls', 'playlist_info', 'playlistinfo'])
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def playlists(self, ctx: commands.Context, *args):
         """
@@ -290,6 +319,7 @@ class PlaylistCog(commands.Cog):
 
     
     @commands.command(aliases = ['dp', 'deletepl', 'deleteplaylist'])
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def delete_playlist(self, ctx: commands.Context, *args):
         """
@@ -318,6 +348,7 @@ class PlaylistCog(commands.Cog):
 
         
     @commands.command(aliases = ['remove_song', 'removesong', 'rs', "del_from_playlist","deletefromplaylist", "dfp", "del_from_pl"])
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def delete_song_from_playlist(self, ctx: commands.Context, *args):
         """
@@ -338,17 +369,22 @@ class PlaylistCog(commands.Cog):
             await ctx.send(embed = no_pl_found)
             return
         
+        # Try to interpret index as an integer position
         try:
-            index = int(index)
-        except ValueError:
-            await ctx.send(f"`{index}` is not a valid position. Please provide a valid position (1-{len(playlist.songs)})")
-            return
+            position = int(index)
+            if position < 1 or position > len(playlist.songs):
+                await ctx.send(f"Position `{position}` is out of range. Please provide a valid position between 1 and {len(playlist.songs)}")
+                return
+            song = playlist.remove_song(position - 1)
 
-        if index < 1 or index > len(playlist.songs):
-            await ctx.send(f"Position `{index}` is out of range. Please provide a valid position between 1 and {len(playlist.songs)}")
-            return
-        
-        song = playlist.remove_song(index-1)
+        except ValueError:
+            # If index is not an integer, try treating it as a song name
+            song_idx = playlist.get_song(index, return_index = True)
+            if song_idx is None:
+                await ctx.send(f"Could not find a song with the name `{index}` in the playlist.")
+                return
+            song = playlist.remove_song(song_idx)
+
 
         await client.update_playlist_changes_db()
 
@@ -356,6 +392,7 @@ class PlaylistCog(commands.Cog):
         await ctx.send(embed = song_deleted)
 
     @commands.command(aliases = ["renameplaylist", "renamepl", "rename_pl"])
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def rename_playlist(self, ctx: commands.Context, *args):
         """

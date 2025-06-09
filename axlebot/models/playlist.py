@@ -24,10 +24,25 @@ class Playlist:
         self.total_duration -= self.songs[index].duration
         return self.songs.pop(index)
     
-    def get_song(self, index : int) -> Union[Song, None]:
-        try:
-            return self.songs[index]
-        except IndexError:
+    def get_song(self, index: int | str, return_index = False) -> Union[Song, None, int]:
+        if isinstance(index, int):
+            if 0 <= index < len(self.songs):
+                if return_index:
+                    return index
+                else:
+                    return self.songs[index]
+            return None
+        elif isinstance(index, str):
+            # Perform the same logic as get_song_from_name
+            index_lower = index.lower()
+            for i, song in enumerate(self.songs):
+                if song.name.lower() == index_lower:
+                    if return_index:
+                        return i
+                    else:
+                        return song
+            return None
+        else:
             return None
         
     def to_dict(self):

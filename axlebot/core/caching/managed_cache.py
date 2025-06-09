@@ -18,6 +18,7 @@ class CacheManager:
         self.cache_to_index = {repr(cache): i for i, cache in enumerate(self.caches)}
         self._eviction_task = None
         self.check_freq_time = check_freq_time  # Time in seconds to check for expired entries
+        self.dbs = [cache for cache in self.caches if cache.is_db]
 
     def start(self):
         self._start_eviction_loop(self.check_freq_time)
@@ -29,7 +30,7 @@ class CacheManager:
         """
         return self.caches[0]
 
-    async def get(self, key) -> dict|None:
+    async def get(self, key, return_newly_created = False):
         """
         Get an item from the cache.
         """
@@ -51,8 +52,11 @@ class CacheManager:
             if value is None:
                 #print('aaa')
                 continue
-            
-            final_client_obj = await self._promote(key, cache, i, value, to_top=True)
+
+            final_client_obj, newly_created = await self._promote(key, cache, i, value, to_top=True)
+
+            if return_newly_created:
+                return final_client_obj, newly_created
 
             return final_client_obj
         
@@ -81,41 +85,38 @@ class CacheManager:
         print(f"Promoting {key} from cache {curr_cache_index}")
         from models.client import Client
         if curr_cache_index == 0:
-            # Already in the top cache
-            #print("Already in the top cache")
-            #print("value id", id(value))
-            return value
+            return value, False  # Already in the top cache
 
         if to_top:
-            #print("Promoting to top cache")
             if not curr_cache.is_db:
-                #await curr_cache.delete(key)
                 await self._delete(key, curr_cache)
             if isinstance(self.caches[0], InMemoryCache):
+                is_newly_created = False
+                if 'newly_created' in value and value['newly_created']:
+                    is_newly_created = True
+                    del value['newly_created']
                 client_obj = await Client.from_dict(value)
-                #print("client_obj", client_obj)
-                #self.caches[0].set(key, client_obj)
+                new_client_obj_dict = client_obj.to_dict()
+                if new_client_obj_dict != value:
+                    print(f"[WARN] The client in the db doesn't match created, updating it to match the db")
+                    for db in self.dbs:
+                        await self._set(key, new_client_obj_dict, db)
+                    print(f"[INFO] Updated client {key} to match the db")
                 await self._set(key, client_obj, self.caches[0])
-
-
-                #print("Set client_obj id:", id(client_obj))
-                #print("Get client_obj id:", id(await self._get(key, self.caches[0])))
-                return client_obj
-
+                return client_obj, is_newly_created
             else:
                 # rendunant atm
-                #await self.caches[0].set(key, value)
                 await self._set(key, value, self.caches[0])
             return
         
+        new_idx = max(curr_cache_index - 1, 0)
+        
         if not curr_cache.is_db:
             await self._delete(key, curr_cache)
-        elif isinstance(self.caches[curr_cache_index - 1], InMemoryCache):
-            await self._set(key, await Client.from_dict(value), self.caches[curr_cache_index - 1])
-            #self.caches[curr_cache_index - 1].set(key, await Client.from_dict(value))
+        elif isinstance(self.caches[new_idx], InMemoryCache):
+            await self._set(key, await Client.from_dict(value), self.caches[new_idx])
         else:
-            await self._set(key, value, self.caches[curr_cache_index - 1])
-            #await self.caches[curr_cache_index - 1].set(key, value)
+            await self._set(key, value, self.caches[new_idx])
 
     async def _demote(self, key, curr_cache: BaseCache, curr_cache_index: int, value):
         """
@@ -129,11 +130,12 @@ class CacheManager:
         if not curr_cache.is_db:
             await self._delete(key, curr_cache)
         #await self.caches[curr_cache_index + 1].set(key, value)
-        print(self.caches[curr_cache_index + 1])
+        new_idx = min(curr_cache_index + 1, len(self.caches) - 1)
+        #print(self.caches[curr_cache_index + 1])
         if isinstance(value, Client):
-            await self._set(key, value.to_dict(), self.caches[curr_cache_index + 1])
+            await self._set(key, value.to_dict(), self.caches[new_idx])
         else:
-            await self._set(key, value, self.caches[curr_cache_index + 1])
+            await self._set(key, value, self.caches[new_idx])
                 
 
     async def _get(self, key, cache: BaseCache):

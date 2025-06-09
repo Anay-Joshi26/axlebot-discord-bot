@@ -58,8 +58,8 @@ class SongQueue:
         """
         Repeats the current song a specified number of times (default is 1)
         """
-        if num < 1 or num > 10:
-            raise ValueError("Number of repeats must be between 1 and 10")
+        if num < 1 or num > 20:
+            raise ValueError("Number of repeats must be between 1 and 20")
         async with self.lock:
             current_song = await self.queue[0].copy()
             for _ in range(num):
@@ -103,6 +103,7 @@ class SongQueue:
             return None
         
         self.current_song.stop()
+        self.current_song.is_first_in_queue = False
         
         if self.loop_current:
             await self.repeat()
@@ -110,10 +111,11 @@ class SongQueue:
 
             next_song = self.queue[0]
 
-            if Song.has_audio_url_expired(await next_song.audio_url, next_song.duration):
-                await next_song.refresh_audio_url_and_player()
+            # if next_song._audio_url is not None and Song.has_audio_url_expired(next_song._audio_url, next_song.duration):
+            #     await next_song.refresh_audio_url_and_player()
 
             next_song.is_looping = self.loop_current # True
+            next_song.is_first_in_queue = True
             return next_song
 
         await self.pop()
@@ -123,9 +125,10 @@ class SongQueue:
         
         next_song = self.queue[0]
         
-        if Song.has_audio_url_expired(await next_song.audio_url, next_song.duration):
-            await next_song.refresh_audio_url_and_player()
-        
+        # if Song.has_audio_url_expired(await next_song.audio_url, next_song.duration):
+        #     await next_song.refresh_audio_url_and_player()
+
+        next_song.is_first_in_queue = True
         return next_song
     
     async def clear(self) -> None:
