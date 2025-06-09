@@ -258,7 +258,7 @@ class MusicCog(commands.Cog):
 
                         if player is None:
                             await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), silent = True)
-                            asyncio.create_task(self.music_cog.play_next(ctx, client))
+                            asyncio.create_task(self.play_next(ctx, client))
                             return
 
                         voice_client.play(
@@ -296,7 +296,7 @@ class MusicCog(commands.Cog):
 
                 if player is None:
                     await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), silent = True)
-                    asyncio.create_task(self.music_cog.play_next(ctx, client))
+                    asyncio.create_task(self.play_next(ctx, client))
                     return
 
                 voice_client.play(
@@ -349,8 +349,8 @@ class MusicCog(commands.Cog):
             player = await next_song.player
 
             if player is None:
-                await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), silent = True)
-                asyncio.create_task(self.music_cog.play_next(ctx, client))
+                await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{next_song.name}` :(, please try again later"), silent = True)
+                asyncio.create_task(self.play_next(ctx, client))
                 return
             
             voice_client.play(player, after = lambda e: self.bot.loop.call_soon_threadsafe(

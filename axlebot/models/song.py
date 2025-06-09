@@ -142,7 +142,7 @@ class Song:
             self._audio_url = await Song.get_audio_url(self.yt_url)
         elif Song.has_audio_url_expired(self._audio_url, self.duration):
             self._audio_url = await Song.get_audio_url(self.yt_url)
-        
+        print(f"Audio URL for {self.name} ({self.artist}): {self._audio_url[:50]}...")
         if not await Song.is_url_valid(self._audio_url):
             return None
 
@@ -568,6 +568,7 @@ class Song:
             print(e)
             audio_url = None
         print("NEW URL")
+        print(audio_url[:50], "...")
         return audio_url
 
     @staticmethod

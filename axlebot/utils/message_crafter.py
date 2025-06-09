@@ -108,7 +108,7 @@ async def update_progress_bar_embed(song: Song, progress_embed: discord.Embed, s
 
     progress_bar: str = None # str
 
-    while progress < 98:
+    while progress < 96:
         #print("tick", song.name)
         if song.is_playing:
             progress = calculate_progress(song)
@@ -121,13 +121,13 @@ async def update_progress_bar_embed(song: Song, progress_embed: discord.Embed, s
         await asyncio.sleep(update_interval)
 
         if not song.is_first_in_queue:
-            asyncio.current_task().cancel()
+            #asyncio.current_task().cancel()
             return
         #print(f"Progress: {progress}%")
 
         if song.is_playing:
             if progress > ((bar_length-2)/bar_length)*100:
-                update_interval = 1.1
+                update_interval = 1
 
     progress_embed.set_field_at(0, name="Progress", value=update_progress_bar(100, bar_length = bar_length))
     await song.progress_message.edit(embed=progress_embed)
