@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from core.commands_handler import audio_command_check, in_voice_channel, cooldown_time
+from core.commands_handler import audio_command_check, in_voice_channel, cooldown_time, bot_use_permissions
 from music.song_request_handler import determine_query_type, convert_to_standard_youtube_url
 from models.song import Song, LyricsStatus
 import asyncio
@@ -70,6 +70,7 @@ class PlaylistCog(commands.Cog):
         self.music_cog : MusicCog = self.bot.get_cog('MusicCog')
 
     @commands.command(aliases = ['np', "newplaylist", "newpl", "createplaylist", "createpl", "create_playlist"])
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def new_playlist(self, ctx: commands.Context, *args):
         """
@@ -162,6 +163,7 @@ class PlaylistCog(commands.Cog):
             await ctx.send(embed=error_urls_embed)
 
     @commands.command(aliases = ['as', 'addsongs'])
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def add_songs(self, ctx: commands.Context, *args):
 
@@ -188,6 +190,7 @@ class PlaylistCog(commands.Cog):
 
     @commands.command(aliases = ['addsong'])
     @commands.check(in_voice_channel)
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def add_song(self, ctx: commands.Context, *args) -> None:
         """
@@ -226,6 +229,7 @@ class PlaylistCog(commands.Cog):
     
     @commands.command(aliases = ['qp', 'queuepl', 'queueplaylist', 'qpl', 'pp', 'playplaylist', 'playpl', 'queue_pl'])
     @commands.check(in_voice_channel)
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def queue_playlist(self, ctx: commands.Context, *args):
         """
@@ -234,7 +238,7 @@ class PlaylistCog(commands.Cog):
         if not args:
             await ctx.send("You didn't provide a playlist name")
             return
-        
+        shuffle = False
         if args[-1] == "-s" or args[-1] == "--shuffle" or args[-1] == "-sh" or args[-1] == "-shuffle" \
             or args[-1] == "--shuffled" or args[-1] == "-shuffled":
             shuffle = True
@@ -271,13 +275,21 @@ class PlaylistCog(commands.Cog):
                 song.is_first_in_queue = True
                 await self.music_cog.send_play_song_embed(ctx, song, client)
 
+                player = await song.player
+
+                if player is None:
+                    await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), silent = True)
+                    asyncio.create_task(self.music_cog.play_next(ctx, client))
+                    return
+
                 client.voice_client.play(
-                    await song.player,
+                    player,
                     after = lambda e: self.bot.loop.call_soon_threadsafe(
                                     lambda: asyncio.ensure_future(self.music_cog.play_next(ctx, client)))
                 )
 
     @commands.command(aliases = ['pls', 'playlist_info', 'playlistinfo'])
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def playlists(self, ctx: commands.Context, *args):
         """
@@ -307,6 +319,7 @@ class PlaylistCog(commands.Cog):
 
     
     @commands.command(aliases = ['dp', 'deletepl', 'deleteplaylist'])
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def delete_playlist(self, ctx: commands.Context, *args):
         """
@@ -335,6 +348,7 @@ class PlaylistCog(commands.Cog):
 
         
     @commands.command(aliases = ['remove_song', 'removesong', 'rs', "del_from_playlist","deletefromplaylist", "dfp", "del_from_pl"])
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def delete_song_from_playlist(self, ctx: commands.Context, *args):
         """
@@ -378,6 +392,7 @@ class PlaylistCog(commands.Cog):
         await ctx.send(embed = song_deleted)
 
     @commands.command(aliases = ["renameplaylist", "renamepl", "rename_pl"])
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def rename_playlist(self, ctx: commands.Context, *args):
         """

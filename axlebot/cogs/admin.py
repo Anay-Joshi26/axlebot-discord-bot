@@ -26,6 +26,7 @@ class AdminCog(commands.Cog):
             return
 
         successful, failed = [], []
+        error = None
 
         for name in args:
             print(f"Processing {entity_type}: {name}")   
@@ -46,12 +47,19 @@ class AdminCog(commands.Cog):
             should_update = (action == "add" and not is_already_present) or (action == "remove" and is_already_present)
 
             if should_update:
-                await change_fn(client, discord_id, action)
-                successful.append(entity.name)
+                try:
+                    await change_fn(client, discord_id, action)
+                    successful.append(entity.name)
+                except ValueError as e:
+                    failed.append(entity.name)
+                    error = str(e)
 
         if successful:
             embed = craft_update_access_embed(entity_type, successful, action)
             await ctx.send(embed = embed) #, allowed_mentions = discord.AllowedMentions.none()
+        if error:
+            embed = craft_general_error(f"{error}")
+            await ctx.send(embed = embed)
         if failed:
             embed = craft_update_access_embed(entity_type, failed, action, added=False)
             await ctx.send(embed = embed)
@@ -163,6 +171,65 @@ class AdminCog(commands.Cog):
         await client.server_config.set_delete_message_after_play(value == "true")
 
         await ctx.send(f"Delete message after play set to `{value.capitalize()}`.")
-        
 
-        
+    @commands.command(aliases = ['sac'])
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.check(has_manage_guild)
+    async def see_all_config(self, ctx: commands.Context, *args):
+        client: Client = await self.server_manager.get_client(ctx.guild.id)
+        config = client.server_config.to_dict()
+
+        role_id_fields, channel_id_fields = "permitted_roles_of_use", "permitted_channels_of_use"
+
+        lines = []
+
+        for key, value in config.items():
+            display_value = ""
+
+            if key == role_id_fields:
+                role_names = []
+                for role_id in value:
+                    role = ctx.guild.get_role(role_id)
+                    if role:
+                        role_names.append(role.name)
+                    else:
+                        role_names.append(f"[Unknown Role {role_id}]")
+                display_value = "[" + ", ".join(role_names) + "]"
+
+            elif key == channel_id_fields:
+                channel_names = []
+                for channel_id in value:
+                    channel = ctx.guild.get_channel(channel_id)
+                    if channel:
+                        channel_names.append(channel.name)
+                    else:
+                        channel_names.append(f"[Unknown Channel {channel_id}]")
+                display_value = "[" + ", ".join(channel_names) + "]"
+
+            else:
+                if isinstance(value, (list, set, tuple)):
+                    display_value = "[" + ", ".join(str(v) for v in value) + "]"
+                else:
+                    display_value = str(value)
+
+            lines.append(f"{key} = {display_value or 'None/Unknown/Empty'}")
+
+        full_description = "```\n" + "\n".join(lines) + "\n```"
+
+        embed = discord.Embed(
+            title=f"Server Configuration for {ctx.guild.name}",
+            description=full_description,
+            color=discord.Color.darker_gray(),
+            timestamp=ctx.message.created_at
+        )
+
+        embed.set_footer(text = 'This information has been sent you you privately')
+
+        await ctx.author.send(embed=embed)
+        await ctx.message.add_reaction("✅")
+
+
+
+            
+
+            

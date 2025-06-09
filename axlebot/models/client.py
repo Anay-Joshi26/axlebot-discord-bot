@@ -222,7 +222,7 @@ class Client:
         }
     
     @classmethod
-    async def from_dict(cls, data: dict, server_id: int | None = None):
+    async def from_dict(cls, data: dict, server_id: int | None = None) -> "Client":
         """
         Creates a client object from data dictionary.
         This client is a client which has just begun using the bot and has an empty queue.
@@ -248,6 +248,8 @@ class Client:
 
         server_config_data = data.get("server_config", {})
         client.server_config = ServerConfig.from_dict(server_config_data, client)
+
+        
 
         return client
 

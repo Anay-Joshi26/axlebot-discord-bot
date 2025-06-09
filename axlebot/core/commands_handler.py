@@ -24,7 +24,6 @@ def has_manage_guild(ctx: commands.Context):
 
     
 async def in_voice_channel(ctx):
-    return True
     user_vc = ctx.author.voice
     bot_vc = ctx.voice_client
 

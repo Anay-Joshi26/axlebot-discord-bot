@@ -111,8 +111,8 @@ class SongQueue:
 
             next_song = self.queue[0]
 
-            if Song.has_audio_url_expired(await next_song.audio_url, next_song.duration):
-                await next_song.refresh_audio_url_and_player()
+            # if next_song._audio_url is not None and Song.has_audio_url_expired(next_song._audio_url, next_song.duration):
+            #     await next_song.refresh_audio_url_and_player()
 
             next_song.is_looping = self.loop_current # True
             next_song.is_first_in_queue = True
@@ -125,8 +125,8 @@ class SongQueue:
         
         next_song = self.queue[0]
         
-        if Song.has_audio_url_expired(await next_song.audio_url, next_song.duration):
-            await next_song.refresh_audio_url_and_player()
+        # if Song.has_audio_url_expired(await next_song.audio_url, next_song.duration):
+        #     await next_song.refresh_audio_url_and_player()
 
         next_song.is_first_in_queue = True
         return next_song

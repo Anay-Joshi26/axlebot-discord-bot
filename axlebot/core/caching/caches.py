@@ -153,6 +153,7 @@ class FirestoreCache(BaseCache):
         from models.client import Client
         base_dict = Client.get_base_client_dict(key)
         await self.set(key, base_dict)
+        base_dict['newly_created'] = True
         return base_dict
         #return None
     

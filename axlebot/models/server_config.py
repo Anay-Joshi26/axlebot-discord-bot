@@ -11,6 +11,8 @@ class ServerConfig:
         self.permitted_roles_of_use = set()
         self.permitted_channels_of_use = set()
         self.delete_message_after_play = False
+        self.MAX_PERMITTED_ROLES = 10
+        self.MAX_PERMITTED_CHANNELS = 10
 
     async def _trigger_update(self):
         await self.client.update_changes_by_attribute("server_config", self.to_dict())
@@ -21,6 +23,9 @@ class ServerConfig:
 
         :param role_id: The ID of the role to add.
         """
+        if len(self.permitted_roles_of_use) >= self.MAX_PERMITTED_ROLES:
+            raise ValueError(f"Cannot add more than {self.MAX_PERMITTED_ROLES} roles. Please remove some before adding new ones.")
+        
         self.permitted_roles_of_use.add(role_id)
         if update_db:
             await self._trigger_update()
@@ -41,6 +46,9 @@ class ServerConfig:
 
         :param channel_id: The ID of the channel to add.
         """
+        if len(self.permitted_channels_of_use) >= self.MAX_PERMITTED_CHANNELS:
+            raise ValueError(f"Cannot add more than {self.MAX_PERMITTED_CHANNELS} channels. Please remove some before adding new ones.")
+        
         self.permitted_channels_of_use.add(channel_id)
         if update_db:
             await self._trigger_update()
@@ -80,7 +88,9 @@ class ServerConfig:
         return {
             "permitted_roles_of_use": [],
             "permitted_channels_of_use": [],
-            "delete_message_after_play": False
+            "delete_message_after_play": False,
+            "MAX_PERMITTED_ROLES": 10,
+            "MAX_PERMITTED_CHANNELS": 10
         }
 
     def to_dict(self) -> dict:

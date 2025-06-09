@@ -3,6 +3,8 @@ A file for utility functions
 """
 
 from typing import Tuple
+from datetime import datetime, timedelta
+# USE CONVERTORS FROM DISCORD PYTHON LIBRARY
 
 def discord_tag_to_id(tag: str) -> Tuple[int, str] | Tuple[None, None]:
     """
@@ -52,3 +54,18 @@ def convert_duration(duration):
     seconds = duration % 60
 
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}" if hours > 0 else f"{minutes:02d}:{seconds:02d}"
+
+def time_string_to_seconds(time_str: str) -> int:
+    """
+    Parses a time string in either MM:SS or HH:MM:SS format into seconds.
+    :param time_str: The time string to parse.
+    :return: The total number of seconds represented by the time string.
+    """
+    if len(time_str.split(":")) == 2:  # MM:SS format
+        time_obj = datetime.strptime(time_str, "%M:%S")
+        return time_obj.minute * 60 + time_obj.second
+    elif len(time_str.split(":")) == 3:  # HH:MM:SS format
+        time_obj = datetime.strptime(time_str, "%H:%M:%S")
+        return time_obj.hour * 3600 + time_obj.minute * 60 + time_obj.second
+    else:
+        raise ValueError("Time format not recognized. Use MM:SS or HH:MM:SS")

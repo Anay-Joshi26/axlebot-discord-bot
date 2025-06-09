@@ -15,7 +15,7 @@ NON_PAID_COOLDOWN : float = 5
 
 class MusicPlaybackButtons(discord.ui.View):
     def __init__(self, ctx : commands.Context, client : Client):
-        super().__init__(timeout=client.queue.current_song.duration+180)
+        super().__init__(timeout=client.queue.current_song.duration+43200)
         self.ctx = ctx
         self.client = client
 
@@ -145,6 +145,7 @@ class MusicCog(commands.Cog):
 
     @commands.command(aliases = ['mv'])
     @commands.check(in_voice_channel)
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def move(self, ctx, *args):
         """
@@ -201,7 +202,7 @@ class MusicCog(commands.Cog):
             asyncio.create_task(self.play_song(ctx, client, query))
         except Exception as e:
             print(f"Error in play command: {e}")
-            await ctx.send(embed=craft_general_error(e))
+            await ctx.send(embed=craft_general_error())
 
 
     async def play_song(self, ctx: commands.Context, client: Client, query: str, position : int = None):
@@ -253,8 +254,15 @@ class MusicCog(commands.Cog):
                         song.is_first_in_queue = True
                         await self.send_play_song_embed(ctx, song, client)
 
+                        player = await song.player
+
+                        if player is None:
+                            await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), silent = True)
+                            asyncio.create_task(self.music_cog.play_next(ctx, client))
+                            return
+
                         voice_client.play(
-                            await song.player,
+                            player,
                             after = lambda e: self.bot.loop.call_soon_threadsafe(
                                         lambda: asyncio.ensure_future(self.play_next(ctx, client))
                                     )
@@ -284,8 +292,15 @@ class MusicCog(commands.Cog):
                 song.is_first_in_queue = True
                 await self.send_play_song_embed(ctx, song, client)
 
+                player = await song.player
+
+                if player is None:
+                    await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), silent = True)
+                    asyncio.create_task(self.music_cog.play_next(ctx, client))
+                    return
+
                 voice_client.play(
-                    await song.player,
+                    player,
                     after = lambda e: self.bot.loop.call_soon_threadsafe(
                                         lambda: asyncio.ensure_future(self.play_next(ctx, client))
                                     )
@@ -307,9 +322,6 @@ class MusicCog(commands.Cog):
         try:
             print(client)
             queue, voice_client = client.queue, client.voice_client
-
-            print(queue.current_song.progress_message)
-            print(queue.current_song.name)
 
             last_progress_message = queue.current_song.progress_message
 
@@ -333,8 +345,15 @@ class MusicCog(commands.Cog):
                 return
             
             await self.send_play_song_embed(ctx, next_song, client)
+
+            player = await next_song.player
+
+            if player is None:
+                await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), silent = True)
+                asyncio.create_task(self.music_cog.play_next(ctx, client))
+                return
             
-            voice_client.play(await next_song.player, after = lambda e: self.bot.loop.call_soon_threadsafe(
+            voice_client.play(player, after = lambda e: self.bot.loop.call_soon_threadsafe(
                                         lambda: asyncio.ensure_future(self.play_next(ctx, client))
                                     ))
             # embed = craft_now_playing(next_song)
@@ -347,6 +366,7 @@ class MusicCog(commands.Cog):
 
     @commands.command(aliases = ['ps'])
     @commands.check(in_voice_channel)
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def pause(self, ctx):
         client = await self.server_manager.get_client(ctx.guild.id)
@@ -370,6 +390,7 @@ class MusicCog(commands.Cog):
 
     @commands.command(aliases = ['res'])
     @commands.check(in_voice_channel)
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def resume(self, ctx):
         client = await self.server_manager.get_client(ctx.guild.id)
@@ -392,13 +413,26 @@ class MusicCog(commands.Cog):
             await ctx.send("Cannot resume song, due to some complications")
 
     @commands.command(aliases = ['q'])
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
-    async def queue(self, ctx):
+    async def queue(self, ctx, num : int | None = None):
         client = await self.server_manager.get_client(ctx.guild.id)
-        embed = craft_queue(client.queue)
-        await ctx.send(embed = embed)
+        print("num", num)
+        if num is None or num > len(client.queue) or num < 1:
+            num = None
+            print("No number provided or number is invalid, showing full queue")
+        embed = craft_queue(client.queue, num = num)
+        try:
+            await ctx.send(embed = embed)
+        except Exception as e:
+            await ctx.send(embed = discord.Embed(
+                title="Too many songs in queue",
+                description="The queue is too long to send through Discord. But don't worry, the songs are still queued up!",
+                colour=embed.colour,
+            ))
 
     @commands.command(aliases = ['l'])
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def lyrics(self, ctx):
         client = await self.server_manager.get_client(ctx.guild.id)
@@ -415,6 +449,7 @@ class MusicCog(commands.Cog):
 
     @commands.command(aliases = ['pn', 'qn'])
     @commands.check(in_voice_channel)
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def queue_next(self, ctx, *args):
         """
@@ -441,6 +476,7 @@ class MusicCog(commands.Cog):
 
     @commands.command(aliases = ['skp', 'sk'])
     @commands.check(in_voice_channel)
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def skip(self, ctx):
         client = await self.server_manager.get_client(ctx.guild.id)
@@ -460,6 +496,7 @@ class MusicCog(commands.Cog):
 
     @commands.command(aliases=['stp'])
     @commands.check(in_voice_channel)
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def stop(self, ctx: commands.Context):
         client = await self.server_manager.get_client(ctx.guild.id)
@@ -494,6 +531,7 @@ class MusicCog(commands.Cog):
 
     @commands.command(aliases = ['lp'])
     @commands.check(in_voice_channel)
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def loop(self, ctx):
         client = await self.server_manager.get_client(ctx.guild.id)
@@ -512,6 +550,7 @@ class MusicCog(commands.Cog):
 
     @commands.command(aliases = ['del'])
     @commands.check(in_voice_channel)
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def delete(self, ctx, pos : int):
         
@@ -536,6 +575,7 @@ class MusicCog(commands.Cog):
     
     @commands.command(aliases = ['shuf', 'sh', 'shuff'])
     @commands.check(in_voice_channel)
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def shuffle(self, ctx):
         client = await self.server_manager.get_client(ctx.guild.id)
@@ -552,6 +592,7 @@ class MusicCog(commands.Cog):
 
     @commands.command(aliases = ['rep'])
     @commands.check(in_voice_channel)
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def repeat(self, ctx, num : int = 1):
         client = await self.server_manager.get_client(ctx.guild.id)
@@ -581,6 +622,7 @@ class MusicCog(commands.Cog):
             await ctx.send(e)
 
     @commands.command(aliases = ['nowplaying'])
+    @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def now_playing(self, ctx):
         client = await self.server_manager.get_client(ctx.guild.id)

@@ -60,7 +60,7 @@ from core.extensions.firebase import fbc
 from cogs.music import MusicCog
 from cogs.playlist import PlaylistCog
 from cogs.admin import AdminCog
-from core.commands_handler import RateLimitCheckFailure, NotInVoiceChannelCheckFailure, has_manage_guild
+from core.commands_handler import NotInVoiceChannelCheckFailure, has_manage_guild, NoPermissionsCheckFailure
 from core.extensions import cache_manager
 
 intents = discord.Intents.default()
@@ -95,14 +95,20 @@ async def on_guild_join(guild: discord.Guild):
     """
     print(f"Joined a new guild: {guild.name} (ID: {guild.id})")
 
-    is_new = True
+    client, is_new = await server_manager.get_client(guild.id, wait_msg=False, return_newly_created=True)
 
-    data_dict = await server_manager.get_client(guild.id, wait_msg=False)
+    if is_new:
+        music_channel_id = None
+        for channel in guild.text_channels:
+            if channel.name.lower() == "music":
+                music_channel_id = channel.id
+                break  # stop after first match
+        if music_channel_id is not None:
+            try:
+                await client.server_config.add_permitted_channel(music_channel_id)
+            except ValueError as e:
+                print(f"Error adding music channel: {e}")
 
-    #data_dict = await fbc.get_client_dict(guild.id)
-    if not data_dict.get("newly_created", False):
-        print(f"Guild {guild.name} already exists in the database, skipping creation")
-        is_new = False
     # Optional: send a message to the system channel or first text channel
     if guild.system_channel and guild.system_channel.permissions_for(guild.me).send_messages:
         await guild.system_channel.send(f"{'Glad to be back' if not is_new else 'Thank you for adding me to the server'}!\n{'To help you get started see the help command below' if is_new else 'As a returning user, below is a refresher on the help command'}")
@@ -120,7 +126,7 @@ async def on_guild_join(guild: discord.Guild):
 
 
 @bot.event
-async def on_command_error(ctx, error):
+async def on_command_error(ctx: commands.Context, error):
     if isinstance(error, commands.CommandOnCooldown):
         await ctx.send(f"Slow down there! Wait {round(error.retry_after, 2)} seconds before sending another message.", 
                        delete_after=6,
@@ -129,35 +135,16 @@ async def on_command_error(ctx, error):
         await ctx.send("Invalid argument provided.", 
                        delete_after=6,
                        silent = True)
+    elif isinstance(error, (NotInVoiceChannelCheckFailure, NoPermissionsCheckFailure)):
+        await ctx.send(f"{error}", 
+                       delete_after=7,
+                       silent = True)
     elif isinstance(error, commands.CommandNotFound):
-        pass  # Ignore command not found errors
+        await ctx.message.add_reaction("❓", ) # question mark
+        await asyncio.sleep(15)
+        await ctx.message.remove_reaction("❓", ctx.me)  # Remove the reaction after a short delay
     else:
-        #raise error
-        await ctx.send(f"{error}", delete_after=15, silent = True)
-
-    # if isinstance(error, RateLimitCheckFailure):
-    #     await ctx.send(f"Slow down there! Wait {ctx.kwargs['waiting_time']} seconds before sending another message")
-
-    # if isinstance(error, NotInVoiceChannelCheckFailure):
-    #     await ctx.send("You must be in a voice channel to use this command")
-
-    #await ctx.send(f"{error}", delete_after=15)
-
-    
-# @bot.event
-# async def on_guild_join(guild: discord.Guild):
-#     """
-#     When the bot joins a new guild, this function is called
-#     This will create a new guild entry in the database and populate it with the default settings.
-#     """
-
-#     default_data = {
-#                 "guild_id": guild.id,
-#                 "max_concurrent_song_loadings": 2,
-#                 "playlists": [],
-#                 "acceptable_delay": 5
-#             }
-#     fbc.set_client(guild.id, default_data)
+        print(f"An error occurred: {error}")
 
 class NextPageButton(discord.ui.Button):
     def __init__(self):
@@ -241,6 +228,12 @@ async def help(ctx: commands.Context, *args):
         if has_manage_guild(ctx):
             await ctx.author.send(embed=craft_admin_help_command())
             await ctx.message.add_reaction("✅")
+            await asyncio.sleep(10)
+            await ctx.message.remove_reaction("✅", ctx.me)
+        else:
+            await ctx.message.add_reaction("❌")
+            await asyncio.sleep(10)
+            await ctx.message.remove_reaction("❌", ctx.me)
     
     
 bot.run(os.getenv("SECRET_KEY"))

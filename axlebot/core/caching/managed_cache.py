@@ -30,7 +30,7 @@ class CacheManager:
         """
         return self.caches[0]
 
-    async def get(self, key) -> dict|None:
+    async def get(self, key, return_newly_created = False):
         """
         Get an item from the cache.
         """
@@ -52,8 +52,11 @@ class CacheManager:
             if value is None:
                 #print('aaa')
                 continue
-            
-            final_client_obj = await self._promote(key, cache, i, value, to_top=True)
+
+            final_client_obj, newly_created = await self._promote(key, cache, i, value, to_top=True)
+
+            if return_newly_created:
+                return final_client_obj, newly_created
 
             return final_client_obj
         
@@ -82,12 +85,16 @@ class CacheManager:
         print(f"Promoting {key} from cache {curr_cache_index}")
         from models.client import Client
         if curr_cache_index == 0:
-            return value
+            return value, False  # Already in the top cache
 
         if to_top:
             if not curr_cache.is_db:
                 await self._delete(key, curr_cache)
             if isinstance(self.caches[0], InMemoryCache):
+                is_newly_created = False
+                if 'newly_created' in value and value['newly_created']:
+                    is_newly_created = True
+                    del value['newly_created']
                 client_obj = await Client.from_dict(value)
                 new_client_obj_dict = client_obj.to_dict()
                 if new_client_obj_dict != value:
@@ -96,9 +103,7 @@ class CacheManager:
                         await self._set(key, new_client_obj_dict, db)
                     print(f"[INFO] Updated client {key} to match the db")
                 await self._set(key, client_obj, self.caches[0])
-
-                return client_obj
-
+                return client_obj, is_newly_created
             else:
                 # rendunant atm
                 await self._set(key, value, self.caches[0])
