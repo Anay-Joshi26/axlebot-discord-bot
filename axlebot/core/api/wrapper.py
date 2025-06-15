@@ -33,11 +33,11 @@ async def fetch_data(url: str, params: dict | None = None, timeout: int = 10):
             print("Response is not valid JSON")
             return None, None
 
-scheme = 'https' if os.getenv('FASTAPI_HTTPS') == 'true' else 'http'
-if scheme == 'https':
-    BASE_URL = f"{scheme}://{os.getenv('FASTAPI_HOST')}/api"
+https = True if os.getenv('FASTAPI_HTTPS') == 'true' else False
+if https:
+    BASE_URL = f"{os.getenv('FASTAPI_HOST')}/api"
 else:
-    BASE_URL = f"{scheme}://{os.getenv('FASTAPI_HOST')}:{os.getenv('FASTAPI_PORT')}/api"
+    BASE_URL = f"{os.getenv('FASTAPI_HOST')}:{os.getenv('FASTAPI_PORT')}/api"
 
 print(f"Using API base URL: {BASE_URL}")
 
