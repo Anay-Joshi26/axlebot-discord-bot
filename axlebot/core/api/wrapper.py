@@ -17,6 +17,7 @@ async def fetch_data(url: str, params: dict | None = None, timeout: int = 5):
     :return: A tuple of (status_code, json_data) if successful, or (None, None) on errors.
     """
     async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=timeout)  # total time budget
         try:
             async with session.get(url, params=params, timeout=timeout) as response:
                 status = response.status
@@ -33,7 +34,7 @@ async def fetch_data(url: str, params: dict | None = None, timeout: int = 5):
             return status, None
 
 
-BASE_URL = f"http://localhost:{os.getenv('FASTAPI_PORT')}"
+BASE_URL = f"http://localhost:{os.getenv('FASTAPI_PORT')}/api"
 
 async def get_youtube_info(query: str) -> dict | None:
     url = f"{BASE_URL}/youtube_info"
