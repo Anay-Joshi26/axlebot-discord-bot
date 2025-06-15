@@ -7,7 +7,7 @@ from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 
 
-async def fetch_data(url: str, params: dict | None = None, timeout: int = 5):
+async def fetch_data(url: str, params: dict | None = None, timeout: int = 10):
     """
     Wrapper for making GET requests to the provided URL with optional query params.
 
@@ -16,10 +16,10 @@ async def fetch_data(url: str, params: dict | None = None, timeout: int = 5):
     :param timeout: The timeout for the request in seconds.
     :return: A tuple of (status_code, json_data) if successful, or (None, None) on errors.
     """
-    async with aiohttp.ClientSession() as session:
-        timeout = aiohttp.ClientTimeout(total=timeout)  # total time budget
+    timeout = aiohttp.ClientTimeout(total=timeout) # total time budget
+    async with aiohttp.ClientSession(timeout=timeout) as session:  
         try:
-            async with session.get(url, params=params, timeout=timeout) as response:
+            async with session.get(url, params=params, headers = {"Accept": "application/json"}) as response:
                 status = response.status
                 json_data = await response.json()
                 return status, json_data
@@ -31,14 +31,16 @@ async def fetch_data(url: str, params: dict | None = None, timeout: int = 5):
             return None, None
         except aiohttp.ContentTypeError:
             print("Response is not valid JSON")
-            return status, None
+            return None, None
 
 
-BASE_URL = f"http://localhost:{os.getenv('FASTAPI_PORT')}/api"
+BASE_URL = f"{'https' if os.getenv('FASTAPI_HTTPS') == 'true' else 'http'}://{os.getenv('FASTAPI_HOST')}:{os.getenv('FASTAPI_PORT')}/api"
 
-async def get_youtube_info(query: str) -> dict | None:
+print(f"Using API base URL: {BASE_URL}")
+
+async def get_youtube_info(query: str, is_yt_url = False) -> dict | None:
     url = f"{BASE_URL}/youtube_info"
-    params = {"query": query}
+    params = {"query": query, "is_yt_url": "true" if is_yt_url else "false"}
     status, data = await fetch_data(url, params=params)
     if status != 200 or data is None:
         print(f"Failed to get youtube info for query: {query}")
@@ -62,4 +64,3 @@ async def get_lyrics(name: str, artist: str) -> dict | None:
         print(f"Failed to get lyrics for {name} by {artist}")
         return None
     return data
-
