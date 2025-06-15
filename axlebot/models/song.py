@@ -160,7 +160,7 @@ class Song:
         print("searching song")
         yt_url, name, duration = await Song.search_youtube_video(youtube_query)
         print("song search finished, got url, getting info")
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         data = await loop.run_in_executor(
             None, lambda: yt_dl.extract_info(yt_url, download=False)
         )
@@ -262,7 +262,7 @@ class Song:
     @classmethod
     async def SpotifySong(cls, name, artist, thumbnail_url):
         yt_url, _ , duration = await Song.search_youtube_video(f"{name} by {artist} audio")
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         data = await loop.run_in_executor(
             None, lambda: yt_dl.extract_info(yt_url, download=False)
         )
@@ -280,7 +280,7 @@ class Song:
         if name is None or duration is None:
             print(f"Failed to fetch song info for URL: {yt_url}")
             return None
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         data = await loop.run_in_executor(
             None, lambda: yt_dl.extract_info(yt_url, download=False)
         )
@@ -558,7 +558,7 @@ class Song:
     async def get_audio_url(yt_url: str) -> str:
         print("GETTING NEW URL")
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             data = await loop.run_in_executor(
                 None, lambda: yt_dl.extract_info(yt_url, download=False)
             )
