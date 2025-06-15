@@ -19,6 +19,7 @@ from async_lru import alru_cache
 from functools import lru_cache
 from uuid import uuid1
 from utils import time_string_to_seconds
+from core.api.wrapper import *
 #from music.song_request_handler import extract_title_and_artist
 
 load_dotenv(find_dotenv())
@@ -261,35 +262,55 @@ class Song:
     
     @classmethod
     async def SpotifySong(cls, name, artist, thumbnail_url):
-        yt_url, _ , duration = await Song.search_youtube_video(f"{name} by {artist} audio")
-        loop = asyncio.get_running_loop()
-        data = await loop.run_in_executor(
-            None, lambda: yt_dl.extract_info(yt_url, download=False)
-        )
-        audio_url = data["url"]
-        player = None
-        song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url, is_spot = True, is_yt = False)
+        song: Song = cls.CreateSong(f"{name} by {artist} audio")
+        song.thumbnail_url = thumbnail_url
         return song
+        # yt_url, _ , duration = await Song.search_youtube_video(f"{name} by {artist} audio")
+        # loop = asyncio.get_running_loop()
+        # data = await loop.run_in_executor(
+        #     None, lambda: yt_dl.extract_info(yt_url, download=False)
+        # )
+        # audio_url = data["url"]
+        # player = None
+        # song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url, is_spot = True, is_yt = False)
+        # return song
     
     async def copy(self):
         return Song(self.duration, self.artist, self.yt_url, await self.player, self.name, self.thumbnail_url, await self.audio_url, song_type=self.type, is_playlist = self.is_playlist)
     
     @classmethod
     async def SongFromYouTubeURL(cls, yt_url):
-        name, duration = await Song.search_youtube_video_by_url(yt_url)
-        if name is None or duration is None:
-            print(f"Failed to fetch song info for URL: {yt_url}")
+        # name, duration = await Song.search_youtube_video_by_url(yt_url)
+        # if name is None or duration is None:
+        #     print(f"Failed to fetch song info for URL: {yt_url}")
+        #     return None
+        # loop = asyncio.get_running_loop()
+        # data = await loop.run_in_executor(
+        #     None, lambda: yt_dl.extract_info(yt_url, download=False)
+        # )
+        # artist = data.get("artist") or data.get("uploader") or "Unknown Artist"
+        # thumbnail_url = data["thumbnail"]
+        # audio_url = data["url"]
+        # player = None
+        # song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url)
+        # return song
+        data = await Song.get_youtube_video_info(yt_url, is_yt_url=True)
+
+        if data is None:
+            print(f"Failed to fetch song info for query: {yt_url}")
             return None
-        loop = asyncio.get_running_loop()
-        data = await loop.run_in_executor(
-            None, lambda: yt_dl.extract_info(yt_url, download=False)
-        )
-        artist = data.get("artist") or data.get("uploader") or "Unknown Artist"
+        artist = data.get("artist") or data.get("uploader") or data.get("channel") or "Unknown Artist"
         thumbnail_url = data["thumbnail"]
         audio_url = data["url"]
+        duration = data["duration"]
+        yt_url = data["webpage_url"]
+        name = data["title"]
         player = None
+        print("SONG CREATED")
+        # Create the song instance
         song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url)
         return song
+
 
     def get_fresh_player(self):
         return discord.FFmpegPCMAudio(self.audio_url, **ffmpeg_options)
@@ -485,16 +506,19 @@ class Song:
     
     @staticmethod
     #@alru_cache(maxsize=128, ttl=86400)
-    async def get_youtube_video_info(query: str) -> dict:
-        loop = asyncio.get_running_loop()
-        data = await loop.run_in_executor(
-            None, lambda: yt_dl.extract_info(f"ytsearch1:{query}", download=False)
-        )
-        if not data or "entries" not in data or len(data["entries"]) == 0:
-            print(f"No results found for query: {query}")
-            return None
-        data = data["entries"][0]
+    async def get_youtube_video_info(query: str, is_yt_url = False) -> dict:
+        # loop = asyncio.get_running_loop()
+        # data = await loop.run_in_executor(
+        #     None, lambda: yt_dl.extract_info(f"{query if is_yt_url else f'ytsearch1{query}'}", download=False)
+        # )
+        # if not data or "entries" not in data or len(data["entries"]) == 0:
+        #     print(f"No results found for query: {query}")
+        #     return None
+        # data = data["entries"][0]
+        # return data
+        data = await get_youtube_info(query, is_yt_url=is_yt_url)
         return data
+
 
     
     @staticmethod
