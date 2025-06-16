@@ -36,7 +36,7 @@ async def proxy_audio(request: Request, url: str = Query(..., description="The f
                 async with session.get(url, headers=headers) as resp:
                     if resp.status != 200:
                         raise Exception(f"Failed to fetch audio. Status code: {resp.status}")
-                    async for chunk in resp.content.iter_chunked(1024):
+                    async for chunk in resp.content.iter_chunked(4096):
                         yield chunk
 
         # Optionally pre-fetch headers before streaming
