@@ -24,7 +24,7 @@ async def get_youtube_video_info(query: str, is_yt_url = False) -> dict | None:
     
     sorted_audio_urls = _sorted_audio_formats(data)
 
-    print(f"Sorted audio URLs: {sorted_audio_urls}")
+    #print(f"Sorted audio URLs: {sorted_audio_urls}")
     if "formats" in data:
         del data["formats"]  # Remove formats to avoid redundancy
     

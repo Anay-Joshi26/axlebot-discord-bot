@@ -141,19 +141,21 @@ class Song:
             self._audio_url = await Song.get_audio_url(self.yt_url)
         elif Song.has_audio_url_expired(self._audio_url, self.duration):
             self._audio_url = await Song.get_audio_url(self.yt_url)
+
+        if PROXY:
+            self._audio_url = PROXY + urllib.parse.quote(self._audio_url)
+
         print(f"Audio URL for {self.name} ({self.artist}): {self._audio_url[:50]}...")
         if not await Song.is_url_valid(self._audio_url):
             while self.all_untried_song_streams:
                 next_url = self.all_untried_song_streams.pop(0)
+                next_url = PROXY + urllib.parse.quote(next_url) if PROXY else next_url
                 print(f"Trying next audio URL...")
                 if not Song.has_audio_url_expired(next_url, self.duration) and await Song.is_url_valid(next_url):
                     self._audio_url = next_url
                     print(f"Valid audio URL found: {self._audio_url[:50]}...")
                     return self._audio_url
             return None
-        
-        if PROXY:
-            return PROXY + urllib.parse.quote(self._audio_url)
 
         return self._audio_url
     
