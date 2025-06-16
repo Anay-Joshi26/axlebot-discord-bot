@@ -47,11 +47,7 @@ async def proxy_audio(request: Request, url: str = Query(..., description="The f
 
         return StreamingResponse(
             audio_stream(),
-            media_type=content_type,
-            headers={
-                "Content-Type": content_type,
-                "Accept-Ranges": "bytes"
-            }
+            media_type=content_type
         )
 
     except Exception as e:
