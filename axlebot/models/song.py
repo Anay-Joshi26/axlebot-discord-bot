@@ -63,6 +63,8 @@ sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 #     "options": "-vn", 
 # }
 
+PROXY = "" if os.getenv("PROXY") == "None" else os.getenv("PROXY")
+
 yt_dl_options = {
     "format": "bestaudio/best",
     "noplaylist": True,
@@ -149,6 +151,9 @@ class Song:
                     print(f"Valid audio URL found: {self._audio_url[:50]}...")
                     return self._audio_url
             return None
+        
+        if PROXY:
+            return PROXY + urllib.parse.quote(self._audio_url)
 
         return self._audio_url
     
@@ -255,9 +260,28 @@ class Song:
 
     @staticmethod
     def has_audio_url_expired(audio_url, duration) -> bool:
-        expire_value = urllib.parse.parse_qs(urllib.parse.urlparse(audio_url).query).get('expire', [None])[0]
-        if expire_value is None or time.time() + duration + 3*60*60 > float(expire_value):
-            print("AUDIO URL EXPIRED")
+        # Try query param first
+        parsed = urllib.parse.urlparse(audio_url)
+        query_params = urllib.parse.parse_qs(parsed.query)
+        expire_value = query_params.get('expire', [None])[0]
+
+        if expire_value is None:
+            # Try to extract from path: e.g., /expire/1750009524/
+            match = re.search(r'/expire/(\d{10})', parsed.path)
+            if match:
+                expire_value = match.group(1)
+
+        if expire_value is None:
+            # If still not found, assume expired for safety
+            print("AUDIO URL EXPIRED (no expire param)")
+            return True
+
+        try:
+            if time.time() + duration + 3 * 60 * 60 > float(expire_value):
+                print("AUDIO URL EXPIRED")
+                return True
+        except ValueError:
+            print("AUDIO URL EXPIRED (invalid expire value)")
             return True
 
         return False
@@ -597,6 +621,7 @@ class Song:
             # #data = yt_dl.extract_info(yt_url, download=False)
             # audio_url = data["url"]
             data = await get_youtube_audio_url(yt_url)
+            print("GOT DATA", data)
             if not data or "audio_urls" not in data or len(data["audio_urls"]) == 0:
                 print(f"No audio URLs found for YouTube URL: {yt_url}")
                 return None
