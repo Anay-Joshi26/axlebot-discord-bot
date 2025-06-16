@@ -264,7 +264,7 @@ class MusicCog(commands.Cog):
                         voice_client.play(
                             player,
                             after = lambda e: self.bot.loop.call_soon_threadsafe(
-                                        lambda: asyncio.ensure_future(self.play_next(ctx, client))
+                                        lambda: asyncio.ensure_future(self._after_playback(e, ctx, client))
                                     )
 
                         )
@@ -302,7 +302,7 @@ class MusicCog(commands.Cog):
                 voice_client.play(
                     player,
                     after = lambda e: self.bot.loop.call_soon_threadsafe(
-                                        lambda: asyncio.ensure_future(self.play_next(ctx, client))
+                                        lambda: asyncio.ensure_future(self._after_playback(e, ctx, client))
                                     )
                 )
             else:
@@ -354,7 +354,7 @@ class MusicCog(commands.Cog):
                 return
             
             voice_client.play(player, after = lambda e: self.bot.loop.call_soon_threadsafe(
-                                        lambda: asyncio.ensure_future(self.play_next(ctx, client))
+                                        lambda: asyncio.ensure_future(self._after_playback(e, ctx, client))
                                     ))
             # embed = craft_now_playing(next_song)
             # progress_message = await ctx.send(embed = embed)
@@ -363,6 +363,12 @@ class MusicCog(commands.Cog):
             print(f"Error in play_next: {e}")
             await ctx.send(embed=craft_general_error(e))
 
+    async def _after_playback(self, error, ctx, client):
+        if error:
+            print(f"Error in play_next: {error}")
+            await ctx.send(embed=craft_general_error())
+
+        await self.play_next(ctx, client)
 
     @commands.command(aliases = ['ps'])
     @commands.check(in_voice_channel)

@@ -285,7 +285,7 @@ class PlaylistCog(commands.Cog):
                 client.voice_client.play(
                     player,
                     after = lambda e: self.bot.loop.call_soon_threadsafe(
-                                    lambda: asyncio.ensure_future(self.music_cog.play_next(ctx, client)))
+                                    lambda: asyncio.ensure_future(self.music_cog._after_playback(e, ctx, client)))
                 )
 
     @commands.command(aliases = ['pls', 'playlist_info', 'playlistinfo'])
