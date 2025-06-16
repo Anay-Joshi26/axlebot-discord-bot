@@ -7,7 +7,7 @@ from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 
 
-async def fetch_data(url: str, params: dict | None = None, timeout: int = 10):
+async def fetch_data(url: str, params: dict | None = None, timeout: int = 20):
     """
     Wrapper for making GET requests to the provided URL with optional query params.
 

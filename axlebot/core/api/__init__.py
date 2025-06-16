@@ -43,14 +43,13 @@ async def proxy_audio(request: Request, url: str = Query(..., description="The f
         async with aiohttp.ClientSession(timeout=None) as session:
             async with session.head(url, headers=headers) as head_resp:
                 content_type = head_resp.headers.get("Content-Type", "audio/webm")
-                content_length = head_resp.headers.get("Content-Length")
+                #content_length = head_resp.headers.get("Content-Length")
 
         return StreamingResponse(
             audio_stream(),
             media_type=content_type,
             headers={
                 "Content-Type": content_type,
-                **({"Content-Length": content_length} if content_length else {}),
                 "Accept-Ranges": "bytes"
             }
         )
