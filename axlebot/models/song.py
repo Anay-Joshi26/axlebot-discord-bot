@@ -622,12 +622,12 @@ class Song:
             # )
             # #data = yt_dl.extract_info(yt_url, download=False)
             # audio_url = data["url"]
-            data = await get_youtube_audio_url(yt_url)
-            print("GOT DATA", data)
-            if not data or "audio_urls" not in data or len(data["audio_urls"]) == 0:
+            audio_urls = await get_youtube_audio_url(yt_url)
+            print("GOT len(audio_urls)", len(audio_urls))
+            if not audio_urls or len(audio_urls) == 0:
                 print(f"No audio URLs found for YouTube URL: {yt_url}")
                 return None
-            audio_url = data.get("audio_urls")[0]
+            audio_url = audio_urls[0]
 
         except Exception as e:
             print(e)

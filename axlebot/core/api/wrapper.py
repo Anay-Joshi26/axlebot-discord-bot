@@ -2,6 +2,7 @@ import aiohttp
 import asyncio
 import os
 from dotenv import load_dotenv, find_dotenv
+from typing import Union, List
 
 
 load_dotenv(find_dotenv())
@@ -50,14 +51,14 @@ async def get_youtube_info(query: str, is_yt_url = False) -> dict | None:
         return None
     return data
 
-async def get_youtube_audio_url(video_url: str) -> str | None:
+async def get_youtube_audio_url(video_url: str) -> List[str]:
     url = f"{BASE_URL}/youtube_audio_url"
     params = {"video_url": video_url}
     status, data = await fetch_data(url, params=params)
-    if status != 200 or data is None or "audio_url" not in data:
+    if status != 200 or data is None or "audio_urls" not in data:
         print(f"Failed to get youtube audio url for video: {video_url}")
         return None
-    return data["audio_url"]
+    return data["audio_urls"]
 
 async def get_lyrics(name: str, artist: str) -> dict | None:
     url = f"{BASE_URL}/lyrics"
