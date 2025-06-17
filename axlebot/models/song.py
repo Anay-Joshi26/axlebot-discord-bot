@@ -85,9 +85,7 @@ yt_dl_options = {
 }
 
 ffmpeg_options = {
-    "before_options": (
-        "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 "
-    ),
+    "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5" ,
     "options": "-vn -headers 'Referer: https://www.youtube.com/\r\nOrigin: https://www.youtube.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'"
 }
 
@@ -340,8 +338,16 @@ class Song:
         return song
 
 
-    def get_fresh_player(self):
-        return discord.FFmpegPCMAudio(self.audio_url, **ffmpeg_options)
+    async def get_fresh_player(self, additional_before_options : str = None, additional_options: str = None):
+        """
+        Returns a fresh FFmpegPCMAudio player for the song.
+        """
+        new_ffmpeg_options = ffmpeg_options.copy()
+        if additional_before_options:
+            new_ffmpeg_options["before_options"] += f" {additional_before_options}"
+        if additional_options:
+            new_ffmpeg_options["options"] += f" {additional_options}"
+        return discord.FFmpegPCMAudio(await self.audio_url, **new_ffmpeg_options)
     
     def get_lyrics(self):
         if self._lyrics_status == LyricsStatus.FETCHED:
@@ -356,72 +362,6 @@ class Song:
         self._lyrics_status = LyricsStatus[data['status']]
         self.lyrics = data.get('lyrics', None)
         return data['lyrics']
-
-        # words_to_ignore = ["(offical video)", "(offical audio)", "(lyrics)", "(offical music video)", "[official music video]", "official", "audio", "video", "lyrics", "music video", \
-        #                    "(video)", "(audio)", "(lyric video)", "(lyric)", "(music video)", "(official lyric video)", "(official lyric)", "()", "~", "( )", "( Music )", \
-        #                     "visualiser", "visualizer", "(visualiser)", "(visualizer)", "[]", "[ ]", f"{self.artist}", " - ", "ft.", "feat.", "-", "- ", " -"]
-        # name_to_use = self.name
-
-        # for word in words_to_ignore*2: # to make sure we remove all instances we do it twice
-        #     name_to_use = re.sub(re.escape(word), "", name_to_use, flags=re.IGNORECASE).strip()
-        #     if "ft." in name_to_use:
-        #         name_to_use = name_to_use[:name_to_use.index("ft.")]
-        #     elif "feat." in name_to_use:
-        #         name_to_use = name_to_use[:name_to_use.index("feat.")]
-
-        # #extract_title_and_artist
-        
-
-        # print(f"Fetching lyrics for {name_to_use} by {self.artist}")
-        
-        # if URL is None:
-        #     URL = f"https://api.lyrics.ovh/v1/{urllib.parse.quote(self.artist)}/{urllib.parse.quote(name_to_use)}"
-            
-
-        # self._lyrics_status = LyricsStatus.FETCHING
-        # self.lyrics = None
-
-        # try:
-        #     async with aiohttp.ClientSession() as session:
-        #         async with session.get(URL) as response:
-        #             content_type = response.headers.get("Content-Type", "")
-
-        #             if response.status == 200:
-        #                 # Expected: valid lyrics data
-        #                 data = await response.json()
-        #                 res_lyrics = data.get('lyrics')
-        #                 if res_lyrics:
-        #                     self.lyrics = res_lyrics.replace('\n\n', '\n')
-        #                     self._lyrics_status = LyricsStatus.FETCHED
-        #                 else:
-        #                     self._lyrics_status = LyricsStatus.NO_LYRICS_FOUND
-
-        #             elif response.status == 404 and "application/json" in content_type:
-        #                 # 404 but still a valid JSON with an error message
-        #                 data = await response.json()
-        #                 if data.get("error") == "No lyrics found":
-        #                     self._lyrics_status = LyricsStatus.NO_LYRICS_FOUND
-        #                 else:
-        #                     self._lyrics_status = LyricsStatus.ERROR
-
-        #             else:
-        #                 # Unexpected response or non-JSON 404
-        #                 self._lyrics_status = LyricsStatus.ERROR
-
-        #             print(f"Lyrics status for {name_to_use} by {self.artist}: {self._lyrics_status.name}")
-
-        # except Exception as e:
-        #     print("Error fetching lyrics:", e)
-        #     self._lyrics_status = LyricsStatus.ERROR
-        #     self.lyrics = None
-
-            # if self.artist and tries == 1:
-            #     await self.fetch_lyrics(
-            #         f"https://lyrist.vercel.app/api/{urllib.parse.quote(name_to_use)}", tries + 1
-            #     )
-
-
-        
 
     @classmethod
     async def YouTubePlaylistSongList(cls, yt_playlist_link, max_concurrent_song_loadings: int = 5):

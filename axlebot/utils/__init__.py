@@ -69,3 +69,33 @@ def time_string_to_seconds(time_str: str) -> int:
         return time_obj.hour * 3600 + time_obj.minute * 60 + time_obj.second
     else:
         raise ValueError("Time format not recognized. Use MM:SS or HH:MM:SS")
+    
+def parse_seek_time(time_str: str) -> float:
+    """
+    Parses a time string in various formats (SECONDS, MM:SS, HH:MM:SS, SECONDS.FRACTION) into total seconds.
+
+    :param time_str: The time string to parse.
+    :return: The total number of seconds represented by the time string.
+    :raises ValueError: If the time string is in an invalid format.
+    """
+    parts = time_str.split(":")
+
+    try:
+        if len(parts) == 1:
+            # SECONDS or SECONDS.FRACTION
+            return float(parts[0])
+        elif len(parts) == 2:
+            # MM:SS
+            minutes = int(parts[0])
+            seconds = float(parts[1])
+            return minutes * 60 + seconds
+        elif len(parts) == 3:
+            # HH:MM:SS or HH:MM:SS.mmm
+            hours = int(parts[0])
+            minutes = int(parts[1])
+            seconds = float(parts[2])
+            return hours * 3600 + minutes * 60 + seconds
+        else:
+            raise ValueError("Invalid time format")
+    except ValueError:
+        raise ValueError("Failed to parse time string")

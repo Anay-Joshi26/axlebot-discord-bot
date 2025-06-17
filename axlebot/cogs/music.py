@@ -9,6 +9,7 @@ from core.server_manager import ServerManager
 from models.client import Client
 from music.songs_queue import SongQueue
 from discord.ext.commands import BucketType, CommandOnCooldown
+from utils import parse_seek_time
 
 PAID_COOLDOWN : float = 1
 NON_PAID_COOLDOWN : float = 5
@@ -645,6 +646,80 @@ class MusicCog(commands.Cog):
         embed = await craft_now_playing(current_song)
         progress_message = await ctx.send(embed = embed, view = MusicPlaybackButtons(ctx, client), silent = True)
         current_song.progress_message = progress_message
+
+    @commands.command()
+    @commands.check(bot_use_permissions)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    async def seek(self, ctx, new_time: str):
+        client = await self.server_manager.get_client(ctx.guild.id)
+
+        if client.voice_client is None or client.queue.current_song is None:
+            await ctx.send("No song is currently playing, `-p <song name>` to play a song")
+            return
+        
+        info_msg = """
+                You can use any of the following time formats when seeking:
+
+                • `SECONDS` → `75` (e.g. 1 minute 15 seconds)  
+                • `MM:SS` → `01:15`  
+                • `HH:MM:SS` → `00:01:15`  
+                • `SECONDS.FRACTION` → `75.5`
+                """
+
+        current_song: Song = client.queue.current_song
+
+        new_player = await current_song.get_fresh_player(additional_before_options= f"-ss {new_time}")
+        if new_player is None:
+            await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_time}`. Please ensure the format is correct.\n{info_msg}"))
+            return
+        
+        was_paused = client.voice_client.is_paused()
+        client.voice_client.stop()
+        current_song.stop()
+        client.voice_client.play(
+            new_player,
+            after=lambda e: self.bot.loop.call_soon_threadsafe(
+                lambda: asyncio.ensure_future(self._after_playback(e, ctx, client))
+            )
+        )
+        if was_paused:
+            client.voice_client.pause()
+            current_song.stop()
+        current_song.seconds_played = parse_seek_time(new_time)
+        current_song.player = new_player 
+        
+
+
+
+    @commands.command(aliases = ['fwd', 'fw'])
+    @commands.check(bot_use_permissions)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    async def forward(self, ctx, seconds: int):
+        client = await self.server_manager.get_client(ctx.guild.id)
+        if client.voice_client is None or client.queue.current_song is None:
+            await ctx.send("No song is currently playing, `-p <song name>` to play a song")
+            return
+        
+        if seconds < 0:
+            await ctx.send("Cannot forward a song by a negative amount of seconds, please provide a positive number")
+            return
+        
+
+        current_song: Song = client.queue.current_song
+
+    @commands.command(aliases = ['rw', 'rew'])
+    @commands.check(bot_use_permissions)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    async def rewind(self, ctx, seconds: int):
+        client = await self.server_manager.get_client(ctx.guild.id)
+        if client.voice_client is None or client.queue.current_song is None:
+            await ctx.send("No song is currently playing, `-p <song name>` to play a song")
+            return
+        
+        if seconds < 0:
+            pass
+        current_song: Song = client.queue.current_song
+        return
 
 
         
