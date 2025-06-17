@@ -47,7 +47,8 @@ async def craft_now_playing(song: Song, is_looping = False):
         if song.type == 'yt' 
         else f"Now playing from Spotify{' from Spotify Playlist' if song.is_playlist else ''}..."
     ),
-    description=song.name,
+    #description=f"[{song.name}]({song.yt_url})", # uncomment this to make the song name a link to the song
+    description=f"{song.name}",
     colour=await extract_embed_color(song.thumbnail_url),
     )
     

@@ -19,6 +19,8 @@ from async_lru import alru_cache
 from functools import lru_cache
 from uuid import uuid1
 from utils import time_string_to_seconds
+from core.api.wrapper import *
+from core.api.lyrics import LyricsStatus
 #from music.song_request_handler import extract_title_and_artist
 
 load_dotenv(find_dotenv())
@@ -61,6 +63,8 @@ sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 #     "options": "-vn", 
 # }
 
+PROXY = "" if os.getenv("PROXY") == "None" else os.getenv("PROXY")
+
 yt_dl_options = {
     "format": "bestaudio/best",
     "noplaylist": True,
@@ -89,16 +93,10 @@ ffmpeg_options = {
 
 yt_dl = YoutubeDL(yt_dl_options)
 
-class LyricsStatus(Enum):
-    NOT_STARTED = auto()
-    FETCHING = auto()
-    FETCHED = auto()
-    NO_LYRICS_FOUND = auto()
-    ERROR = auto()
-
 
 class Song:
-    def __init__(self, duration, artist, yt_url, player, name, thumbnail_url, audio_url, song_type = None, is_spot=False, is_yt=True, is_playlist = False, belongs_to = None):
+    def __init__(self, duration, artist, yt_url, player, name, thumbnail_url, audio_url, song_type = None, 
+                 is_spot=False, is_yt=True, is_playlist = False, belongs_to = None, all_untried_song_streams: List[str] = None):
         self.yt_url = yt_url
         self.name = name
         self.artist = artist
@@ -128,6 +126,7 @@ class Song:
         self.belongs_to = belongs_to # belonging to a playlist
         self.is_looping = False
         self.is_first_in_queue = False  # Indicates if the song is currently active in the queue
+        self.all_untried_song_streams = [] if all_untried_song_streams is None else all_untried_song_streams # list of all song urls incase a url is invalid, we can try the next one
 
     @property
     async def player(self) -> discord.FFmpegPCMAudio:
@@ -142,8 +141,20 @@ class Song:
             self._audio_url = await Song.get_audio_url(self.yt_url)
         elif Song.has_audio_url_expired(self._audio_url, self.duration):
             self._audio_url = await Song.get_audio_url(self.yt_url)
+
+        if PROXY:
+            self._audio_url = PROXY + urllib.parse.quote(self._audio_url)
+
         print(f"Audio URL for {self.name} ({self.artist}): {self._audio_url[:50]}...")
         if not await Song.is_url_valid(self._audio_url):
+            while self.all_untried_song_streams:
+                next_url = self.all_untried_song_streams.pop(0)
+                next_url = PROXY + urllib.parse.quote(next_url) if PROXY else next_url
+                print(f"Trying next audio URL...")
+                if not Song.has_audio_url_expired(next_url, self.duration) and await Song.is_url_valid(next_url):
+                    self._audio_url = next_url
+                    print(f"Valid audio URL found: {self._audio_url[:50]}...")
+                    return self._audio_url
             return None
 
         return self._audio_url
@@ -196,7 +207,7 @@ class Song:
         player = None
         print("SONG CREATED")
         # Create the song instance
-        song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url)
+        song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url, all_untried_song_streams=data.get("audio_urls")[1:])
         return song
     
     @lru_cache(maxsize=64)
@@ -215,7 +226,6 @@ class Song:
             track_info["album"]["images"][0]["url"]
             or track_info["artist"]["images"][0]["url"],
         )
-
         song = await cls.SpotifySong(name, artist, thumbnail_url)
 
         return song
@@ -252,44 +262,83 @@ class Song:
 
     @staticmethod
     def has_audio_url_expired(audio_url, duration) -> bool:
-        expire_value = urllib.parse.parse_qs(urllib.parse.urlparse(audio_url).query).get('expire', [None])[0]
-        if expire_value is None or time.time() + duration + 3*60*60 > float(expire_value):
-            print("AUDIO URL EXPIRED")
+        # Try query param first
+        parsed = urllib.parse.urlparse(audio_url)
+        query_params = urllib.parse.parse_qs(parsed.query)
+        expire_value = query_params.get('expire', [None])[0]
+
+        if expire_value is None:
+            # Try to extract from path: e.g., /expire/1750009524/
+            match = re.search(r'/expire/(\d{10})', parsed.path)
+            if match:
+                expire_value = match.group(1)
+
+        if expire_value is None:
+            # If still not found, assume expired for safety
+            print("AUDIO URL EXPIRED (no expire param)")
+            return True
+
+        try:
+            if time.time() + duration + 3 * 60 * 60 > float(expire_value):
+                print("AUDIO URL EXPIRED")
+                return True
+        except ValueError:
+            print("AUDIO URL EXPIRED (invalid expire value)")
             return True
 
         return False
     
     @classmethod
     async def SpotifySong(cls, name, artist, thumbnail_url):
-        yt_url, _ , duration = await Song.search_youtube_video(f"{name} by {artist} audio")
-        loop = asyncio.get_running_loop()
-        data = await loop.run_in_executor(
-            None, lambda: yt_dl.extract_info(yt_url, download=False)
-        )
-        audio_url = data["url"]
-        player = None
-        song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url, is_spot = True, is_yt = False)
+        song: Song = await cls.CreateSong(f"{name} by {artist} audio")
+        song.thumbnail_url = thumbnail_url
         return song
+        # yt_url, _ , duration = await Song.search_youtube_video(f"{name} by {artist} audio")
+        # loop = asyncio.get_running_loop()
+        # data = await loop.run_in_executor(
+        #     None, lambda: yt_dl.extract_info(yt_url, download=False)
+        # )
+        # audio_url = data["url"]
+        # player = None
+        # song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url, is_spot = True, is_yt = False)
+        # return song
     
     async def copy(self):
         return Song(self.duration, self.artist, self.yt_url, await self.player, self.name, self.thumbnail_url, await self.audio_url, song_type=self.type, is_playlist = self.is_playlist)
     
     @classmethod
     async def SongFromYouTubeURL(cls, yt_url):
-        name, duration = await Song.search_youtube_video_by_url(yt_url)
-        if name is None or duration is None:
-            print(f"Failed to fetch song info for URL: {yt_url}")
+        # name, duration = await Song.search_youtube_video_by_url(yt_url)
+        # if name is None or duration is None:
+        #     print(f"Failed to fetch song info for URL: {yt_url}")
+        #     return None
+        # loop = asyncio.get_running_loop()
+        # data = await loop.run_in_executor(
+        #     None, lambda: yt_dl.extract_info(yt_url, download=False)
+        # )
+        # artist = data.get("artist") or data.get("uploader") or "Unknown Artist"
+        # thumbnail_url = data["thumbnail"]
+        # audio_url = data["url"]
+        # player = None
+        # song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url)
+        # return song
+        data = await Song.get_youtube_video_info(yt_url, is_yt_url=True)
+
+        if data is None:
+            print(f"Failed to fetch song info for query: {yt_url}")
             return None
-        loop = asyncio.get_running_loop()
-        data = await loop.run_in_executor(
-            None, lambda: yt_dl.extract_info(yt_url, download=False)
-        )
-        artist = data.get("artist") or data.get("uploader") or "Unknown Artist"
+        artist = data.get("artist") or data.get("uploader") or data.get("channel") or "Unknown Artist"
         thumbnail_url = data["thumbnail"]
         audio_url = data["url"]
+        duration = data["duration"]
+        yt_url = data["webpage_url"]
+        name = data["title"]
         player = None
-        song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url)
+        print("SONG CREATED")
+        # Create the song instance
+        song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url, all_untried_song_streams=data.get("audio_urls")[1:])
         return song
+
 
     def get_fresh_player(self):
         return discord.FFmpegPCMAudio(self.audio_url, **ffmpeg_options)
@@ -302,63 +351,69 @@ class Song:
     
     async def fetch_lyrics(self, URL = None, tries = 1):
 
-        words_to_ignore = ["(offical video)", "(offical audio)", "(lyrics)", "(offical music video)", "[official music video]", "official", "audio", "video", "lyrics", "music video", \
-                           "(video)", "(audio)", "(lyric video)", "(lyric)", "(music video)", "(official lyric video)", "(official lyric)", "()", "~", "( )", "( Music )", \
-                            "visualiser", "visualizer", "(visualiser)", "(visualizer)", "[]", "[ ]", f"{self.artist}", " - ", "ft.", "feat.", "-", "- ", " -"]
-        name_to_use = self.name
+        self._lyrics_status = LyricsStatus.FETCHING
+        data = await get_lyrics(self.name, self.artist)
+        self._lyrics_status = LyricsStatus[data['status']]
+        self.lyrics = data.get('lyrics', None)
+        return data['lyrics']
 
-        for word in words_to_ignore*2: # to make sure we remove all instances we do it twice
-            name_to_use = re.sub(re.escape(word), "", name_to_use, flags=re.IGNORECASE).strip()
-            if "ft." in name_to_use:
-                name_to_use = name_to_use[:name_to_use.index("ft.")]
-            elif "feat." in name_to_use:
-                name_to_use = name_to_use[:name_to_use.index("feat.")]
+        # words_to_ignore = ["(offical video)", "(offical audio)", "(lyrics)", "(offical music video)", "[official music video]", "official", "audio", "video", "lyrics", "music video", \
+        #                    "(video)", "(audio)", "(lyric video)", "(lyric)", "(music video)", "(official lyric video)", "(official lyric)", "()", "~", "( )", "( Music )", \
+        #                     "visualiser", "visualizer", "(visualiser)", "(visualizer)", "[]", "[ ]", f"{self.artist}", " - ", "ft.", "feat.", "-", "- ", " -"]
+        # name_to_use = self.name
 
-        #extract_title_and_artist
+        # for word in words_to_ignore*2: # to make sure we remove all instances we do it twice
+        #     name_to_use = re.sub(re.escape(word), "", name_to_use, flags=re.IGNORECASE).strip()
+        #     if "ft." in name_to_use:
+        #         name_to_use = name_to_use[:name_to_use.index("ft.")]
+        #     elif "feat." in name_to_use:
+        #         name_to_use = name_to_use[:name_to_use.index("feat.")]
+
+        # #extract_title_and_artist
         
 
-        print(f"Fetching lyrics for {name_to_use} by {self.artist}")
+        # print(f"Fetching lyrics for {name_to_use} by {self.artist}")
         
-        if URL is None:
-            URL = f"https://api.lyrics.ovh/v1/{urllib.parse.quote(self.artist)}/{urllib.parse.quote(name_to_use)}"
+        # if URL is None:
+        #     URL = f"https://api.lyrics.ovh/v1/{urllib.parse.quote(self.artist)}/{urllib.parse.quote(name_to_use)}"
             
 
-        self._lyrics_status = LyricsStatus.FETCHING
-        self.lyrics = None
+        # self._lyrics_status = LyricsStatus.FETCHING
+        # self.lyrics = None
 
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(URL) as response:
-                    content_type = response.headers.get("Content-Type", "")
+        # try:
+        #     async with aiohttp.ClientSession() as session:
+        #         async with session.get(URL) as response:
+        #             content_type = response.headers.get("Content-Type", "")
 
-                    if response.status == 200:
-                        # Expected: valid lyrics data
-                        data = await response.json()
-                        res_lyrics = data.get('lyrics')
-                        if res_lyrics:
-                            self.lyrics = res_lyrics.replace('\n\n', '\n')
-                            self._lyrics_status = LyricsStatus.FETCHED
-                        else:
-                            self._lyrics_status = LyricsStatus.NO_LYRICS_FOUND
+        #             if response.status == 200:
+        #                 # Expected: valid lyrics data
+        #                 data = await response.json()
+        #                 res_lyrics = data.get('lyrics')
+        #                 if res_lyrics:
+        #                     self.lyrics = res_lyrics.replace('\n\n', '\n')
+        #                     self._lyrics_status = LyricsStatus.FETCHED
+        #                 else:
+        #                     self._lyrics_status = LyricsStatus.NO_LYRICS_FOUND
 
-                    elif response.status == 404 and "application/json" in content_type:
-                        # 404 but still a valid JSON with an error message
-                        data = await response.json()
-                        if data.get("error") == "No lyrics found":
-                            self._lyrics_status = LyricsStatus.NO_LYRICS_FOUND
-                        else:
-                            self._lyrics_status = LyricsStatus.ERROR
+        #             elif response.status == 404 and "application/json" in content_type:
+        #                 # 404 but still a valid JSON with an error message
+        #                 data = await response.json()
+        #                 if data.get("error") == "No lyrics found":
+        #                     self._lyrics_status = LyricsStatus.NO_LYRICS_FOUND
+        #                 else:
+        #                     self._lyrics_status = LyricsStatus.ERROR
 
-                    else:
-                        # Unexpected response or non-JSON 404
-                        self._lyrics_status = LyricsStatus.ERROR
+        #             else:
+        #                 # Unexpected response or non-JSON 404
+        #                 self._lyrics_status = LyricsStatus.ERROR
 
-                    print(f"Lyrics status for {name_to_use} by {self.artist}: {self._lyrics_status.name}")
+        #             print(f"Lyrics status for {name_to_use} by {self.artist}: {self._lyrics_status.name}")
 
-        except Exception as e:
-            print("Error fetching lyrics:", e)
-            self._lyrics_status = LyricsStatus.ERROR
-            self.lyrics = None
+        # except Exception as e:
+        #     print("Error fetching lyrics:", e)
+        #     self._lyrics_status = LyricsStatus.ERROR
+        #     self.lyrics = None
 
             # if self.artist and tries == 1:
             #     await self.fetch_lyrics(
@@ -485,16 +540,19 @@ class Song:
     
     @staticmethod
     #@alru_cache(maxsize=128, ttl=86400)
-    async def get_youtube_video_info(query: str) -> dict:
-        loop = asyncio.get_running_loop()
-        data = await loop.run_in_executor(
-            None, lambda: yt_dl.extract_info(f"ytsearch1:{query}", download=False)
-        )
-        if not data or "entries" not in data or len(data["entries"]) == 0:
-            print(f"No results found for query: {query}")
-            return None
-        data = data["entries"][0]
+    async def get_youtube_video_info(query: str, is_yt_url = False) -> dict:
+        # loop = asyncio.get_running_loop()
+        # data = await loop.run_in_executor(
+        #     None, lambda: yt_dl.extract_info(f"{query if is_yt_url else f'ytsearch1{query}'}", download=False)
+        # )
+        # if not data or "entries" not in data or len(data["entries"]) == 0:
+        #     print(f"No results found for query: {query}")
+        #     return None
+        # data = data["entries"][0]
+        # return data
+        data = await get_youtube_info(query, is_yt_url=is_yt_url)
         return data
+
 
     
     @staticmethod
@@ -558,12 +616,22 @@ class Song:
     async def get_audio_url(yt_url: str) -> str:
         print("GETTING NEW URL")
         try:
-            loop = asyncio.get_running_loop()
-            data = await loop.run_in_executor(
-                None, lambda: yt_dl.extract_info(yt_url, download=False)
-            )
-            #data = yt_dl.extract_info(yt_url, download=False)
-            audio_url = data["url"]
+            # loop = asyncio.get_running_loop()
+            # data = await loop.run_in_executor(
+            #     None, lambda: yt_dl.extract_info(yt_url, download=False)
+            # )
+            # #data = yt_dl.extract_info(yt_url, download=False)
+            # audio_url = data["url"]
+            audio_urls = await get_youtube_audio_url(yt_url)
+            if audio_urls is None:
+                print(f"Failed to fetch audio URLs for YouTube URL: {yt_url}")
+                return None
+            print("GOT len(audio_urls)", len(audio_urls))
+            if not audio_urls or len(audio_urls) == 0:
+                print(f"No audio URLs found for YouTube URL: {yt_url}")
+                return None
+            audio_url = audio_urls[0]
+
         except Exception as e:
             print(e)
             audio_url = None
