@@ -44,6 +44,7 @@ class Client:
         self.number_of_playlists_limit = 10
         self.client_lock = asyncio.Lock()  # Lock to prevent concurrent modifications to the client
         self.server_config: ServerConfig = ServerConfig(self)
+        self.vc_stopped_due_to_seek = False
 
     @staticmethod
     async def from_guild_id(guild_id):

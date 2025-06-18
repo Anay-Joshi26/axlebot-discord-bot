@@ -7,6 +7,8 @@ yt_dl = yt_dlp.YoutubeDL({
     "format": "bestaudio/best",
     "no_warnings": True,
     "skip_download": True,
+    "ignoreerrors": True,
+    "noplaylist": True,
 })
 
 async def get_youtube_video_info(query: str, is_yt_url = False) -> dict | None:

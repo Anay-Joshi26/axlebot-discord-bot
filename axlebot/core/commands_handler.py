@@ -19,7 +19,8 @@ def audio_command_check(ctx):
 
 def has_manage_guild(ctx: commands.Context):
     if not ctx.author.guild_permissions.manage_guild:
-        raise NoPermissionsCheckFailure("You do not have the required permissions to use this command.")
+        #raise NoPermissionsCheckFailure("You do not have the required permissions to use this command.")
+        return False
     return True
 
     

@@ -217,6 +217,8 @@ class MusicCog(commands.Cog):
 
             client.interupt_inactivity_timer()
 
+            fetching_song_message = await ctx.send("*Loading music, please wait...*", silent = True)
+
             if query_type == self.YT_SONG:
                 song_task = asyncio.create_task(Song.SongFromYouTubeURL(query))
             elif query_type == self.SPOT_SONG:
@@ -252,6 +254,7 @@ class MusicCog(commands.Cog):
 
                     # Start playing the first song if it's not already playing
                     if len(queue) == 1:
+                        await fetching_song_message.delete()
                         song.is_first_in_queue = True
                         await self.send_play_song_embed(ctx, song, client)
 
@@ -290,6 +293,7 @@ class MusicCog(commands.Cog):
             await queue.append(song, position)
 
             if len(queue) == 1:
+                await fetching_song_message.delete()
                 song.is_first_in_queue = True
                 await self.send_play_song_embed(ctx, song, client)
 
@@ -312,6 +316,7 @@ class MusicCog(commands.Cog):
                 else:
                     await ctx.send(f"**{song.name}** will play next after the current song", silent = True)
         except Exception as e:
+            await fetching_song_message.delete()
             print(f"Error in play command: {e}")
             await ctx.send(embed=craft_general_error(e))
 
@@ -320,6 +325,10 @@ class MusicCog(commands.Cog):
         """
         Plays the next song in the queue, or informs the user that the queue is empty
         """
+        if client.vc_stopped_due_to_seek:
+            # If the voice client was stopped due to seeking, we don't want to play the next song
+            client.vc_stopped_due_to_seek = False
+            return
         try:
             print(client)
             queue, voice_client = client.queue, client.voice_client
@@ -362,7 +371,7 @@ class MusicCog(commands.Cog):
             # next_song.progress_message = progress_message
         except Exception as e:
             print(f"Error in play_next: {e}")
-            await ctx.send(embed=craft_general_error(e))
+            await ctx.send(embed=craft_general_error())
 
     async def _after_playback(self, error, ctx, client):
         if error:
@@ -668,12 +677,19 @@ class MusicCog(commands.Cog):
 
         current_song: Song = client.queue.current_song
 
+        try:
+            seconds_into_song = parse_seek_time(new_time)
+        except ValueError as e:
+            await ctx.send(embed=craft_general_error(f"Invalid time format: `{new_time}`. Please use one of the formats mentioned below.\n{info_msg}"))
+            return
+
         new_player = await current_song.get_fresh_player(additional_before_options= f"-ss {new_time}")
         if new_player is None:
             await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_time}`. Please ensure the format is correct.\n{info_msg}"))
             return
         
         was_paused = client.voice_client.is_paused()
+        client.vc_stopped_due_to_seek = True  # Set this flag to indicate that the voice client was stopped due to seeking
         client.voice_client.stop()
         current_song.stop()
         client.voice_client.play(
@@ -685,41 +701,82 @@ class MusicCog(commands.Cog):
         if was_paused:
             client.voice_client.pause()
             current_song.stop()
-        current_song.seconds_played = parse_seek_time(new_time)
-        current_song.player = new_player 
+        else:
+            current_song.play()
+        current_song.seconds_played = seconds_into_song
+        #current_song.player = new_player 
         
 
 
 
-    @commands.command(aliases = ['fwd', 'fw'])
-    @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
-    async def forward(self, ctx, seconds: int):
+    async def seek_by(self, ctx, seconds: int):
         client = await self.server_manager.get_client(ctx.guild.id)
         if client.voice_client is None or client.queue.current_song is None:
             await ctx.send("No song is currently playing, `-p <song name>` to play a song")
-            return
+            return False
         
+        if seconds == 0:
+            await ctx.send("You must provide a non-zero number of seconds to seek.")
+            return False
+
+        new_position = client.queue.current_song.seconds_played + seconds
+        if new_position < 0:
+            new_position = 0  # Clamp to start of song
+
+        info_msg = """
+            You can use any of the following time formats when seeking:
+
+            • `SECONDS` → `75` (e.g. 1 minute 15 seconds)  
+            • `MM:SS` → `01:15`  
+            • `HH:MM:SS` → `00:01:15`  
+            • `SECONDS.FRACTION` → `75.5`
+            """
+
+        current_song: Song = client.queue.current_song
+        new_player = await current_song.get_fresh_player(additional_before_options=f"-ss {new_position}")
+
+        if new_player is None:
+            await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_position}` seconds. Please ensure the format is correct.\n{info_msg}"))
+            return False
+
+        was_paused = client.voice_client.is_paused()
+        client.vc_stopped_due_to_seek = True
+        client.voice_client.stop()
+        current_song.stop()
+        client.voice_client.play(
+            new_player,
+            after=lambda e: self.bot.loop.call_soon_threadsafe(
+                lambda: asyncio.ensure_future(self._after_playback(e, ctx, client))
+            )
+        )
+        if was_paused:
+            client.voice_client.pause()
+        else:
+            current_song.play()
+        
+        current_song.seconds_played = new_position
+        #current_song.player = new_player
+        return True
+
+
+    @commands.command(aliases=['fwd', 'fw'])
+    @commands.check(bot_use_permissions)
+    @commands.dynamic_cooldown(cooldown_time, type=BucketType.user)
+    async def forward(self, ctx, seconds: int):
         if seconds < 0:
             await ctx.send("Cannot forward a song by a negative amount of seconds, please provide a positive number")
             return
-        
+        await self.seek_by(ctx, seconds)
 
-        current_song: Song = client.queue.current_song
 
-    @commands.command(aliases = ['rw', 'rew'])
+    @commands.command(aliases=['rw', 'rew'])
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type=BucketType.user)
     async def rewind(self, ctx, seconds: int):
-        client = await self.server_manager.get_client(ctx.guild.id)
-        if client.voice_client is None or client.queue.current_song is None:
-            await ctx.send("No song is currently playing, `-p <song name>` to play a song")
-            return
-        
         if seconds < 0:
-            pass
-        current_song: Song = client.queue.current_song
-        return
+            await ctx.send("Cannot rewind a song by a negative amount of seconds, please provide a positive number")
+            return
+        await self.seek_by(ctx, -seconds)
 
 
         

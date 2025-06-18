@@ -347,7 +347,7 @@ class Song:
             new_ffmpeg_options["before_options"] += f" {additional_before_options}"
         if additional_options:
             new_ffmpeg_options["options"] += f" {additional_options}"
-        return discord.FFmpegPCMAudio(await self.audio_url, **new_ffmpeg_options)
+        return discord.FFmpegOpusAudio(await self.audio_url, **new_ffmpeg_options)
     
     def get_lyrics(self):
         if self._lyrics_status == LyricsStatus.FETCHED:
