@@ -21,6 +21,7 @@ from uuid import uuid1
 from utils import time_string_to_seconds
 from core.api.wrapper import *
 from core.api.lyrics import LyricsStatus
+import lavalink
 #from music.song_request_handler import extract_title_and_artist
 
 load_dotenv(find_dotenv())
@@ -125,13 +126,15 @@ class Song:
         self.is_looping = False
         self.is_first_in_queue = False  # Indicates if the song is currently active in the queue
         self.all_untried_song_streams = all_untried_song_streams # list of all song urls incase a url is invalid, we can try the next one
+        #self.track = lavalink_track  # For Lavalink 4.x, this is the track object
 
     @property
-    async def player(self) -> discord.FFmpegPCMAudio:
-        audio_url = await self.audio_url
-        if audio_url is None:
-            return None
-        return discord.FFmpegOpusAudio(audio_url, **ffmpeg_options)  
+    async def player(self) -> lavalink.AudioTrack | None:
+        # audio_url = await self.audio_url
+        # if audio_url is None:
+        #     return None
+        # return discord.FFmpegOpusAudio(audio_url, **ffmpeg_options)  
+        return self._player
     
     @property
     async def audio_url(self) -> str | None:
@@ -197,7 +200,7 @@ class Song:
         return song
     
     @classmethod
-    async def CreateSong(cls, youtube_query):
+    async def CreateSong_old_new(cls, youtube_query):
         print("searching song")
         #yt_url, name, duration = await Song.search_youtube_video(youtube_query)
         #print("song search finished, got url, getting info")
@@ -216,6 +219,52 @@ class Song:
         # Create the song instance
         song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url, all_untried_song_streams=data.get("audio_urls")[1:])
         return song
+    
+    @classmethod
+    async def CreateSong(cls, query: str, player):
+        print("Searching song...")
+
+        # Search via Lavalink node
+        search_result = await player.node.get_tracks(f"scsearch:{query}")
+
+        if not search_result or not search_result['tracks']:
+            print(f"Failed to fetch song info for query: {query}")
+            return None
+
+        # Use the first track
+        track = search_result['tracks'][0]
+        info = track['info'].raw.get('info', {})
+
+        print(info)
+        print(type(info))
+        print(info.keys())
+
+        name = info.get('title', 'Unknown Title')
+
+        print(info['title'])
+        artist = (
+            info.get('author') or
+            info.get('artist') or
+            info.get('uploader') or
+            info.get('channel') or
+            "Unknown Artist"
+        )
+        duration = info.get('length', 0)
+        yt_url = info.get('uri') or info.get('url')  # For Lavalink 4.x, 'uri' is standard
+        thumbnail_url = info.get('artworkUrl')
+
+        print("SONG CREATED")
+
+        return cls(
+            duration=duration,
+            artist=artist,
+            yt_url=yt_url,
+            player=track,
+            name=name,
+            thumbnail_url=thumbnail_url,
+            audio_url=None,
+            all_untried_song_streams=None
+        )
     
     @lru_cache(maxsize=64)
     def _cached_spotify_track(url: str):

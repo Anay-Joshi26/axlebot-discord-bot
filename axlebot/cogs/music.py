@@ -226,8 +226,8 @@ class MusicCog(commands.Cog):
                 client.voice_client = vc
                 #client.lavalink_voice_client = LavalinkVoiceClient(self.bot, ctx.author.voice.channel)
 
-            print("AVAIL NODES", client.voice_client.lavalink.node_manager.available_nodes)
-            player = client.voice_client.lavalink.player_manager.get(ctx.guild.id)
+            print("AVAIL NODES", core.extensions.lavalink_client.node_manager.available_nodes)
+            player = client.voice_client.player
 
             results = await player.node.get_tracks(f"scsearch:{query}")
             if not results or not results['tracks']:
@@ -236,12 +236,18 @@ class MusicCog(commands.Cog):
 
             track = results['tracks'][0]
 
-            # ✅ Add and play
-            user_id = ctx.author.id
-            player.add(requester=user_id, track=track)
+            info = track['info']
+
+            try:
+                print(vars(info))
+            except TypeError:
+                # fallback to dir()
+                for attr in dir(info):
+                    if not attr.startswith('_'):
+                        print(f"{attr}: {getattr(info, attr)}")
 
             if not player.is_playing:
-                await player.play()
+                await player.play(track)
                 await ctx.send(f"Now playing: {track['info']['title']}")
 
 
@@ -298,7 +304,7 @@ class MusicCog(commands.Cog):
             async with client.client_lock:
                 if client.voice_client is None:
                     print("Client voice client is None, connecting to voice channel")
-                    vc = await ctx.author.voice.channel.connect()
+                    vc = await ctx.author.voice.channel.connect(cls = LavalinkVoiceClient)
                     print("Connected to voice channel", vc.channel.name)
                     client.voice_client = vc
 
@@ -380,7 +386,7 @@ class MusicCog(commands.Cog):
 
                 return        
             elif query_type == self.STD_YT_QUERY:
-                song_task = asyncio.create_task(Song.CreateSong(query))
+                song_task = asyncio.create_task(Song.CreateSong(query, client.voice_client.player))
             error_occured = False
             try:
                 song = await song_task
@@ -404,11 +410,11 @@ class MusicCog(commands.Cog):
                 player = await song.player
 
                 if player is None:
-                    await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), silent = True)
+                    await ctx.send(embed=craft_general_error(f"The music could not be played :("), silent = True)
                     asyncio.create_task(self.play_next(ctx, client))
                     return
 
-                voice_client.play(
+                await voice_client.play(
                     player,
                     after = lambda e: self.bot.loop.call_soon_threadsafe(
                                         lambda: asyncio.ensure_future(self._after_playback(e, ctx, client))

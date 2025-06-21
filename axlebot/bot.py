@@ -89,8 +89,9 @@ async def on_ready():
     cache_manager.start()  # Start the cache manager
     print("Cache manager started")
 
-    # core.extensions.lavalink_client = lavalink.Client(bot.user.id)
-    # core.extensions.lavalink_client.add_node('localhost', 2333, 'HEYthisIsAReallyHardPAss0rdToGu3ss', 'na', 'axlebot-lavalink')
+    core.extensions.lavalink_client = lavalink.Client(bot.user.id)
+    core.extensions.lavalink_client.add_node('localhost', 2333, 'HEYthisIsAReallyHardPAss0rdToGu3ss', 'na', 'axlebot-lavalink')
+    bot.lavalink = core.extensions.lavalink_client
 
     print("All cogs loaded")
 

@@ -9,8 +9,7 @@ import discord
 from discord.ext import commands
 from utils.message_crafter import craft_bot_music_stopped
 from models.server_config import ServerConfig
-import lavalink
-import core.extensions
+from core.lavalink import LavalinkVoiceClient
 
 
 class Client:

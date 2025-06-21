@@ -3,11 +3,13 @@ import re
 import discord
 import lavalink
 from discord.ext import commands
-from lavalink.events import TrackStartEvent, QueueEndEvent
+from lavalink.events import TrackStartEvent, QueueEndEvent, TrackEndEvent, TrackExceptionEvent, TrackStuckEvent
 from lavalink.errors import ClientError
 from lavalink.filters import LowPass
 from lavalink.server import LoadType
 import asyncio
+import core.extensions
+
 
 url_rx = re.compile(r'https?://(?:www\.)?.+')
 
@@ -20,29 +22,42 @@ class LavalinkVoiceClient(discord.VoiceClient):
     https://discordpy.readthedocs.io/en/latest/api.html#voiceprotocol
     """
 
-    def __init__(self, client: discord.Client, channel: discord.abc.Connectable):
-        super().__init__(client, channel)
-        self.client = client
+    def __init__(self, bot: discord.Client, channel: discord.abc.Connectable):
+        super().__init__(bot, channel)
+        self.client = bot
         self.channel = channel
         self.guild_id = channel.guild.id
         self._destroyed = False
+        self._lavalink = core.extensions.lavalink_client # shouldnt be needed
+        self._after_callback = None
+        self._current_track_id = None
+        self._loop = asyncio.get_running_loop()
 
-        if not hasattr(self.client, 'lavalink'):
-            # Instantiate a client if one doesn't exist.
-            # We store it in `self.client` so that it may persist across cog reloads,
-            # however this is not mandatory.
-            self.client.lavalink = lavalink.Client(client.user.id)
-            print("Lavalink client created")
-            self.client.lavalink.add_node(host='localhost', port=2333, password='HEYthisIsAReallyHardPAss0rdToGu3ss',
-                                          region='us', name='default-node')
-            print("Lavalink node added")
-            print("TEST TEST1", self.client.lavalink.node_manager.available_nodes)
-            print("All nodes:", self.client.lavalink.node_manager.nodes)
+    async def play(self, track, *, after=None):
+        self._after_callback = after
+        self._current_track_id = track.track
+        await self.player.play(track)
 
+    async def stop(self):
+        await self.player.stop()
 
+    async def pause(self):
+        await self.player.set_pause(True)
 
-        # Create a shortcut to the Lavalink client here.
-        self.lavalink = self.client.lavalink
+    async def resume(self):
+        await self.player.set_pause(False)
+
+    def is_connected(self):
+        return self.channel is not None and self.channel.guild.voice_client is self
+
+    @lavalink.listener(TrackEndEvent)
+    async def on_track_end(self, event):
+        if self._after_callback:
+            try:
+                self._after_callback(None)  # DO NOT await this
+            except Exception as e:
+                print(f"Error in after callback: {e}")
+            self._after_callback = None
 
     async def on_voice_server_update(self, data):
         # the data needs to be transformed before being handed down to
@@ -51,7 +66,7 @@ class LavalinkVoiceClient(discord.VoiceClient):
             't': 'VOICE_SERVER_UPDATE',
             'd': data
         }
-        await self.lavalink.voice_update_handler(lavalink_data)
+        await self._lavalink.voice_update_handler(lavalink_data)
 
     async def on_voice_state_update(self, data):
         channel_id = data['channel_id']
@@ -69,7 +84,7 @@ class LavalinkVoiceClient(discord.VoiceClient):
             'd': data
         }
 
-        await self.lavalink.voice_update_handler(lavalink_data)
+        await self._lavalink.voice_update_handler(lavalink_data)
 
     async def _wait_for_lavalink_node(self, timeout=10, sleep_time=0.5) -> bool:
         """
@@ -77,7 +92,7 @@ class LavalinkVoiceClient(discord.VoiceClient):
         """
         total_wait = 0
         while total_wait < timeout:
-            if self.lavalink.node_manager.available_nodes:
+            if self._lavalink.node_manager.available_nodes:
                 return True
             await asyncio.sleep(sleep_time)
             total_wait += sleep_time
@@ -92,7 +107,8 @@ class LavalinkVoiceClient(discord.VoiceClient):
             raise RuntimeError("No Lavalink nodes available. Please ensure the Lavalink server is running.")
         
         # ensure there is a player_manager when creating a new voice_client
-        self.lavalink.player_manager.create(guild_id=self.channel.guild.id)
+        if not hasattr(self, 'player'):
+            self.player = self._lavalink.player_manager.create(guild_id=self.channel.guild.id)
 
         await self.channel.guild.change_voice_state(channel=self.channel, self_mute=self_mute, self_deaf=self_deaf)
         print(f"Connected to voice channel {self.channel.name} in guild {self.channel.guild.name}")
@@ -102,7 +118,7 @@ class LavalinkVoiceClient(discord.VoiceClient):
         Handles the disconnect.
         Cleans up running player and leaves the voice client.
         """
-        player = self.lavalink.player_manager.get(self.channel.guild.id)
+        player = self._lavalink.player_manager.get(self.channel.guild.id)
 
         # no need to disconnect if we are not connected
         if not force and not player.is_connected:
@@ -128,6 +144,10 @@ class LavalinkVoiceClient(discord.VoiceClient):
         self._destroyed = True
 
         try:
-            await self.lavalink.player_manager.destroy(self.guild_id)
+            await self._lavalink.player_manager.destroy(self.guild_id)
         except ClientError:
             pass
+    
+    async def lavalink_play(self, track, after=None):
+        player = self._lavalink.player_manager.get(guild_id=self.channel.guild.id)
+        await player.play(track["track"])

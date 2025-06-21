@@ -9,6 +9,8 @@ plugins:
 #    another_key: another_value
 lavalink:
   plugins:
+    - dependency: "dev.lavalink.youtube:youtube-plugin:1.13.3"
+      snapshot: false 
 #    - dependency: "com.github.example:example-plugin:1.0.0" # required, the coordinates of your plugin
 #      repository: "https://maven.example.com/releases" # optional, defaults to the Lavalink releases repository by default
 #      snapshot: false # optional, defaults to false, used to tell Lavalink to use the snapshot repository instead of the release repository
@@ -19,7 +21,7 @@ lavalink:
     password: "HEYthisIsAReallyHardPAss0rdToGu3ss"
     sources:
       # The default Youtube source is now deprecated and won't receive further updates. Please use https://github.com/lavalink-devs/youtube-source#plugin instead.
-      youtube: true
+      youtube: false
       bandcamp: true
       soundcloud: true
       twitch: true
