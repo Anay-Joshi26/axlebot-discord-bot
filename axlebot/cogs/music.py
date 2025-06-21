@@ -6,10 +6,13 @@ from models.song import Song, LyricsStatus
 import asyncio
 from utils.message_crafter import *
 from core.server_manager import ServerManager
+from core.lavalink import LavalinkVoiceClient
 from models.client import Client
 from music.songs_queue import SongQueue
 from discord.ext.commands import BucketType, CommandOnCooldown
 from utils import parse_seek_time
+#import lavalink
+import core.extensions
 
 PAID_COOLDOWN : float = 1
 NON_PAID_COOLDOWN : float = 5
@@ -20,7 +23,121 @@ class MusicPlaybackButtons(discord.ui.View):
         self.ctx = ctx
         self.client = client
 
-    @discord.ui.button(style=discord.ButtonStyle.gray, label='⏯ Pause/Resume')
+    # @discord.ui.button(style=discord.ButtonStyle.gray, label='⏯ Pause/Resume')
+    # @commands.check(in_voice_channel)
+    # async def pause_resume_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+    #     try:
+    #         await in_voice_channel_interaction(interaction)
+    #     except NotInVoiceChannelCheckFailure as e:
+    #         await interaction.response.send_message(str(e), ephemeral=True)
+    #         return
+
+    #     voice_client = self.client.voice_client
+
+    #     if voice_client is None:
+    #         await interaction.response.send_message("The bot is not connected to a voice channel", ephemeral = True)
+
+    #     if voice_client.is_playing():
+    #         voice_client.pause()
+    #         self.client.queue.current_song.stop()
+    #         await interaction.message.add_reaction('⏸️')
+    #         # await interaction.message.clear_reaction('▶️')
+    #         await interaction.response.defer()
+
+    #     elif voice_client.is_paused():
+    #         voice_client.resume()
+    #         self.client.queue.current_song.play()
+    #         #await interaction.message.add_reaction('▶️')
+    #         await interaction.message.remove_reaction('⏸️', interaction.guild.me)
+    #         await interaction.response.defer()
+    #     else:
+    #         await self.ctx.send("Cannot pause/resume song, due to some complications", ephemeral = True)
+
+    @discord.ui.button(style=discord.ButtonStyle.gray, label='⏭️ Skip', row = 1)
+    @commands.check(in_voice_channel)
+    async def skip_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            await in_voice_channel_interaction(interaction)
+        except NotInVoiceChannelCheckFailure as e:
+            await interaction.response.send_message(str(e), ephemeral=True)
+            return
+
+        await interaction.response.defer()
+
+        if self.client.voice_client is None:
+            await self.ctx.send("The bot is not connected to a voice channel", ephemeral = True)
+
+        if self.client.voice_client.is_playing() and len(self.client.queue) > 0:
+            self.client.voice_client.stop()
+            self.client.queue.current_song.stop()
+
+            await interaction.message.remove_reaction('⏭️', interaction.guild.me)
+            # await ctx.send("Skipped the song...")
+        else:
+            await self.ctx.send("No song is currently playing", ephemeral = True)
+
+    @discord.ui.button(style=discord.ButtonStyle.gray, label='🔁 Repeat', row = 1)
+    @commands.check(in_voice_channel)
+    async def repeat_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            await in_voice_channel_interaction(interaction)
+        except NotInVoiceChannelCheckFailure as e:
+            await interaction.response.send_message(str(e), ephemeral=True)
+            return
+
+        await interaction.response.defer()
+
+        if self.client.voice_client is None:
+            await self.ctx.send("The bot is not connected to a voice channel")
+            return
+        
+        try:
+            await self.client.queue.repeat()
+            await self.ctx.send(f"The current playing song will repeat, run `-q` to see the updated queue")
+        except ValueError as e:
+            await self.ctx.send(e)
+        
+
+    @discord.ui.button(style=discord.ButtonStyle.gray, label='🔂 Loop', row = 1)
+    @commands.check(in_voice_channel)
+    async def loop_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            await in_voice_channel_interaction(interaction)
+        except NotInVoiceChannelCheckFailure as e:
+            await interaction.response.send_message(str(e), ephemeral=True)
+            return
+
+        await interaction.response.defer()
+
+        try:
+            is_looping = self.client.queue.loop()
+            if is_looping:
+                await interaction.message.add_reaction('🔂')
+            else:
+                try:
+                    await interaction.message.remove_reaction('🔂', interaction.guild.me)
+                except discord.NotFound:
+                    print("Reaction not found")
+
+        except Exception as e:
+            await interaction.response.send_message(e, ephemeral = True)
+
+    @discord.ui.button(style=discord.ButtonStyle.gray, label='⏪ 10s', row = 0)
+    @commands.check(in_voice_channel)
+    async def seek_backwards_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            await in_voice_channel_interaction(interaction)
+        except NotInVoiceChannelCheckFailure as e:
+            await interaction.response.send_message(str(e), ephemeral=True)
+            return
+
+        await interaction.response.defer()
+        try:
+            await self.ctx.bot.get_cog('MusicCog').seek_by(self.ctx, -10)
+        except Exception as e:
+            await interaction.followup.send(f"Failed to seek: {e}", ephemeral=True)
+
+    @discord.ui.button(style=discord.ButtonStyle.gray, label='⏯ Pause/Resume', row = 0)
     @commands.check(in_voice_channel)
     async def pause_resume_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
@@ -50,9 +167,9 @@ class MusicPlaybackButtons(discord.ui.View):
         else:
             await self.ctx.send("Cannot pause/resume song, due to some complications", ephemeral = True)
 
-    @discord.ui.button(style=discord.ButtonStyle.gray, label='⏭️ Skip')
+    @discord.ui.button(style=discord.ButtonStyle.gray, label='10s ⏩', row = 0)
     @commands.check(in_voice_channel)
-    async def skip_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def seek_forward_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
             await in_voice_channel_interaction(interaction)
         except NotInVoiceChannelCheckFailure as e:
@@ -60,64 +177,11 @@ class MusicPlaybackButtons(discord.ui.View):
             return
 
         await interaction.response.defer()
-
-        if self.client.voice_client is None:
-            await self.ctx.send("The bot is not connected to a voice channel", ephemeral = True)
-
-        if self.client.voice_client.is_playing() and len(self.client.queue) > 0:
-            self.client.voice_client.stop()
-            self.client.queue.current_song.stop()
-
-            await interaction.message.remove_reaction('⏭️', interaction.guild.me)
-            # await ctx.send("Skipped the song...")
-        else:
-            await self.ctx.send("No song is currently playing", ephemeral = True)
-
-    @discord.ui.button(style=discord.ButtonStyle.gray, label='🔁 Repeat')
-    @commands.check(in_voice_channel)
-    async def repeat_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
-            await in_voice_channel_interaction(interaction)
-        except NotInVoiceChannelCheckFailure as e:
-            await interaction.response.send_message(str(e), ephemeral=True)
-            return
-
-        await interaction.response.defer()
-
-        if self.client.voice_client is None:
-            await self.ctx.send("The bot is not connected to a voice channel")
-            return
-        
-        try:
-            await self.client.queue.repeat()
-            await self.ctx.send(f"The current playing song will repeat, run `-q` to see the updated queue")
-        except ValueError as e:
-            await self.ctx.send(e)
-        
-
-    @discord.ui.button(style=discord.ButtonStyle.gray, label='🔂 Loop')
-    @commands.check(in_voice_channel)
-    async def loop_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        try:
-            await in_voice_channel_interaction(interaction)
-        except NotInVoiceChannelCheckFailure as e:
-            await interaction.response.send_message(str(e), ephemeral=True)
-            return
-
-        await interaction.response.defer()
-
-        try:
-            is_looping = self.client.queue.loop()
-            if is_looping:
-                await interaction.message.add_reaction('🔂')
-            else:
-                try:
-                    await interaction.message.remove_reaction('🔂', interaction.guild.me)
-                except discord.NotFound:
-                    print("Reaction not found")
-
+            await self.ctx.bot.get_cog('MusicCog').seek_by(self.ctx, 10)
         except Exception as e:
-            await interaction.response.send_message(e, ephemeral = True)
+            await interaction.followup.send(f"Failed to seek: {e}", ephemeral=True)
+
 
 
 class MusicCog(commands.Cog):
@@ -142,6 +206,46 @@ class MusicCog(commands.Cog):
         song.progress_message = progress_message
         #asyncio.create_task(update_progress_bar_embed(song, embed, progress_message)) # function updates the progress bar in the embed (every set interval seconds)
         asyncio.create_task(update_progress_bar_embed(song, embed, "progress_message")) # function updates the progress bar in the embed (every set interval seconds)
+
+    @commands.command()
+    async def test(self, ctx, *, query):
+        client = await self.server_manager.get_client(ctx.guild.id, ctx)
+
+        print("Client for guild found", client)
+        print("Client queue", client.queue.queue)
+        print("Playing client id", id(client))
+
+        async with client.client_lock:
+            if client.voice_client is None:
+                print("Client voice client is None, connecting to voice channel")
+
+                # ✅ Use LavalinkVoiceClient subclass
+                vc = await ctx.author.voice.channel.connect(cls = LavalinkVoiceClient)
+
+                print("Connected to voice channel", vc.channel.name)
+                client.voice_client = vc
+                #client.lavalink_voice_client = LavalinkVoiceClient(self.bot, ctx.author.voice.channel)
+
+            print("AVAIL NODES", client.voice_client.lavalink.node_manager.available_nodes)
+            player = client.voice_client.lavalink.player_manager.get(ctx.guild.id)
+
+            results = await player.node.get_tracks(f"scsearch:{query}")
+            if not results or not results['tracks']:
+                await ctx.send("No tracks found.")
+                return
+
+            track = results['tracks'][0]
+
+            # ✅ Add and play
+            user_id = ctx.author.id
+            player.add(requester=user_id, track=track)
+
+            if not player.is_playing:
+                await player.play()
+                await ctx.send(f"Now playing: {track['info']['title']}")
+
+
+            
 
 
     @commands.command(aliases = ['mv'])
@@ -183,9 +287,8 @@ class MusicCog(commands.Cog):
     @commands.check(in_voice_channel)
     @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
-    async def play(self, ctx: commands.Context, *args):
+    async def play(self, ctx: commands.Context, *, query):
         try:
-            query = ' '.join(args)
             client = await self.server_manager.get_client(ctx.guild.id, ctx)
 
             print("Client for guild found", client)
@@ -287,6 +390,7 @@ class MusicCog(commands.Cog):
                 error_occured = True
             
             if error_occured:
+                await fetching_song_message.delete()
                 await ctx.send(embed = craft_general_error("The song could not be found with the provided query"))
                 return
 
@@ -311,6 +415,7 @@ class MusicCog(commands.Cog):
                                     )
                 )
             else:
+                await fetching_song_message.delete()
                 if position is None:
                     await ctx.send(f"**{song.name}** has been added to the queue in position `{len(queue)}`", silent = True)
                 else:

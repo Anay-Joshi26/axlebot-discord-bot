@@ -358,7 +358,7 @@ def craft_songs_not_added(urls: list):
     
     embed = discord.Embed(
         title="Songs not added",
-        description=f"The following \"urls\" could not be converted into songs:\n\n{urls_description}",
+        description=f"The following queries could not be converted into songs:\n\n{urls_description}",
         colour=COLOURS["error"]
     )
     

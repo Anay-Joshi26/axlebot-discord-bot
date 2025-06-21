@@ -1,7 +1,7 @@
 from core.extensions.server_manager import server_manager
 import discord
 from discord.ext import commands
-from discord import app_commands
+#from discord import app_commands
 import asyncio
 
 class RateLimitCheckFailure(commands.CheckFailure):

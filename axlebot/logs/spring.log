@@ -1,0 +1,440 @@
+2025-06-21T10:14:55.640+08:00  INFO 21885 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:56053
+2025-06-21T10:14:55.741+08:00  INFO 21885 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T10:14:55.753+08:00  INFO 21885 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T10:15:03.857+08:00 ERROR 21885 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Authentication failed from /127.0.0.1:56086
+2025-06-21T10:15:03.861+08:00  INFO 21885 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T10:15:12.096+08:00  INFO 21885 --- [Lavalink] [XNIO-1 I/O-16] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:56053 with id aqavejgzuxq4z1t8 -- CloseStatus[code=1006, reason=]
+2025-06-21T10:15:12.097+08:00  INFO 21885 --- [Lavalink] [XNIO-1 I/O-16] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T10:15:39.627+08:00  INFO 21885 --- [Lavalink] [SpringApplicationShutdownHook] io.undertow                              : stopping server: Undertow - 2.3.13.Final
+2025-06-21T10:15:39.653+08:00  INFO 21885 --- [Lavalink] [SpringApplicationShutdownHook] io.undertow.servlet                      : Destroying Spring FrameworkServlet 'dispatcherServlet'
+2025-06-21T10:15:39.664+08:00  INFO 21885 --- [Lavalink] [SpringApplicationShutdownHook] c.s.d.l.tools.GarbageCollectionMonitor   : GC monitoring disabled.
+2025-06-21T10:15:44.680+08:00  INFO 11003 --- [Lavalink] [main] lavalink.server.Launcher                 : Starting Launcher v4.0.8 using Java 17.0.13 with PID 11003 (/mnt/c/Users/abjos/Desktop/axlebot/axlebot-discord-bot/axlebot/Lavalink.jar started by anay in /mnt/c/Users/abjos/Desktop/axlebot/axlebot-discord-bot/axlebot)
+2025-06-21T10:15:44.685+08:00  INFO 11003 --- [Lavalink] [main] lavalink.server.Launcher                 : No active profile set, falling back to 1 default profile: "default"
+2025-06-21T10:15:46.390+08:00  INFO 11003 --- [Lavalink] [main] lavalink.server.Launcher                 : Started Launcher in 2.523 seconds (process running for 3.505)
+2025-06-21T10:15:46.476+08:00  INFO 11003 --- [Lavalink] [main] lavalink.server.Launcher                 : 
+
+[32m       .  [31m _                  _ _       _    [32m__ _ _
+[32m      /\\ [31m| | __ ___   ____ _| (_)_ __ | | __[32m\ \ \ \
+[32m     ( ( )[31m| |/ _` \ \ / / _` | | | '_ \| |/ /[32m \ \ \ \
+[32m      \\/ [31m| | (_| |\ V / (_| | | | | | |   < [32m  ) ) ) )
+[32m       '  [31m|_|\__,_| \_/ \__,_|_|_|_| |_|_|\_\[32m / / / /
+[0m    =========================================[32m/_/_/_/[0m
+
+	Version:        4.0.8
+	Build time:     20.09.2024 20:20:10 UTC
+	Branch          HEAD
+	Commit:         2946608
+	Commit time:    20.09.2024 20:17:58 UTC
+	JVM:            17.0.13
+	Lavaplayer      2.2.2
+
+2025-06-21T10:15:46.488+08:00  INFO 11003 --- [Lavalink] [main] lavalink.server.Launcher                 : No active profile set, falling back to 1 default profile: "default"
+2025-06-21T10:15:47.483+08:00  WARN 11003 --- [Lavalink] [main] io.undertow.websockets.jsr               : UT026010: Buffer pool was not set on WebSocketDeploymentInfo, the default pool will be used
+2025-06-21T10:15:47.521+08:00  INFO 11003 --- [Lavalink] [main] io.undertow.servlet                      : Initializing Spring embedded WebApplicationContext
+2025-06-21T10:15:47.522+08:00  INFO 11003 --- [Lavalink] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1029 ms
+2025-06-21T10:15:47.723+08:00  INFO 11003 --- [Lavalink] [main] c.s.d.l.tools.GarbageCollectionMonitor   : GC monitoring enabled, reporting results every 2 minutes.
+2025-06-21T10:15:48.741+08:00  INFO 11003 --- [Lavalink] [main] l.server.config.KoeConfiguration         : OS: LINUX, Arch: X86_64
+2025-06-21T10:15:48.742+08:00  INFO 11003 --- [Lavalink] [main] l.server.config.KoeConfiguration         : Enabling JDA-NAS
+2025-06-21T10:15:48.746+08:00  INFO 11003 --- [Lavalink] [main] c.s.l.c.natives.NativeLibraryLoader      : Native library udpqueue: loading with filter null
+2025-06-21T10:15:48.771+08:00  INFO 11003 --- [Lavalink] [main] c.s.l.c.natives.NativeLibraryLoader      : Native library udpqueue: successfully loaded.
+2025-06-21T10:15:48.814+08:00  WARN 11003 --- [Lavalink] [main] l.server.config.SentryConfiguration      : Turning off sentry
+2025-06-21T10:15:49.215+08:00  INFO 11003 --- [Lavalink] [main] io.undertow                              : starting server: Undertow - 2.3.13.Final
+2025-06-21T10:15:49.227+08:00  INFO 11003 --- [Lavalink] [main] org.xnio                                 : XNIO version 3.8.8.Final
+2025-06-21T10:15:49.239+08:00  INFO 11003 --- [Lavalink] [main] org.xnio.nio                             : XNIO NIO Implementation Version 3.8.8.Final
+2025-06-21T10:15:49.343+08:00  INFO 11003 --- [Lavalink] [main] org.jboss.threads                        : JBoss Threads version 3.5.0.Final
+2025-06-21T10:15:49.409+08:00  INFO 11003 --- [Lavalink] [main] o.s.b.w.e.undertow.UndertowWebServer     : Undertow started on port 2333 (http) with context path '/'
+2025-06-21T10:15:49.416+08:00  INFO 11003 --- [Lavalink] [main] lavalink.server.Launcher                 : Started Launcher in 3.017 seconds (process running for 6.531)
+2025-06-21T10:15:49.418+08:00  INFO 11003 --- [Lavalink] [main] lavalink.server.Launcher                 : Lavalink is ready to accept connections.
+2025-06-21T10:16:00.092+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] io.undertow.servlet                      : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-06-21T10:16:00.093+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-06-21T10:16:00.095+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2025-06-21T10:16:00.126+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:56348
+2025-06-21T10:16:00.148+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T10:16:00.214+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T10:16:05.182+08:00 ERROR 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Authentication failed from /127.0.0.1:56382
+2025-06-21T10:16:05.204+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T10:16:17.118+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-6] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:56348 with id 6gwv9u8q9nrlygmj -- CloseStatus[code=1006, reason=]
+2025-06-21T10:16:17.119+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-6] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T10:18:51.185+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:56756
+2025-06-21T10:18:51.186+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T10:18:51.188+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T10:18:58.410+08:00 ERROR 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Authentication failed from /127.0.0.1:56802
+2025-06-21T10:18:58.411+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T10:22:53.313+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-9] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:56756 with id e8z4qsrv1vm04tpd -- CloseStatus[code=1006, reason=]
+2025-06-21T10:22:53.314+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-9] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T10:23:01.721+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:57192
+2025-06-21T10:23:01.722+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T10:23:01.724+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T10:23:10.792+08:00 ERROR 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Authentication failed from /127.0.0.1:57227
+2025-06-21T10:23:10.793+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T10:23:14.954+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-5] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:57192 with id kvzzbi8z0w42sx8o -- CloseStatus[code=1006, reason=]
+2025-06-21T10:23:14.954+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-5] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T10:23:37.351+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:57326
+2025-06-21T10:23:37.354+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T10:23:37.356+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T10:23:44.265+08:00 ERROR 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Authentication failed from /127.0.0.1:57394
+2025-06-21T10:23:44.266+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T10:28:15.343+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-5] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:57326 with id ih8upa0ynwkavjh7 -- CloseStatus[code=1006, reason=]
+2025-06-21T10:28:15.344+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-5] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T10:28:43.388+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:57840
+2025-06-21T10:28:43.389+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T10:28:43.390+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T10:28:48.384+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-8] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:57840 with id oo8rt980oap5kriq -- CloseStatus[code=1006, reason=]
+2025-06-21T10:28:48.384+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-8] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T10:33:30.228+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:58369
+2025-06-21T10:33:30.229+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T10:33:30.231+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T10:46:38.401+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-5] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:58369 with id 89yn5844u88zpi6p -- CloseStatus[code=1006, reason=]
+2025-06-21T10:46:38.401+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-5] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T10:46:50.281+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:59076
+2025-06-21T10:46:50.282+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T10:46:50.285+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T10:52:56.165+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-10] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:59076 with id ez85lkod28mhbigj -- CloseStatus[code=1006, reason=]
+2025-06-21T10:52:56.165+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-10] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T10:53:09.502+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:59501
+2025-06-21T10:53:09.503+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T10:53:09.505+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T11:06:21.317+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-7] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:59501 with id 5uvsb727tbknpitk -- CloseStatus[code=1006, reason=]
+2025-06-21T11:06:21.317+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-7] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T11:06:39.788+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:60671
+2025-06-21T11:06:39.790+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T11:06:39.792+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T11:08:30.911+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-11] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:60671 with id czu6e4u21p4mci2s -- CloseStatus[code=1006, reason=]
+2025-06-21T11:08:30.911+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-11] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T11:08:54.974+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:61041
+2025-06-21T11:08:54.975+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T11:08:54.978+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T11:09:09.577+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "ytsearch:hurts me"
+2025-06-21T11:09:09.668+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/loadtracks?identifier=ytsearch:hurts+me, client=127.0.0.1
+2025-06-21T11:10:02.439+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-8] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:61041 with id ngsfni3vp4y45yjn -- CloseStatus[code=1006, reason=]
+2025-06-21T11:10:02.439+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-8] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T11:10:22.238+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:61265
+2025-06-21T11:10:22.239+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T11:10:22.241+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T11:10:29.484+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "scsearch:hurts me"
+2025-06-21T11:10:29.490+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] c.s.d.l.s.s.SoundCloudClientIdTracker    : Updating SoundCloud client ID (current is null).
+2025-06-21T11:10:31.120+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] c.s.d.l.s.s.SoundCloudClientIdTracker    : Updating SoundCloud client ID succeeded, new ID is T26Olo5VaFwfbJtWjYtvIFx3vOe4v84D.
+2025-06-21T11:10:31.988+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.player.AudioLoaderRestHandler   : Loaded playlist Search results for: hurts me
+2025-06-21T11:10:32.012+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/loadtracks?identifier=scsearch:hurts+me, client=127.0.0.1
+2025-06-21T11:10:32.166+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : PATCH /v4/sessions/2epjw85aacdu9wuu/players/1016181130644443147, client=127.0.0.1, payload={"track": {"encoded": "QAABIQMADUhvbGQgb24gdG8gTWUABUh1cnRzAAAAAAACxFMAclU6aHR0cHM6Ly9hcGktdjIuc291bmRjbG91ZC5jb20vbWVkaWEvc291bmRjbG91ZDp0cmFja3M6MzQzMDgwMDg3LzM5NzBjMGFlLTJlMmUtNDE2OS1iOWMzLTJiZjllMzU3NzczOC9wcmV2aWV3L2hscwABACpodHRwczovL3NvdW5kY2xvdWQuY29tL2h1cnRzL2hvbGQtb24tdG8tbWUBADpodHRwczovL2kxLnNuZGNkbi5jb20vYXJ0d29ya3MtSkFNM01iYnZMcjVtLTAtb3JpZ2luYWwuanBnAQAMREVFODYxNzAxMDc0AApzb3VuZGNsb3VkAAAAAAAAAAA="}}
+2025-06-21T11:10:32.964+08:00  INFO 11003 --- [Lavalink] [lava-daemon-pool-playback-1-thread-1] c.s.l.c.natives.NativeLibraryLoader      : Native library libmpg123-0: loading with filter com.sedmelluq.discord.lavaplayer.natives.ConnectorNativeLibLoader$$Lambda$908/0x00007f7db4730000@6703ad
+2025-06-21T11:10:32.964+08:00  INFO 11003 --- [Lavalink] [lava-daemon-pool-playback-1-thread-1] c.s.l.c.natives.NativeLibraryLoader      : Native library connector: loading with filter null
+2025-06-21T11:10:33.002+08:00  INFO 11003 --- [Lavalink] [lava-daemon-pool-playback-1-thread-1] c.s.l.c.natives.NativeLibraryLoader      : Native library connector: successfully loaded.
+2025-06-21T11:13:19.948+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-16] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:61265 with id 2epjw85aacdu9wuu -- CloseStatus[code=1006, reason=]
+2025-06-21T11:13:19.949+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-16] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T11:13:34.786+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:61626
+2025-06-21T11:13:34.788+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T11:13:34.790+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T11:15:52.267+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-3] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:61626 with id vxrvhzdvgmgpmiex -- CloseStatus[code=1006, reason=]
+2025-06-21T11:15:52.267+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-3] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T11:16:05.835+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:61935
+2025-06-21T11:16:05.849+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T11:16:05.865+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T11:16:09.050+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "scsearch:hurts me tory"
+2025-06-21T11:16:09.771+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.player.AudioLoaderRestHandler   : Loaded playlist Search results for: hurts me tory
+2025-06-21T11:16:09.799+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/loadtracks?identifier=scsearch:hurts+me+tory, client=127.0.0.1
+2025-06-21T11:16:09.949+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : PATCH /v4/sessions/wqle9lt7y8yukuay/players/1016181130644443147, client=127.0.0.1, payload={"track": {"encoded": "QAABQgMACEh1cnRzIE1lAA1UcmlwcGllIFJlZGR/AAAAAAACJjQAck86aHR0cHM6Ly9hcGktdjIuc291bmRjbG91ZC5jb20vbWVkaWEvc291bmRjbG91ZDp0cmFja3M6MTU0ODIzNzU3NC80M2FmZmUyNS03YjZhLTQzMTQtODgzNi1lMjM5ODVlMDBhZWYvc3RyZWFtL2hscwABAEhodHRwczovL3NvdW5kY2xvdWQuY29tL3RyaXBwaWUtaGlwcGllLTIvdG9yeS1sYW5lei10cmlwcGllLXJlZGQtaHVydHMtbWUBADpodHRwczovL2kxLnNuZGNkbi5jb20vYXJ0d29ya3MtUGR6R3BabkVyU3U1LTAtb3JpZ2luYWwuanBnAQAMUVpKODQyMDAzMzgwAApzb3VuZGNsb3VkAAAAAAAAAAA="}}
+2025-06-21T11:19:47.961+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-14] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:61935 with id wqle9lt7y8yukuay -- CloseStatus[code=1006, reason=]
+2025-06-21T11:19:47.961+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-14] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T11:20:09.113+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:62364
+2025-06-21T11:20:09.115+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T11:20:09.117+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T11:22:42.221+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-10] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:62364 with id i8ehzz8yqzql2e7u -- CloseStatus[code=1006, reason=]
+2025-06-21T11:22:42.221+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-10] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T11:23:04.717+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:62685
+2025-06-21T11:23:04.718+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T11:23:04.720+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T11:31:26.834+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-8] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:62685 with id zrw75yqd9r8x2yye -- CloseStatus[code=1006, reason=]
+2025-06-21T11:31:26.835+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-8] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T11:31:42.313+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:63201
+2025-06-21T11:31:42.314+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T11:31:42.316+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T11:32:29.031+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-13] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:63201 with id whh12hs2s44ktjb3 -- CloseStatus[code=1006, reason=]
+2025-06-21T11:32:29.032+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-13] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T11:32:38.621+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:63384
+2025-06-21T11:32:38.624+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T11:32:38.627+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T11:36:23.930+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-10] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:63384 with id qk6nnxbp31uk37hs -- CloseStatus[code=1006, reason=]
+2025-06-21T11:36:23.930+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-10] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T11:36:37.412+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:63715
+2025-06-21T11:36:37.417+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T11:36:37.434+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T11:40:37.367+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-12] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:63715 with id h23811ex5xu8mu3t -- CloseStatus[code=1006, reason=]
+2025-06-21T11:40:37.368+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-12] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T11:40:50.172+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:64045
+2025-06-21T11:40:50.173+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T11:40:50.175+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T11:40:54.288+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-12] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:64045 with id r7o13e3axvqnjcqp -- CloseStatus[code=1006, reason=]
+2025-06-21T11:40:54.288+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-12] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T11:42:37.254+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:64399
+2025-06-21T11:42:37.256+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T11:42:37.259+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T11:42:42.513+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-2] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:64399 with id a2xv52nubf0lmskg -- CloseStatus[code=1006, reason=]
+2025-06-21T11:42:42.514+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-2] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T11:42:56.012+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:64521
+2025-06-21T11:42:56.013+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T11:42:56.014+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T11:43:01.973+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : PATCH /v4/sessions/2jgcsoibfrxjh5y0/players/1016181130644443147, client=127.0.0.1, payload={"voice": {"sessionId": "c6905963195ec5fc7c2069f36c95b134", "endpoint": "sydney11099.discord.media:443", "token": "c5239bdbfb5103c2"}}
+2025-06-21T11:43:02.067+08:00  WARN 11003 --- [Lavalink] [nioEventLoopGroup-2-1] io.netty.bootstrap.Bootstrap             : Failed to set channel option 'IP_TOS' with value '24' for channel '[id: 0x518492ee]'
+
+io.netty.channel.ChannelException: java.net.SocketException: Operation not permitted
+	at io.netty.channel.socket.DefaultDatagramChannelConfig.setTrafficClass(DefaultDatagramChannelConfig.java:358) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.socket.DefaultDatagramChannelConfig.setOption(DefaultDatagramChannelConfig.java:130) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.socket.nio.NioDatagramChannelConfig.setOption(NioDatagramChannelConfig.java:216) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.AbstractBootstrap.setChannelOption(AbstractBootstrap.java:487) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.AbstractBootstrap.setChannelOptions(AbstractBootstrap.java:479) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.Bootstrap.init(Bootstrap.java:278) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.AbstractBootstrap.initAndRegister(AbstractBootstrap.java:327) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.Bootstrap.doResolveAndConnect(Bootstrap.java:164) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.Bootstrap.connect(Bootstrap.java:148) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at moe.kyokobot.koe.internal.handler.DiscordUDPConnection.connect(DiscordUDPConnection.java:59) ~[core-2.0.3-rc2.jar!/:na]
+	at moe.kyokobot.koe.gateway.MediaGatewayV8Connection.selectProtocol(MediaGatewayV8Connection.java:199) ~[core-2.0.3-rc2.jar!/:na]
+	at moe.kyokobot.koe.gateway.MediaGatewayV8Connection.handlePayload(MediaGatewayV8Connection.java:95) ~[core-2.0.3-rc2.jar!/:na]
+	at moe.kyokobot.koe.gateway.AbstractMediaGatewayConnection$WebSocketClientHandler.channelRead0(AbstractMediaGatewayConnection.java:215) ~[core-2.0.3-rc2.jar!/:na]
+	at io.netty.channel.SimpleChannelInboundHandler.channelRead(SimpleChannelInboundHandler.java:99) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.fireChannelRead(ByteToMessageDecoder.java:346) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:318) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.ssl.SslHandler.unwrap(SslHandler.java:1473) ~[netty-handler-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.ssl.SslHandler.decodeJdkCompatible(SslHandler.java:1336) ~[netty-handler-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.ssl.SslHandler.decode(SslHandler.java:1385) ~[netty-handler-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.decodeRemovalReentryProtection(ByteToMessageDecoder.java:530) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.callDecode(ByteToMessageDecoder.java:469) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:290) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1407) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:918) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:166) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994) ~[netty-common-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74) ~[netty-common-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30) ~[netty-common-4.1.112.Final.jar!/:4.1.112.Final]
+	at java.base/java.lang.Thread.run(Thread.java:840) ~[na:na]
+Caused by: java.net.SocketException: Operation not permitted
+	at java.base/sun.nio.ch.Net.setIntOption0(Native Method) ~[na:na]
+	at java.base/sun.nio.ch.Net.setSocketOption(Net.java:455) ~[na:na]
+	at java.base/sun.nio.ch.DatagramChannelImpl.setOption(DatagramChannelImpl.java:390) ~[na:na]
+	at java.base/sun.nio.ch.DatagramSocketAdaptor.setIntOption(DatagramSocketAdaptor.java:321) ~[na:na]
+	at java.base/sun.nio.ch.DatagramSocketAdaptor.setTrafficClass(DatagramSocketAdaptor.java:391) ~[na:na]
+	at io.netty.channel.socket.DefaultDatagramChannelConfig.setTrafficClass(DefaultDatagramChannelConfig.java:356) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	... 43 common frames omitted
+
+2025-06-21T11:43:19.099+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : DELETE /v4/sessions/2jgcsoibfrxjh5y0/players/1016181130644443147, client=127.0.0.1
+2025-06-21T11:43:19.101+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-10] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:64521 with id 2jgcsoibfrxjh5y0 -- CloseStatus[code=1006, reason=]
+2025-06-21T11:43:19.101+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-10] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T11:43:42.469+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:64760
+2025-06-21T11:43:42.470+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T11:43:42.472+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T11:43:47.214+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : PATCH /v4/sessions/9xzbn8jtc3urze1p/players/1016181130644443147, client=127.0.0.1, payload={"voice": {"sessionId": "880b7dae5e3d3c308ed6e65eab824272", "endpoint": "sydney11099.discord.media:443", "token": "ba33a17d2408ddbb"}}
+2025-06-21T11:43:47.281+08:00  WARN 11003 --- [Lavalink] [nioEventLoopGroup-2-10] io.netty.bootstrap.Bootstrap             : Failed to set channel option 'IP_TOS' with value '24' for channel '[id: 0x8813cbed]'
+
+io.netty.channel.ChannelException: java.net.SocketException: Operation not permitted
+	at io.netty.channel.socket.DefaultDatagramChannelConfig.setTrafficClass(DefaultDatagramChannelConfig.java:358) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.socket.DefaultDatagramChannelConfig.setOption(DefaultDatagramChannelConfig.java:130) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.socket.nio.NioDatagramChannelConfig.setOption(NioDatagramChannelConfig.java:216) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.AbstractBootstrap.setChannelOption(AbstractBootstrap.java:487) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.AbstractBootstrap.setChannelOptions(AbstractBootstrap.java:479) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.Bootstrap.init(Bootstrap.java:278) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.AbstractBootstrap.initAndRegister(AbstractBootstrap.java:327) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.Bootstrap.doResolveAndConnect(Bootstrap.java:164) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.Bootstrap.connect(Bootstrap.java:148) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at moe.kyokobot.koe.internal.handler.DiscordUDPConnection.connect(DiscordUDPConnection.java:59) ~[core-2.0.3-rc2.jar!/:na]
+	at moe.kyokobot.koe.gateway.MediaGatewayV8Connection.selectProtocol(MediaGatewayV8Connection.java:199) ~[core-2.0.3-rc2.jar!/:na]
+	at moe.kyokobot.koe.gateway.MediaGatewayV8Connection.handlePayload(MediaGatewayV8Connection.java:95) ~[core-2.0.3-rc2.jar!/:na]
+	at moe.kyokobot.koe.gateway.AbstractMediaGatewayConnection$WebSocketClientHandler.channelRead0(AbstractMediaGatewayConnection.java:215) ~[core-2.0.3-rc2.jar!/:na]
+	at io.netty.channel.SimpleChannelInboundHandler.channelRead(SimpleChannelInboundHandler.java:99) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.fireChannelRead(ByteToMessageDecoder.java:346) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:318) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.ssl.SslHandler.unwrap(SslHandler.java:1473) ~[netty-handler-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.ssl.SslHandler.decodeJdkCompatible(SslHandler.java:1336) ~[netty-handler-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.ssl.SslHandler.decode(SslHandler.java:1385) ~[netty-handler-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.decodeRemovalReentryProtection(ByteToMessageDecoder.java:530) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.callDecode(ByteToMessageDecoder.java:469) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:290) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1407) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:918) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:166) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994) ~[netty-common-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74) ~[netty-common-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30) ~[netty-common-4.1.112.Final.jar!/:4.1.112.Final]
+	at java.base/java.lang.Thread.run(Thread.java:840) ~[na:na]
+Caused by: java.net.SocketException: Operation not permitted
+	at java.base/sun.nio.ch.Net.setIntOption0(Native Method) ~[na:na]
+	at java.base/sun.nio.ch.Net.setSocketOption(Net.java:455) ~[na:na]
+	at java.base/sun.nio.ch.DatagramChannelImpl.setOption(DatagramChannelImpl.java:390) ~[na:na]
+	at java.base/sun.nio.ch.DatagramSocketAdaptor.setIntOption(DatagramSocketAdaptor.java:321) ~[na:na]
+	at java.base/sun.nio.ch.DatagramSocketAdaptor.setTrafficClass(DatagramSocketAdaptor.java:391) ~[na:na]
+	at io.netty.channel.socket.DefaultDatagramChannelConfig.setTrafficClass(DefaultDatagramChannelConfig.java:356) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	... 43 common frames omitted
+
+2025-06-21T11:43:55.668+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : DELETE /v4/sessions/9xzbn8jtc3urze1p/players/1016181130644443147, client=127.0.0.1
+2025-06-21T11:43:55.670+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-13] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:64760 with id 9xzbn8jtc3urze1p -- CloseStatus[code=1006, reason=]
+2025-06-21T11:43:55.671+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-13] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T11:49:42.245+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:49574
+2025-06-21T11:49:42.246+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T11:49:42.247+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T11:49:44.779+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-14] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:49574 with id muxankxrxo1elkgk -- CloseStatus[code=1006, reason=]
+2025-06-21T11:49:44.780+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-14] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T11:50:03.285+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:49720
+2025-06-21T11:50:03.286+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T11:50:03.287+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T11:50:03.786+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "scsearch:hurts me"
+2025-06-21T11:50:04.402+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.player.AudioLoaderRestHandler   : Loaded playlist Search results for: hurts me
+2025-06-21T11:50:04.404+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : GET /v4/loadtracks?identifier=scsearch:hurts+me, client=127.0.0.1
+2025-06-21T11:50:04.408+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : PATCH /v4/sessions/8tuhxrrcsz5o50ec/players/1016181130644443147, client=127.0.0.1, payload={"track": {"encoded": "QAABIQMADUhvbGQgb24gdG8gTWUABUh1cnRzAAAAAAACxFMAclU6aHR0cHM6Ly9hcGktdjIuc291bmRjbG91ZC5jb20vbWVkaWEvc291bmRjbG91ZDp0cmFja3M6MzQzMDgwMDg3LzM5NzBjMGFlLTJlMmUtNDE2OS1iOWMzLTJiZjllMzU3NzczOC9wcmV2aWV3L2hscwABACpodHRwczovL3NvdW5kY2xvdWQuY29tL2h1cnRzL2hvbGQtb24tdG8tbWUBADpodHRwczovL2kxLnNuZGNkbi5jb20vYXJ0d29ya3MtSkFNM01iYnZMcjVtLTAtb3JpZ2luYWwuanBnAQAMREVFODYxNzAxMDc0AApzb3VuZGNsb3VkAAAAAAAAAAA="}}
+2025-06-21T11:50:04.523+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-3] l.server.io.RequestLoggingFilter         : PATCH /v4/sessions/8tuhxrrcsz5o50ec/players/1016181130644443147, client=127.0.0.1, payload={"voice": {"sessionId": "867976d2e6eda08d196612e60b176a56", "endpoint": "sydney11099.discord.media:443", "token": "d99319f475ce8e60"}}
+2025-06-21T11:50:04.593+08:00  WARN 11003 --- [Lavalink] [nioEventLoopGroup-2-28] io.netty.bootstrap.Bootstrap             : Failed to set channel option 'IP_TOS' with value '24' for channel '[id: 0x9b2e3308]'
+
+io.netty.channel.ChannelException: java.net.SocketException: Operation not permitted
+	at io.netty.channel.socket.DefaultDatagramChannelConfig.setTrafficClass(DefaultDatagramChannelConfig.java:358) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.socket.DefaultDatagramChannelConfig.setOption(DefaultDatagramChannelConfig.java:130) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.socket.nio.NioDatagramChannelConfig.setOption(NioDatagramChannelConfig.java:216) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.AbstractBootstrap.setChannelOption(AbstractBootstrap.java:487) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.AbstractBootstrap.setChannelOptions(AbstractBootstrap.java:479) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.Bootstrap.init(Bootstrap.java:278) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.AbstractBootstrap.initAndRegister(AbstractBootstrap.java:327) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.Bootstrap.doResolveAndConnect(Bootstrap.java:164) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.Bootstrap.connect(Bootstrap.java:148) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at moe.kyokobot.koe.internal.handler.DiscordUDPConnection.connect(DiscordUDPConnection.java:59) ~[core-2.0.3-rc2.jar!/:na]
+	at moe.kyokobot.koe.gateway.MediaGatewayV8Connection.selectProtocol(MediaGatewayV8Connection.java:199) ~[core-2.0.3-rc2.jar!/:na]
+	at moe.kyokobot.koe.gateway.MediaGatewayV8Connection.handlePayload(MediaGatewayV8Connection.java:95) ~[core-2.0.3-rc2.jar!/:na]
+	at moe.kyokobot.koe.gateway.AbstractMediaGatewayConnection$WebSocketClientHandler.channelRead0(AbstractMediaGatewayConnection.java:215) ~[core-2.0.3-rc2.jar!/:na]
+	at io.netty.channel.SimpleChannelInboundHandler.channelRead(SimpleChannelInboundHandler.java:99) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.fireChannelRead(ByteToMessageDecoder.java:346) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.fireChannelRead(ByteToMessageDecoder.java:333) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.callDecode(ByteToMessageDecoder.java:455) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:290) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.ssl.SslHandler.unwrap(SslHandler.java:1473) ~[netty-handler-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.ssl.SslHandler.decodeJdkCompatible(SslHandler.java:1336) ~[netty-handler-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.ssl.SslHandler.decode(SslHandler.java:1385) ~[netty-handler-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.decodeRemovalReentryProtection(ByteToMessageDecoder.java:530) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.callDecode(ByteToMessageDecoder.java:469) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:290) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1407) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:918) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:166) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994) ~[netty-common-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74) ~[netty-common-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30) ~[netty-common-4.1.112.Final.jar!/:4.1.112.Final]
+	at java.base/java.lang.Thread.run(Thread.java:840) ~[na:na]
+Caused by: java.net.SocketException: Operation not permitted
+	at java.base/sun.nio.ch.Net.setIntOption0(Native Method) ~[na:na]
+	at java.base/sun.nio.ch.Net.setSocketOption(Net.java:455) ~[na:na]
+	at java.base/sun.nio.ch.DatagramChannelImpl.setOption(DatagramChannelImpl.java:390) ~[na:na]
+	at java.base/sun.nio.ch.DatagramSocketAdaptor.setIntOption(DatagramSocketAdaptor.java:321) ~[na:na]
+	at java.base/sun.nio.ch.DatagramSocketAdaptor.setTrafficClass(DatagramSocketAdaptor.java:391) ~[na:na]
+	at io.netty.channel.socket.DefaultDatagramChannelConfig.setTrafficClass(DefaultDatagramChannelConfig.java:356) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	... 45 common frames omitted
+
+2025-06-21T11:50:33.818+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-3] l.server.io.RequestLoggingFilter         : DELETE /v4/sessions/8tuhxrrcsz5o50ec/players/1016181130644443147, client=127.0.0.1
+2025-06-21T11:50:33.821+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-1] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:49720 with id 8tuhxrrcsz5o50ec -- CloseStatus[code=1006, reason=]
+2025-06-21T11:50:33.821+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-1] lavalink.server.io.SocketContext         : Shutting down 0 playing players.
+2025-06-21T11:50:48.899+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-3] l.server.io.HandshakeInterceptorImpl     : Incoming connection from /127.0.0.1:49872
+2025-06-21T11:50:48.900+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-3] l.server.io.RequestLoggingFilter         : GET /v4/websocket, client=127.0.0.1
+2025-06-21T11:50:48.901+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-3] lavalink.server.io.SocketServer          : Connection successfully established from Lavalink.py/5.9.0
+2025-06-21T11:50:49.400+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-3] l.server.player.AudioLoaderRestHandler   : Got request to load for identifier "scsearch:hurts me tory"
+2025-06-21T11:50:49.941+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-3] l.server.player.AudioLoaderRestHandler   : Loaded playlist Search results for: hurts me tory
+2025-06-21T11:50:49.945+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-3] l.server.io.RequestLoggingFilter         : GET /v4/loadtracks?identifier=scsearch:hurts+me+tory, client=127.0.0.1
+2025-06-21T11:50:49.958+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-3] l.server.io.RequestLoggingFilter         : PATCH /v4/sessions/09ywya5bnmptf58c/players/1016181130644443147, client=127.0.0.1, payload={"track": {"encoded": "QAABQgMACEh1cnRzIE1lAA1UcmlwcGllIFJlZGR/AAAAAAACJjQAck86aHR0cHM6Ly9hcGktdjIuc291bmRjbG91ZC5jb20vbWVkaWEvc291bmRjbG91ZDp0cmFja3M6MTU0ODIzNzU3NC80M2FmZmUyNS03YjZhLTQzMTQtODgzNi1lMjM5ODVlMDBhZWYvc3RyZWFtL2hscwABAEhodHRwczovL3NvdW5kY2xvdWQuY29tL3RyaXBwaWUtaGlwcGllLTIvdG9yeS1sYW5lei10cmlwcGllLXJlZGQtaHVydHMtbWUBADpodHRwczovL2kxLnNuZGNkbi5jb20vYXJ0d29ya3MtUGR6R3BabkVyU3U1LTAtb3JpZ2luYWwuanBnAQAMUVpKODQyMDAzMzgwAApzb3VuZGNsb3VkAAAAAAAAAAA="}}
+2025-06-21T11:50:50.148+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : PATCH /v4/sessions/09ywya5bnmptf58c/players/1016181130644443147, client=127.0.0.1, payload={"voice": {"sessionId": "ef96c2111bb38144d8f9a89d9b01eb92", "endpoint": "sydney11099.discord.media:443", "token": "1d73244915c03d56"}}
+2025-06-21T11:50:50.213+08:00  WARN 11003 --- [Lavalink] [nioEventLoopGroup-2-14] io.netty.bootstrap.Bootstrap             : Failed to set channel option 'IP_TOS' with value '24' for channel '[id: 0x2f73c12d]'
+
+io.netty.channel.ChannelException: java.net.SocketException: Operation not permitted
+	at io.netty.channel.socket.DefaultDatagramChannelConfig.setTrafficClass(DefaultDatagramChannelConfig.java:358) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.socket.DefaultDatagramChannelConfig.setOption(DefaultDatagramChannelConfig.java:130) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.socket.nio.NioDatagramChannelConfig.setOption(NioDatagramChannelConfig.java:216) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.AbstractBootstrap.setChannelOption(AbstractBootstrap.java:487) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.AbstractBootstrap.setChannelOptions(AbstractBootstrap.java:479) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.Bootstrap.init(Bootstrap.java:278) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.AbstractBootstrap.initAndRegister(AbstractBootstrap.java:327) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.Bootstrap.doResolveAndConnect(Bootstrap.java:164) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.bootstrap.Bootstrap.connect(Bootstrap.java:148) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at moe.kyokobot.koe.internal.handler.DiscordUDPConnection.connect(DiscordUDPConnection.java:59) ~[core-2.0.3-rc2.jar!/:na]
+	at moe.kyokobot.koe.gateway.MediaGatewayV8Connection.selectProtocol(MediaGatewayV8Connection.java:199) ~[core-2.0.3-rc2.jar!/:na]
+	at moe.kyokobot.koe.gateway.MediaGatewayV8Connection.handlePayload(MediaGatewayV8Connection.java:95) ~[core-2.0.3-rc2.jar!/:na]
+	at moe.kyokobot.koe.gateway.AbstractMediaGatewayConnection$WebSocketClientHandler.channelRead0(AbstractMediaGatewayConnection.java:215) ~[core-2.0.3-rc2.jar!/:na]
+	at io.netty.channel.SimpleChannelInboundHandler.channelRead(SimpleChannelInboundHandler.java:99) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.fireChannelRead(ByteToMessageDecoder.java:346) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:318) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.ssl.SslHandler.unwrap(SslHandler.java:1473) ~[netty-handler-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.ssl.SslHandler.decodeJdkCompatible(SslHandler.java:1336) ~[netty-handler-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.ssl.SslHandler.decode(SslHandler.java:1385) ~[netty-handler-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.decodeRemovalReentryProtection(ByteToMessageDecoder.java:530) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.callDecode(ByteToMessageDecoder.java:469) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:290) ~[netty-codec-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1407) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:918) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:166) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994) ~[netty-common-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74) ~[netty-common-4.1.112.Final.jar!/:4.1.112.Final]
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30) ~[netty-common-4.1.112.Final.jar!/:4.1.112.Final]
+	at java.base/java.lang.Thread.run(Thread.java:840) ~[na:na]
+Caused by: java.net.SocketException: Operation not permitted
+	at java.base/sun.nio.ch.Net.setIntOption0(Native Method) ~[na:na]
+	at java.base/sun.nio.ch.Net.setSocketOption(Net.java:455) ~[na:na]
+	at java.base/sun.nio.ch.DatagramChannelImpl.setOption(DatagramChannelImpl.java:390) ~[na:na]
+	at java.base/sun.nio.ch.DatagramSocketAdaptor.setIntOption(DatagramSocketAdaptor.java:321) ~[na:na]
+	at java.base/sun.nio.ch.DatagramSocketAdaptor.setTrafficClass(DatagramSocketAdaptor.java:391) ~[na:na]
+	at io.netty.channel.socket.DefaultDatagramChannelConfig.setTrafficClass(DefaultDatagramChannelConfig.java:356) ~[netty-transport-4.1.112.Final.jar!/:4.1.112.Final]
+	... 43 common frames omitted
+
+2025-06-21T11:51:21.421+08:00  INFO 11003 --- [Lavalink] [XNIO-1 task-2] l.server.io.RequestLoggingFilter         : DELETE /v4/sessions/09ywya5bnmptf58c/players/1016181130644443147, client=127.0.0.1
+2025-06-21T11:51:21.423+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-3] lavalink.server.io.SocketServer          : Connection closed from /127.0.0.1:49872 with id 09ywya5bnmptf58c -- CloseStatus[code=1006, reason=]
+2025-06-21T11:51:21.423+08:00  INFO 11003 --- [Lavalink] [XNIO-1 I/O-3] lavalink.server.io.SocketContext         : Shutting down 0 playing players.

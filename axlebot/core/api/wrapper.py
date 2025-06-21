@@ -8,7 +8,7 @@ from typing import Union, List
 load_dotenv(find_dotenv())
 
 
-async def fetch_data(url: str, params: dict | None = None, timeout: int = 20):
+async def fetch_data(url: str, params: dict | None = None, timeout: int = 30):
     """
     Wrapper for making GET requests to the provided URL with optional query params.
 
@@ -18,6 +18,7 @@ async def fetch_data(url: str, params: dict | None = None, timeout: int = 20):
     :return: A tuple of (status_code, json_data) if successful, or (None, None) on errors.
     """
     timeout = aiohttp.ClientTimeout(total=timeout) # total time budget
+
     async with aiohttp.ClientSession(timeout=timeout) as session:  
         try:
             async with session.get(url, params=params, headers = {"Accept": "application/json"}) as response:

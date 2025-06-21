@@ -9,6 +9,9 @@ import discord
 from discord.ext import commands
 from utils.message_crafter import craft_bot_music_stopped
 from models.server_config import ServerConfig
+import lavalink
+import core.extensions
+
 
 class Client:
     def __init__(self, server_id):
@@ -45,6 +48,8 @@ class Client:
         self.client_lock = asyncio.Lock()  # Lock to prevent concurrent modifications to the client
         self.server_config: ServerConfig = ServerConfig(self)
         self.vc_stopped_due_to_seek = False
+        #print("TEST TEST", core.extensions.lavalink_client.node_manager.available_nodes)
+        #self.lavalink_player = core.extensions.lavalink_client.player_manager.get(server_id) or core.extensions.lavalink_client.player_manager.create(server_id)
 
     @staticmethod
     async def from_guild_id(guild_id):

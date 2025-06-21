@@ -124,7 +124,7 @@ class Song:
         self.belongs_to = belongs_to # belonging to a playlist
         self.is_looping = False
         self.is_first_in_queue = False  # Indicates if the song is currently active in the queue
-        self.all_untried_song_streams = [] if all_untried_song_streams is None else all_untried_song_streams # list of all song urls incase a url is invalid, we can try the next one
+        self.all_untried_song_streams = all_untried_song_streams # list of all song urls incase a url is invalid, we can try the next one
 
     @property
     async def player(self) -> discord.FFmpegPCMAudio:
@@ -136,15 +136,24 @@ class Song:
     @property
     async def audio_url(self) -> str | None:
         if self._audio_url is None:
-            self._audio_url = await Song.get_audio_url(self.yt_url)
+            all_streams = await Song.get_audio_url(self.yt_url, return_all = True)
+            if len(all_streams) > 0:
+                self._audio_url, *self.all_untried_song_streams = all_streams
+            else:
+                return None
         elif Song.has_audio_url_expired(self._audio_url, self.duration):
-            self._audio_url = await Song.get_audio_url(self.yt_url)
+            all_streams = await Song.get_audio_url(self.yt_url, return_all = True)
+            if len(all_streams) > 0:
+                self._audio_url, *self.all_untried_song_streams = all_streams
+            else:
+                return None  
 
         if PROXY:
             self._audio_url = PROXY + urllib.parse.quote(self._audio_url)
 
         print(f"Audio URL for {self.name} ({self.artist}): {self._audio_url[:50]}...")
         if not await Song.is_url_valid(self._audio_url):
+            print("other audio urls len", len(self.all_untried_song_streams))
             while self.all_untried_song_streams:
                 next_url = self.all_untried_song_streams.pop(0)
                 next_url = PROXY + urllib.parse.quote(next_url) if PROXY else next_url
@@ -387,6 +396,7 @@ class Song:
             song = await next_loaded_song
             if song:
                 yield song
+            
     @classmethod
     @alru_cache(maxsize=64, ttl=86400)
     async def get_spotify_info(cls, spotify_url):
@@ -553,7 +563,7 @@ class Song:
             self._play_task = None
 
     @staticmethod
-    async def get_audio_url(yt_url: str) -> str:
+    async def get_audio_url(yt_url: str, return_all = False) -> str:
         print("GETTING NEW URL")
         try:
             # loop = asyncio.get_running_loop()
@@ -570,6 +580,9 @@ class Song:
             if not audio_urls or len(audio_urls) == 0:
                 print(f"No audio URLs found for YouTube URL: {yt_url}")
                 return None
+            if return_all:
+                print("Returning all audio URLs")
+                return audio_urls
             audio_url = audio_urls[0]
 
         except Exception as e:
