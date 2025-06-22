@@ -349,7 +349,7 @@ class PlaylistCog(commands.Cog):
                     player = await song.player
 
                     if player is None:
-                        await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), silent = True)
+                        await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), delete_after = 20)
                         asyncio.create_task(self.music_cog.play_next(ctx, client))
                         return
 
@@ -359,8 +359,8 @@ class PlaylistCog(commands.Cog):
                                         lambda: asyncio.ensure_future(self.music_cog._after_playback(e, ctx, client)))
                     )
         except Exception as e:
-            print(f"Error in play command: {e}")
-            await ctx.send(embed=craft_general_error())
+            print(f"Error in queue playlist command: {e}")
+            await ctx.send(embed=craft_general_error(), delete_after = 20)
 
     @commands.command(aliases = ['pls', 'playlist_info', 'playlistinfo'])
     @commands.check(bot_use_permissions)

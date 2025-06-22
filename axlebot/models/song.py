@@ -335,31 +335,34 @@ class Song:
         all_tracks_info = await cls.get_spotify_info(spotify_playlist_url)
 
         semaphore = asyncio.Semaphore(max_concurrent_song_loadings)
+        unique_playlist_id = uuid1().int >> 64
 
-        unique_playlist_id = uuid1().int>>64
-
-        async def process_track(track, sleep_time = 3) -> Song:
+        async def process_track(track, sleep_time=0) -> Song:
             async with semaphore:
                 try:
+                    if sleep_time > 0:
+                        await asyncio.sleep(sleep_time)
+
                     song = await Song.SpotifySong(track[0], track[1], track[2])
                     if song:
                         song.is_playlist = True
                         song.belongs_to = unique_playlist_id
-
-                    if sleep_time > 0:
-                        await asyncio.sleep(sleep_time)
-
                     return song
                 except Exception as e:
                     print(f"Error processing URL {track}: {e}")
                     return None
-                
-        tasks  = [process_track(all_tracks_info[0], 0)] + [process_track(track) for track in all_tracks_info[1:]]
+
+        # Set initial sleep_time = 0, then increase by 5s each time
+        tasks = [
+            process_track(track, sleep_time=i * 2)
+            for i, track in enumerate(all_tracks_info)
+        ]
 
         for next_loaded_song in asyncio.as_completed(tasks):
             song = await next_loaded_song
             if song:
                 yield song
+
 
     @staticmethod
     def has_audio_url_expired(audio_url, duration) -> bool:
@@ -393,6 +396,7 @@ class Song:
     async def SpotifySong(cls, name, artist, thumbnail_url):
         song: Song = await cls.CreateSong(f"{name} by {artist} audio")
         song.thumbnail_url = thumbnail_url
+        song.type = "spot"; song.is_spot = True; song.is_yt = False
         return song
         # yt_url, _ , duration = await Song.search_youtube_video(f"{name} by {artist} audio")
         # loop = asyncio.get_running_loop()
@@ -409,36 +413,6 @@ class Song:
     
     @classmethod
     async def SongFromYouTubeURL(cls, yt_url):
-        # name, duration = await Song.search_youtube_video_by_url(yt_url)
-        # if name is None or duration is None:
-        #     print(f"Failed to fetch song info for URL: {yt_url}")
-        #     return None
-        # loop = asyncio.get_running_loop()
-        # data = await loop.run_in_executor(
-        #     None, lambda: yt_dl.extract_info(yt_url, download=False)
-        # )
-        # artist = data.get("artist") or data.get("uploader") or "Unknown Artist"
-        # thumbnail_url = data["thumbnail"]
-        # audio_url = data["url"]
-        # player = None
-        # song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url)
-        # return song
-        # data = await Song.get_youtube_video_info(yt_url, is_yt_url=True)
-
-        # if data is None:
-        #     print(f"Failed to fetch song info for query: {yt_url}")
-        #     return None
-        # artist = data.get("artist") or data.get("uploader") or data.get("channel") or "Unknown Artist"
-        # thumbnail_url = data["thumbnail"]
-        # audio_url = data["url"]
-        # duration = data["duration"]
-        # yt_url = data["webpage_url"]
-        # name = data["title"]
-        # player = None
-        # print("SONG CREATED")
-        # # Create the song instance
-        # song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url, all_untried_song_streams=data.get("audio_urls")[1:])
-        # return song
         return await cls.CreateSong(yt_url)
 
 
@@ -473,7 +447,7 @@ class Song:
 
         semaphore = asyncio.Semaphore(max_concurrent_song_loadings)
 
-        async def process_url(url, sleep_time = 3) -> Song:
+        async def process_url(url, sleep_time = 0) -> Song:
             async with semaphore:
                 try:
                     song = await Song.SongFromYouTubeURL(url)
@@ -482,13 +456,17 @@ class Song:
 
                     if sleep_time > 0:
                         await asyncio.sleep(sleep_time)
-                        
+
                     return song
                 except Exception as e:
                     print(f"Error processing URL {url}: {e}")
                     return None
 
-        tasks = [process_url(yt_playlist_urls[0], 0)] + [process_url(url) for url in yt_playlist_urls[1:]]
+        # Set initial sleep_time = 0, then increase by 5s each time
+        tasks = [
+            process_url(track, sleep_time=i * 2)
+            for i, track in enumerate(yt_playlist_urls)
+        ]
 
         for next_loaded_song in asyncio.as_completed(tasks):
             song = await next_loaded_song
@@ -579,30 +557,37 @@ class Song:
     
     @staticmethod
     async def get_youtube_playlist_info(playlist_url: str) -> list:
-        playlist = Playlist(playlist_url)
+        # playlist = Playlist(playlist_url)
         
-        while playlist.hasMoreVideos:
-            await playlist.getNextVideos()
+        # while playlist.hasMoreVideos:
+        #     await playlist.getNextVideos()
         
-        return [f"https://www.youtube.com/watch?v={video['id']}" for video in playlist.videos]
+        # return [f"https://www.youtube.com/watch?v={video['id']}" for video in playlist.videos]
+        ydl_opts = {
+            'quiet': True,
+            'extract_flat': True,
+            'playlistend': None,  # Limit number of videos
+        }
+        
+        with YoutubeDL(ydl_opts) as ydl:
+            try:
+                playlist_info = await asyncio.get_running_loop().run_in_executor(
+                    None, lambda: ydl.extract_info(playlist_url, download=False)
+                )
+
+                return [entry['url'] for entry in playlist_info['entries'] if entry]
+            except Exception as e:
+                print(f"Error extracting playlist: {e}")
+                return []
     
     @staticmethod
     #@alru_cache(maxsize=128, ttl=86400)
     async def get_youtube_video_info(query: str, is_yt_url = False) -> dict:
-        # loop = asyncio.get_running_loop()
-        # data = await loop.run_in_executor(
-        #     None, lambda: yt_dl.extract_info(f"{query if is_yt_url else f'ytsearch1{query}'}", download=False)
-        # )
-        # if not data or "entries" not in data or len(data["entries"]) == 0:
-        #     print(f"No results found for query: {query}")
-        #     return None
-        # data = data["entries"][0]
-        # return data
         data = await get_youtube_info(query, is_yt_url=is_yt_url)
         return data
 
 
-    
+
     @staticmethod
     @alru_cache(maxsize=128, ttl=86400)
     async def search_youtube_video(query: str):

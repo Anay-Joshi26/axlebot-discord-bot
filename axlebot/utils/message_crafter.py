@@ -45,7 +45,7 @@ async def craft_now_playing(song: Song, is_looping = False):
     title=(
         f"Now playing{' from YouTube Playlist' if song.is_playlist else ''}..." 
         if song.type == 'yt' 
-        else f"Now playing from Spotify{' from Spotify Playlist' if song.is_playlist else ''}..."
+        else f"Now playing from Spotify{' Playlist' if song.is_playlist else ''}..."
     ),
     #description=f"[{song.name}]({song.yt_url})", # uncomment this to make the song name a link to the song
     description=f"{song.name}",
@@ -70,7 +70,7 @@ async def craft_now_playing(song: Song, is_looping = False):
 
 def craft_playlist_added(type_of_playlist):
     embed = discord.Embed(title = f"{'Spotify' if type_of_playlist == 'spot' else 'YouTube'} Playlist Queued",
-                    description=f"You have just queued a playlist.\n\nIt may take some time to queue every song in the playlist. There are some playlist specific commands you can use while a playlist is being played.\n\n**The first song should start to be queued shortly...**\n\nYou can inspect the queue to see the added songs via `-queue` or `q` (the songs will be added slowly).",
+                    description=f"You have just queued a playlist.\n\nIt may take some time to queue every song in the playlist. *The songs are not guaranteed to show up in the original order*.\n\n**The first song should start to be queued shortly...**\n\nYou can inspect the queue to see the added songs via `-queue` or `q` (the songs will be added slowly).",
                     colour=0x1ED760 if type_of_playlist == "spot" else 0xFF0033)
 
     return embed

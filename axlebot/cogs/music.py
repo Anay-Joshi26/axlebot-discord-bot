@@ -315,7 +315,8 @@ class MusicCog(commands.Cog):
             asyncio.create_task(self.play_song(ctx, client, query))
         except Exception as e:
             print(f"Error in play command: {e}")
-            await ctx.send(embed=craft_general_error())
+            await ctx.send(embed=craft_general_error(), delete_after = 20)
+            traceback.print_exc()
 
 
     async def play_song(self, ctx: commands.Context, client: Client, query: str, position : int = None):
@@ -373,7 +374,7 @@ class MusicCog(commands.Cog):
                         player = await song.player
 
                         if player is None:
-                            await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), silent = True)
+                            await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), delete_after = 20)
                             asyncio.create_task(self.play_next(ctx, client))
                             return
 
@@ -400,7 +401,7 @@ class MusicCog(commands.Cog):
             
             if error_occured:
                 await fetching_song_message.delete()
-                await ctx.send(embed = craft_general_error("The song could not be found with the provided query"))
+                await ctx.send(embed = craft_general_error("The song could not be found with the provided query"), delete_after = 20)
                 return
 
             await queue.append(song, position)
@@ -413,7 +414,7 @@ class MusicCog(commands.Cog):
                 player = await song.player
 
                 if player is None:
-                    await ctx.send(embed=craft_general_error(f"The music could not be played :("), silent = True)
+                    await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), delete_after = 20)
                     asyncio.create_task(self.play_next(ctx, client))
                     return
 
@@ -432,7 +433,8 @@ class MusicCog(commands.Cog):
         except Exception as e:
             await fetching_song_message.delete()
             print(f"Error in play command: {e}")
-            await ctx.send(embed=craft_general_error(e))
+            await ctx.send(embed=craft_general_error(), delete_after = 20)
+            traceback.print_exc()
 
         
     async def play_next(self, ctx, client : Client):
@@ -473,7 +475,7 @@ class MusicCog(commands.Cog):
             player = await next_song.player
 
             if player is None:
-                await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{next_song.name}` :(, please try again later"), silent = True)
+                await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{next_song.name}` :(, please try again later"), delete_after = 20)
                 asyncio.create_task(self.play_next(ctx, client))
                 return
             
@@ -485,13 +487,13 @@ class MusicCog(commands.Cog):
             # next_song.progress_message = progress_message
         except Exception as e:
             print(f"Error in play_next: {e}")
-            await ctx.send(embed=craft_general_error())
+            await ctx.send(embed=craft_general_error(), delete_after = 20)
             traceback.print_exc()
 
     async def _after_playback(self, error, ctx, client):
         if error:
             print(f"Error in play_next: {error}")
-            await ctx.send(embed=craft_general_error())
+            await ctx.send(embed=craft_general_error(), delete_after = 20)
 
         await self.play_next(ctx, client)
 
@@ -795,13 +797,13 @@ class MusicCog(commands.Cog):
         try:
             mseconds_into_song = int(parse_seek_time(new_time) * 1000)
         except ValueError as e:
-            await ctx.send(embed=craft_general_error(f"Invalid time format: `{new_time}`. Please use one of the formats mentioned below.\n{info_msg}"))
+            await ctx.send(embed=craft_general_error(f"Invalid time format: `{new_time}`. Please use one of the formats mentioned below.\n{info_msg}"), delete_after = 90)
             return
         
         try:
             await client.voice_client.player.seek(mseconds_into_song)
         except Exception as e:
-            await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_time}`. Please ensure the format is correct.\n{info_msg}"))
+            await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_time}`. Please ensure the format is correct.\n{info_msg}"), delete_after = 90)
             return
 
         # new_player = await current_song.get_fresh_player(additional_before_options= f"-ss {new_time}")
@@ -857,7 +859,7 @@ class MusicCog(commands.Cog):
         try:
             await client.voice_client.player.seek(new_position)
         except Exception as e:
-            await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_position}`. Please ensure the format is correct.\n{info_msg}"))
+            await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_position}`. Please ensure the format is correct.\n{info_msg}"), delete_after = 90)
             return
         # new_player = await current_song.get_fresh_player(additional_before_options=f"-ss {new_position}")
 
