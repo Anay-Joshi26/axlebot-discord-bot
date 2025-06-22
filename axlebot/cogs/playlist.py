@@ -13,6 +13,7 @@ from cogs.music import MusicCog
 from discord.ext.commands import BucketType
 from copy import deepcopy
 import random
+from core.lavalink import LavalinkVoiceClient
 
 class CreatePlaylistModal(discord.ui.Modal):
 
@@ -324,7 +325,7 @@ class PlaylistCog(commands.Cog):
                 return
 
             if client.voice_client is None:
-                vc = await ctx.author.voice.channel.connect()
+                vc = await ctx.author.voice.channel.connect(cls = LavalinkVoiceClient)
                 client.voice_client = vc
 
             queue = client.queue
@@ -352,7 +353,7 @@ class PlaylistCog(commands.Cog):
                         asyncio.create_task(self.music_cog.play_next(ctx, client))
                         return
 
-                    client.voice_client.play(
+                    await client.voice_client.play(
                         player,
                         after = lambda e: self.bot.loop.call_soon_threadsafe(
                                         lambda: asyncio.ensure_future(self.music_cog._after_playback(e, ctx, client)))

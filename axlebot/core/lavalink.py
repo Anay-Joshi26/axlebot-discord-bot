@@ -32,6 +32,7 @@ class LavalinkVoiceClient(discord.VoiceClient):
         self._after_callback = None
         self._current_track_id = None
         self._loop = asyncio.get_running_loop()
+        self._lavalink.add_event_hooks(self)
 
     async def play(self, track, *, after=None):
         self._after_callback = after
@@ -39,6 +40,7 @@ class LavalinkVoiceClient(discord.VoiceClient):
         await self.player.play(track)
 
     async def stop(self):
+        print("Stopping the player")
         await self.player.stop()
 
     async def pause(self):
@@ -49,9 +51,16 @@ class LavalinkVoiceClient(discord.VoiceClient):
 
     def is_connected(self):
         return self.channel is not None and self.channel.guild.voice_client is self
+    
+    def is_playing(self):
+        return self.player.is_playing and not self.player.paused
+    
+    def is_paused(self):
+        return self.player.paused
 
     @lavalink.listener(TrackEndEvent)
     async def on_track_end(self, event):
+        print(f"Track ended: {event.track.title} in guild {self.guild_id}")
         if self._after_callback:
             try:
                 self._after_callback(None)  # DO NOT await this
@@ -147,7 +156,3 @@ class LavalinkVoiceClient(discord.VoiceClient):
             await self._lavalink.player_manager.destroy(self.guild_id)
         except ClientError:
             pass
-    
-    async def lavalink_play(self, track, after=None):
-        player = self._lavalink.player_manager.get(guild_id=self.channel.guild.id)
-        await player.play(track["track"])

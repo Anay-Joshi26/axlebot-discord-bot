@@ -16,7 +16,7 @@ class Client:
     def __init__(self, server_id):
         self.queue : SongQueue = SongQueue(server_id=server_id)
         self.server_id = server_id
-        self.voice_client : discord.VoiceClient = None
+        self.voice_client : LavalinkVoiceClient = None
         self.last_message_time = None
         self.acceptable_delay = 5
         self.time_to_wait_precision = 2
@@ -173,7 +173,7 @@ class Client:
         if self.queue.current_song is not None:
             self.queue.current_song.stop()
         if self.voice_client is not None:
-            self.voice_client.stop()
+            await self.voice_client.stop()
             await self.voice_client.disconnect(); self.voice_client = None
         await self.queue.clear()
 
