@@ -2,11 +2,8 @@ import re
 
 import discord
 import lavalink
-from discord.ext import commands
 from lavalink.events import TrackStartEvent, QueueEndEvent, TrackEndEvent, TrackExceptionEvent, TrackStuckEvent
 from lavalink.errors import ClientError
-from lavalink.filters import LowPass
-from lavalink.server import LoadType
 import asyncio
 import core.extensions
 

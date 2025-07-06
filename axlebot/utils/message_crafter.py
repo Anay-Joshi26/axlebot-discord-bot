@@ -282,7 +282,7 @@ def craft_songs_added_to_playlist(name: str, songs_added: list) -> discord.Embed
     songs_description = "\n".join([f"{i+1}. **{song.name}**" for i,song in enumerate(songs_added)])
     
     embed = discord.Embed(
-        title=f"Songs successfully added to {name}",
+        title=f"Songs successfully added to `{name}`",
         description=f"The following songs were successfully added:\n\n{songs_description}",
         colour=COLOURS["success"]
     )
@@ -404,7 +404,7 @@ def craft_songs_in_playlist(playlist_name: str, songs: list) -> discord.Embed:
 
     description = "\n".join([f"{i+1}. {song.name}" for i,song in enumerate(songs)])
 
-    embed = discord.Embed(title=f"Songs in {playlist_name}",
+    embed = discord.Embed(title=f"Songs in `{playlist_name}`",
                       description=f"The playlist named `{playlist_name}` currently has `{n}` songs{', they are:' if n != 0 else '.'}\n\n{description}",
                       colour=0x00b0f4)
 
@@ -498,6 +498,7 @@ def craft_custom_playlist_help_command():
         "You can add YouTube or Spotify track URLs, or just type a query for the song name.\n\n"
 
         "__To add songs to a playlist__\n"
+        "Run `-add_songs` and then provide the playlist name and the songs you want to add. OR\n"
         "`-add_songs \"<Playlist name>\" <url 1> <url 2> \"<Song name>\" ...`\n"
         "Wrap the playlist name in double quotes. If the song is **not** a URL, wrap the name in double quotes as well.\n\n"
 
