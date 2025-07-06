@@ -567,6 +567,7 @@ class Song:
             'quiet': True,
             'extract_flat': True,
             'playlistend': None,  # Limit number of videos
+            'skip_download': True
         }
         
         with YoutubeDL(ydl_opts) as ydl:

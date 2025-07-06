@@ -502,8 +502,8 @@ def craft_custom_playlist_help_command():
         "Wrap the playlist name in double quotes. If the song is **not** a URL, wrap the name in double quotes as well.\n\n"
 
         "__To queue/play a playlist__\n"
-        "`-queue_playlist <Playlist name>`\n"
-        "Aliases: `qp`, `queuepl`, `queueplaylist`, `qpl`, `pp`, `playplaylist`, `playpl`, `queue_pl`\n\n"
+        "`-queue_playlist <Playlist name> <-s : Optional to shuffle>`\n"
+        "Aliases: `qp`, `queuepl`, `queueplaylist`, `qpl`, `pp`, `playplaylist`, `playpl`, `queue_pl`*\n\n"
 
         "__To add the current playing song to a playlist__\n"
         "`-add_song <Playlist name>` (`-addsong` also works)\n\n"

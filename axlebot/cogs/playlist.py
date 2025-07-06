@@ -213,7 +213,7 @@ class PlaylistCog(commands.Cog):
                     songs_added_embed = craft_songs_added_to_playlist(playlist.name, added_songs)
                     await ctx.send(embed=songs_added_embed)
                     await ctx.send(str(e) + "\nNo more songs will be added to the playlist")
-                    raise
+                    return
 
         try:
             await asyncio.gather(*(process_url(url) for url in urls))
@@ -262,11 +262,11 @@ class PlaylistCog(commands.Cog):
     @commands.check(in_voice_channel)
     @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
-    async def add_song(self, ctx: commands.Context, *args) -> None:
+    async def add_song(self, ctx: commands.Context, *, playlist_name) -> None:
         """
         Adds the current playing to a playlist with the given name.
         """
-        if not args:
+        if not playlist_name:
             await ctx.send("You didn't provide a playlist name")
             return
 
@@ -277,7 +277,6 @@ class PlaylistCog(commands.Cog):
             await ctx.send("No song is currently playing", silent = True)
             return
         
-        playlist_name = " ".join(args)
         playlist = client.get_playlist_by_name(playlist_name)
 
         if not playlist:
@@ -290,7 +289,8 @@ class PlaylistCog(commands.Cog):
         try:
             playlist.add_song(current_song)
         except ValueError as e:
-            await ctx.send(str(e))
+            await ctx.send(embed = craft_general_error(str(e)))
+            return
 
         await client.update_playlist_changes_db()
 
