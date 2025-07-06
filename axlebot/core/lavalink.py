@@ -1,5 +1,3 @@
-import re
-
 import discord
 import lavalink
 from lavalink.events import TrackStartEvent, QueueEndEvent, TrackEndEvent, TrackExceptionEvent, TrackStuckEvent
@@ -8,15 +6,22 @@ import asyncio
 import core.extensions
 
 
-url_rx = re.compile(r'https?://(?:www\.)?.+')
-
-
 class LavalinkVoiceClient(discord.VoiceClient):
     """
+    A Lavalink voice client that extends discord.VoiceClient. This was chosen to be a drop in replacement for the default `discord.VoiceClient`,
+    providing the necessary functionality to interact with Discord and Lavalink servers.
+
+    This class is used to handle voice connections and interactions with Lavalink.
+    It is designed to work with Lavalink.py, a Python library for interacting with Lavalink servers.
+
+    Below is from lavalink.py's GitHub: https://github.com/devoxin/Lavalink.py
+
     This is the preferred way to handle external voice sending
     This client will be created via a cls in the connect method of the channel
     see the following documentation:
     https://discordpy.readthedocs.io/en/latest/api.html#voiceprotocol
+
+    *Although this version is modified to subclass `discord.VoiceClient` **not** `discord.VoiceProtocol`*
     """
 
     def __init__(self, bot: discord.Client, channel: discord.abc.Connectable):
