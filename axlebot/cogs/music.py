@@ -340,13 +340,17 @@ class MusicCog(commands.Cog):
 
                 qt = "yt" if query_type == self.YT_PLAYLIST else "spot"
 
+                stop_event = asyncio.Event()
+                client.stop_event = stop_event
+
+                print("client.stop_event", id(client.stop_event))
+                print("stop_event", id(stop_event))
+                print("stop_event is set?", stop_event.is_set())
 
                 if query_type == self.SPOT_PLAYLIST:
-                    song_generator = Song.SpotifyPlaylistSongList(query, max_concurrent_song_loadings=client.max_concurrent_song_loadings)
+                    song_generator = Song.SpotifyPlaylistSongList(query, max_concurrent_song_loadings=client.max_concurrent_song_loadings, stop_event=stop_event)
                 else:
-                    song_generator = Song.YouTubePlaylistSongList(query, max_concurrent_song_loadings=client.max_concurrent_song_loadings)
-
-                
+                    song_generator = Song.YouTubePlaylistSongList(query, max_concurrent_song_loadings=client.max_concurrent_song_loadings, stop_event=stop_event)
 
                 # embed = craft_playlist_added(qt)
                 # await ctx.send(embed = embed)
