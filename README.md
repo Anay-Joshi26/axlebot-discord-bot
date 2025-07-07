@@ -23,7 +23,7 @@ Axlebot is a feature-rich Discord music bot that supports YouTube and Spotify pl
 ## Getting Started
 
 ### Prerequisites
-- Python 3.10+
+- Python 3.11+ (mainly for `asyncio` features)
 - Discord bot token (create one at https://discord.com/developers/applications)
 - Lavalink server (for audio streaming)
 - FFmpeg installed and available in your PATH
