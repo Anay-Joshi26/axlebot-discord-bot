@@ -1,7 +1,6 @@
 from models.client import Client
 from typing import Dict
 import asyncio
-import discord
 import discord.ext.commands as commands
 from core.caching.managed_cache import CacheManager
 from core.caching.base_cache import BaseCache

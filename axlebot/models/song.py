@@ -21,6 +21,8 @@ from uuid import uuid1
 from utils import time_string_to_seconds
 from core.api.wrapper import *
 from core.api.lyrics import LyricsStatus
+import lavalink
+import core.extensions
 #from music.song_request_handler import extract_title_and_artist
 
 load_dotenv(find_dotenv())
@@ -94,7 +96,8 @@ yt_dl = YoutubeDL(yt_dl_options)
 
 class Song:
     def __init__(self, duration, artist, yt_url, player, name, thumbnail_url, audio_url, song_type = None, 
-                 is_spot=False, is_yt=True, is_playlist = False, belongs_to = None, all_untried_song_streams: List[str] = None):
+                 is_spot=False, is_yt=True, is_playlist = False, belongs_to = None, all_untried_song_streams: List[str] = None,
+                 lavalink_track_id: str = None):
         self.yt_url = yt_url
         self.name = name
         self.artist = artist
@@ -124,38 +127,88 @@ class Song:
         self.belongs_to = belongs_to # belonging to a playlist
         self.is_looping = False
         self.is_first_in_queue = False  # Indicates if the song is currently active in the queue
-        self.all_untried_song_streams = [] if all_untried_song_streams is None else all_untried_song_streams # list of all song urls incase a url is invalid, we can try the next one
+        self.all_untried_song_streams = all_untried_song_streams # list of all song urls incase a url is invalid, we can try the next one
+        self.lavalink_track_id = lavalink_track_id 
+        #self.track = lavalink_track  # For Lavalink 4.x, this is the track object
 
     @property
-    async def player(self) -> discord.FFmpegPCMAudio:
-        audio_url = await self.audio_url
-        if audio_url is None:
-            return None
-        return discord.FFmpegOpusAudio(audio_url, **ffmpeg_options)  
+    async def player(self) -> lavalink.AudioTrack | None:
+        """
+        Returns the player for the song, fetching it if not already set.
+        """
+        if self._player is None:
+
+            if self.lavalink_track_id:
+                return await core.extensions.lavalink_client.decode_track(self.lavalink_track_id)
+            
+            search_query = self.yt_url if self.yt_url else self.name
+            if search_query is None:
+                print("No search query provided for song player retrieval.")
+                return None
+            
+            search_result = await core.extensions.lavalink_client.get_tracks(f"ytsearch:{search_query}")
+
+            if not search_result or not search_result['tracks']:
+                print(f"Failed to fetch song info for query: {self.name}")
+                return None
+
+            # Use the first track
+            track = search_result['tracks'][0]
+            self._player = track
+            return track
+
+        return self._player
     
-    @property
-    async def audio_url(self) -> str | None:
-        if self._audio_url is None:
-            self._audio_url = await Song.get_audio_url(self.yt_url)
-        elif Song.has_audio_url_expired(self._audio_url, self.duration):
-            self._audio_url = await Song.get_audio_url(self.yt_url)
+    # async def get_player(self) -> lavalink.AudioTrack | None:
+    #     """
+    #     Returns the player for the song, fetching it if not already set.
+    #     """
+    #     if self._player is None:
 
-        if PROXY:
-            self._audio_url = PROXY + urllib.parse.quote(self._audio_url)
+    #         search_result = await core.extensions.lavalink_client.get_tracks(f"scsearch:{self.name}")
 
-        print(f"Audio URL for {self.name} ({self.artist}): {self._audio_url[:50]}...")
-        if not await Song.is_url_valid(self._audio_url):
-            while self.all_untried_song_streams:
-                next_url = self.all_untried_song_streams.pop(0)
-                next_url = PROXY + urllib.parse.quote(next_url) if PROXY else next_url
-                print(f"Trying next audio URL...")
-                if not Song.has_audio_url_expired(next_url, self.duration) and await Song.is_url_valid(next_url):
-                    self._audio_url = next_url
-                    print(f"Valid audio URL found: {self._audio_url[:50]}...")
-                    return self._audio_url
-            return None
+    #         if not search_result or not search_result['tracks']:
+    #             print(f"Failed to fetch song info for query: {self.name}")
+    #             return None
 
-        return self._audio_url
+    #         # Use the first track
+    #         track = search_result['tracks'][0]
+    #         self._player = track
+    #         return track
+    #     return self._player
+    
+    # @property
+    # async def audio_url(self) -> str | None:
+    #     if self._audio_url is None:
+    #         all_streams = await Song.get_audio_url(self.yt_url, return_all = True)
+    #         if len(all_streams) > 0:
+    #             self._audio_url, *self.all_untried_song_streams = all_streams
+    #         else:
+    #             return None
+    #     elif Song.has_audio_url_expired(self._audio_url, self.duration):
+    #         all_streams = await Song.get_audio_url(self.yt_url, return_all = True)
+    #         if len(all_streams) > 0:
+    #             self._audio_url, *self.all_untried_song_streams = all_streams
+    #         else:
+    #             return None  
+
+    #     if PROXY:
+    #         self._audio_url = PROXY + urllib.parse.quote(self._audio_url)
+
+    #     print(f"Audio URL for {self.name} ({self.artist}): {self._audio_url[:50]}...")
+    #     if not await Song.is_url_valid(self._audio_url):
+    #         print("other audio urls len", len(self.all_untried_song_streams))
+    #         while self.all_untried_song_streams:
+    #             next_url = self.all_untried_song_streams.pop(0)
+    #             next_url = PROXY + urllib.parse.quote(next_url) if PROXY else next_url
+    #             print(f"Trying next audio URL...")
+    #             if not Song.has_audio_url_expired(next_url, self.duration) and await Song.is_url_valid(next_url):
+    #                 self._audio_url = next_url
+    #                 print(f"Valid audio URL found: {self._audio_url[:50]}...")
+    #                 return self._audio_url
+    #         return None
+
+    #     return self._audio_url
     
     @property
     def is_playing(self) -> bool:
@@ -188,7 +241,7 @@ class Song:
         return song
     
     @classmethod
-    async def CreateSong(cls, youtube_query):
+    async def CreateSong_old_new(cls, youtube_query):
         print("searching song")
         #yt_url, name, duration = await Song.search_youtube_video(youtube_query)
         #print("song search finished, got url, getting info")
@@ -208,6 +261,54 @@ class Song:
         song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url, all_untried_song_streams=data.get("audio_urls")[1:])
         return song
     
+    @classmethod
+    async def CreateSong(cls, query: str):
+        print("Searching song...")
+
+        # Search via Lavalink node
+        #search_result = await player.node.get_tracks(f"scsearch:{query}")
+        search_result = await core.extensions.lavalink_client.get_tracks(f"ytsearch:{query}")
+
+        if not search_result or not search_result['tracks']:
+            print(f"Failed to fetch song info for query: {query}")
+            return None
+
+        # Use the first track
+        track = search_result['tracks'][0]
+        info = track['info'].raw.get('info', {})
+
+        print(info)
+        print(type(info))
+        print(info.keys())
+
+        name = info.get('title', 'Unknown Title')
+
+        print(info['title'])
+        artist = (
+            info.get('author') or
+            info.get('artist') or
+            info.get('uploader') or
+            info.get('channel') or
+            "Unknown Artist"
+        )
+        duration = int(info.get('length', 0)/1000)
+        yt_url = info.get('uri') or info.get('url')  # For Lavalink 4.x, 'uri' is standard
+        thumbnail_url = info.get('artworkUrl')
+
+        print("SONG CREATED")
+
+        return cls(
+            duration=duration,
+            artist=artist,
+            yt_url=yt_url,
+            player=track,
+            name=name,
+            thumbnail_url=thumbnail_url,
+            audio_url=None,
+            all_untried_song_streams=None,
+            lavalink_track_id=track.track
+        )
+    
     @lru_cache(maxsize=64)
     def _cached_spotify_track(url: str):
         return sp.track(url)
@@ -224,6 +325,7 @@ class Song:
             track_info["album"]["images"][0]["url"]
             or track_info["artist"]["images"][0]["url"],
         )
+        print(f"Creating Spotify song: {name} by {artist}")
         song = await cls.SpotifySong(name, artist, thumbnail_url)
 
         return song
@@ -233,30 +335,34 @@ class Song:
         all_tracks_info = await cls.get_spotify_info(spotify_playlist_url)
 
         semaphore = asyncio.Semaphore(max_concurrent_song_loadings)
+        unique_playlist_id = uuid1().int >> 64
 
-        unique_playlist_id = uuid1().int>>64
-
-        async def process_track(track) -> Song:
+        async def process_track(track, sleep_time=0) -> Song:
             async with semaphore:
                 try:
+                    if sleep_time > 0:
+                        await asyncio.sleep(sleep_time)
+
                     song = await Song.SpotifySong(track[0], track[1], track[2])
                     if song:
                         song.is_playlist = True
                         song.belongs_to = unique_playlist_id
-
-                    await asyncio.sleep(0.1)
-
                     return song
                 except Exception as e:
                     print(f"Error processing URL {track}: {e}")
                     return None
-                
-        tasks = [process_track(track) for track in all_tracks_info]
+
+        # Set initial sleep_time = 0, then increase by 5s each time
+        tasks = [
+            process_track(track, sleep_time=i * 2)
+            for i, track in enumerate(all_tracks_info)
+        ]
 
         for next_loaded_song in asyncio.as_completed(tasks):
             song = await next_loaded_song
             if song:
                 yield song
+
 
     @staticmethod
     def has_audio_url_expired(audio_url, duration) -> bool:
@@ -290,6 +396,7 @@ class Song:
     async def SpotifySong(cls, name, artist, thumbnail_url):
         song: Song = await cls.CreateSong(f"{name} by {artist} audio")
         song.thumbnail_url = thumbnail_url
+        song.type = "spot"; song.is_spot = True; song.is_yt = False
         return song
         # yt_url, _ , duration = await Song.search_youtube_video(f"{name} by {artist} audio")
         # loop = asyncio.get_running_loop()
@@ -302,40 +409,11 @@ class Song:
         # return song
     
     async def copy(self):
-        return Song(self.duration, self.artist, self.yt_url, await self.player, self.name, self.thumbnail_url, await self.audio_url, song_type=self.type, is_playlist = self.is_playlist)
+        return Song(self.duration, self.artist, self.yt_url, await self.player, self.name, self.thumbnail_url, self._audio_url, song_type=self.type, is_playlist = self.is_playlist)
     
     @classmethod
     async def SongFromYouTubeURL(cls, yt_url):
-        # name, duration = await Song.search_youtube_video_by_url(yt_url)
-        # if name is None or duration is None:
-        #     print(f"Failed to fetch song info for URL: {yt_url}")
-        #     return None
-        # loop = asyncio.get_running_loop()
-        # data = await loop.run_in_executor(
-        #     None, lambda: yt_dl.extract_info(yt_url, download=False)
-        # )
-        # artist = data.get("artist") or data.get("uploader") or "Unknown Artist"
-        # thumbnail_url = data["thumbnail"]
-        # audio_url = data["url"]
-        # player = None
-        # song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url)
-        # return song
-        data = await Song.get_youtube_video_info(yt_url, is_yt_url=True)
-
-        if data is None:
-            print(f"Failed to fetch song info for query: {yt_url}")
-            return None
-        artist = data.get("artist") or data.get("uploader") or data.get("channel") or "Unknown Artist"
-        thumbnail_url = data["thumbnail"]
-        audio_url = data["url"]
-        duration = data["duration"]
-        yt_url = data["webpage_url"]
-        name = data["title"]
-        player = None
-        print("SONG CREATED")
-        # Create the song instance
-        song = cls(duration, artist, yt_url, player, name, thumbnail_url, audio_url, all_untried_song_streams=data.get("audio_urls")[1:])
-        return song
+        return await cls.CreateSong(yt_url)
 
 
     async def get_fresh_player(self, additional_before_options : str = None, additional_options: str = None):
@@ -369,24 +447,32 @@ class Song:
 
         semaphore = asyncio.Semaphore(max_concurrent_song_loadings)
 
-        async def process_url(url):
+        async def process_url(url, sleep_time = 0) -> Song:
             async with semaphore:
                 try:
                     song = await Song.SongFromYouTubeURL(url)
                     if song:
                         song.is_playlist = True
-                    await asyncio.sleep(0.1)
+
+                    if sleep_time > 0:
+                        await asyncio.sleep(sleep_time)
+
                     return song
                 except Exception as e:
                     print(f"Error processing URL {url}: {e}")
                     return None
 
-        tasks = [process_url(url) for url in yt_playlist_urls]
+        # Set initial sleep_time = 0, then increase by 5s each time
+        tasks = [
+            process_url(track, sleep_time=i * 2)
+            for i, track in enumerate(yt_playlist_urls)
+        ]
 
         for next_loaded_song in asyncio.as_completed(tasks):
             song = await next_loaded_song
             if song:
                 yield song
+            
     @classmethod
     @alru_cache(maxsize=64, ttl=86400)
     async def get_spotify_info(cls, spotify_url):
@@ -471,30 +557,38 @@ class Song:
     
     @staticmethod
     async def get_youtube_playlist_info(playlist_url: str) -> list:
-        playlist = Playlist(playlist_url)
+        # playlist = Playlist(playlist_url)
         
-        while playlist.hasMoreVideos:
-            await playlist.getNextVideos()
+        # while playlist.hasMoreVideos:
+        #     await playlist.getNextVideos()
         
-        return [f"https://www.youtube.com/watch?v={video['id']}" for video in playlist.videos]
+        # return [f"https://www.youtube.com/watch?v={video['id']}" for video in playlist.videos]
+        ydl_opts = {
+            'quiet': True,
+            'extract_flat': True,
+            'playlistend': None,  # Limit number of videos
+            'skip_download': True
+        }
+        
+        with YoutubeDL(ydl_opts) as ydl:
+            try:
+                playlist_info = await asyncio.get_running_loop().run_in_executor(
+                    None, lambda: ydl.extract_info(playlist_url, download=False)
+                )
+
+                return [entry['url'] for entry in playlist_info['entries'] if entry]
+            except Exception as e:
+                print(f"Error extracting playlist: {e}")
+                return []
     
     @staticmethod
     #@alru_cache(maxsize=128, ttl=86400)
     async def get_youtube_video_info(query: str, is_yt_url = False) -> dict:
-        # loop = asyncio.get_running_loop()
-        # data = await loop.run_in_executor(
-        #     None, lambda: yt_dl.extract_info(f"{query if is_yt_url else f'ytsearch1{query}'}", download=False)
-        # )
-        # if not data or "entries" not in data or len(data["entries"]) == 0:
-        #     print(f"No results found for query: {query}")
-        #     return None
-        # data = data["entries"][0]
-        # return data
         data = await get_youtube_info(query, is_yt_url=is_yt_url)
         return data
 
 
-    
+
     @staticmethod
     @alru_cache(maxsize=128, ttl=86400)
     async def search_youtube_video(query: str):
@@ -553,7 +647,7 @@ class Song:
             self._play_task = None
 
     @staticmethod
-    async def get_audio_url(yt_url: str) -> str:
+    async def get_audio_url(yt_url: str, return_all = False) -> str:
         print("GETTING NEW URL")
         try:
             # loop = asyncio.get_running_loop()
@@ -570,6 +664,9 @@ class Song:
             if not audio_urls or len(audio_urls) == 0:
                 print(f"No audio URLs found for YouTube URL: {yt_url}")
                 return None
+            if return_all:
+                print("Returning all audio URLs")
+                return audio_urls
             audio_url = audio_urls[0]
 
         except Exception as e:
@@ -602,7 +699,8 @@ class Song:
             "duration": self.duration,
             "thumbnail_url": self.thumbnail_url,
             "type": self.type,
-            "is_playlist": self.is_playlist
+            "is_playlist": self.is_playlist,
+            "lavalink_track_id": self.lavalink_track_id
         }
     
     @staticmethod
@@ -617,10 +715,11 @@ class Song:
                 data["thumbnail_url"],
                 None,
                 song_type=data["type"],
-                is_playlist = data["is_playlist"]
+                is_playlist = data.get("is_playlist"),
+                lavalink_track_id=data.get("lavalink_track_id", None),
             )
         except Exception as e:
-            print(e)
+            print("what the", e)
             return None
 
 

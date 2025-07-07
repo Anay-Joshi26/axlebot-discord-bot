@@ -1,65 +1,85 @@
-## AxleBot - Discord Music Bot
+# Axlebot Discord Music Bot
 
-AxleBot is a Discord bot designed to play music from Spotify and YouTube, search for lyrics, and manage playlists. It is built using the Discord.py library and integrates with Spotify and YouTube APIs for music playback.
+Axlebot is a feature-rich Discord music bot that supports YouTube and Spotify playback, custom playlists, queue management, and more. It is designed for easy use and high performance in your Discord server.
 
-Note: It is my first time building such a bot, so there may be imperfections/inconsistencies etc with the code.
+## Features
+- Play music from YouTube and Spotify links or search queries
+- Create, manage, and play custom playlists
+- Queue, skip, move, and shuffle songs
+- View song lyrics and now playing info
+- Advanced queue controls (move, remove, repeat, seek, etc.)
+- Permission checks and cooldowns to prevent spam
+- Supports both single songs and full playlists
 
-### Features
+## How It Works
+- The bot uses Discord's voice API to join your server's voice channel and play audio.
+- Songs are fetched and streamed using YouTube and Spotify APIs (via Lavalink and other libraries).
+- A dedicated FastAPI service is used to fetch lyrics (and previously handled all song info fetching).
+- Users interact with the bot using commands (e.g., `-play`, `-queuepl`, `-skip`, `-playlist`, etc.).
+- Most commands have simpler aliases for easier use (e.g., `-p` for `-play` and many more...)
+- Playlists and queues are managed in memory but playlists can also be persisted to a database.
+- The bot uses async programming for efficient concurrent song fetching and playback to work on many servers simultaneously.
 
-- Play music from Spotify and YouTube
-- Search and display lyrics for the currently playing song
-- Queue management with options to skip, pause, resume, and stop playback
-- Spotify playlist support
-- YouTube playlist support (including YouTube Music)
-- Shuffle queue functionality
-- Repeat songs
+## Getting Started
 
 ### Prerequisites
-Before running AxleBot, make sure you have the following dependencies installed:
+- Python 3.10+
+- Discord bot token (create one at https://discord.com/developers/applications)
+- Lavalink server (for audio streaming)
+- FFmpeg installed and available in your PATH
+- Dependencies inside the `requirements.txt` file
 
-Python 3.11 (persoanlly used)
-Discord.py
-yt_dlp
-pytube
-spotipy
-PIL (Python Imaging Library)
-(Along with some others)
-*Note: FFMPEG must be installed and the path must be given*
+### Installation
+1. Clone this repository:
+   ```bash
+   git clone <repo-url>
+   cd axlebot-discord-bot
+   ```
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Configure your bot:
+   - Copy `account_key.json` and `application.yml` with your credentials and settings.
+   - Set your Discord bot token in the config file or as an environment variable.
+   - Ensure `Lavalink.jar` is present and configured (see Lavalink docs).
 
-### Install the dependencies using:
+*Note: The `application.yml` in `main` is simply an example*
 
-```bash
-pip install discord.py yt-dlp pytube spotipy pillow
-```
-
-### Setup
-
-1. Install the required packages
-
-2. Get your Spotify API credentials:
-
-Create a Spotify Developer account: Spotify Developer Dashboard
-Create a new application and note down the Client ID and Client Secret.
-Replace the `client_id` and `client_secret` variables in your code with the obtained Spotify credentials.
-
-3. Get your Discord bot token:
-
-Create a new Discord bot on the Discord Developer Portal
-Copy the bot token.
-Replace the `client.run("YOUR_DISCORD_BOT_TOKEN")` line in your code with your Discord bot token.
-
-4. Run the bot, using 
-```bash
-python your_bot_script_name.py
-```
+### Running the Bot
+1. Start the Lavalink server (in a separate terminal):
+   ```bash
+   java -jar Lavalink.jar
+   ```
+2. Start the FastAPI lyrics service (in a separate terminal):
+   ```bash
+   uvicorn axlebot.core.api:app
+   ```
+3. Start the bot:
+   ```bash
+   python axlebot/bot.py
+   ```
 
 ### Usage
-Note, the bot currently only works in one server, but plans exist add functionality to work in multiple servers at once
-Use -p or -play to play a song from Spotify, YouTube, or a playlist.
-Use -q or -queue to display the current song queue.
-Use -l or -lyrics to show lyrics for the current song.
-Use other commands like -skip, -pause, -resume, -stop, etc., to control playback.
-For a full list of commands, use -help within a text channel
+- Invite the bot to your server using the OAuth2 URL from the Discord developer portal.
+- Use commands in any text channel:
+  - `-play <song or URL>`: Play a song or add to queue
+  - `-queuepl <playlist name>`: Queue a custom playlist
+  - `-skip`: Skip the current song
+  - `-playlist`: View or manage playlists
+  - `-move <from> <to>`: Move a song in the queue
+  - `-shuffle`: Shuffle the queue
+  - `-lyrics`: Show lyrics for the current song
+  - ...and more (see `cogs/*.py` for all commands)
+  - See all commands via `-help`
 
-### Contributors
-@Anay-Joshi26
+## FastAPI Service
+- The FastAPI service is used to fetch lyrics for songs.
+- Start it with:
+  ```bash
+  uvicorn axlebot.core.api:app
+  ```
+- In previous versions (see other branches), this service also handled all song info fetching.
+
+## Contributing
+Pull requests and suggestions are welcome! Please open an issue or PR for bug fixes or new features.

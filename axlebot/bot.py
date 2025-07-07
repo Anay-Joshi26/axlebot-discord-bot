@@ -53,7 +53,7 @@ commands_list_aliases = {
 
 import discord
 from discord.ext import commands
-from models.client import Client
+#from models.client import Client
 from typing import Dict
 from core.extensions.server_manager import server_manager
 from core.extensions.firebase import fbc
@@ -62,6 +62,8 @@ from cogs.playlist import PlaylistCog
 from cogs.admin import AdminCog
 from core.commands_handler import NotInVoiceChannelCheckFailure, has_manage_guild, NoPermissionsCheckFailure
 from core.extensions import cache_manager
+import lavalink
+import core.extensions
 
 intents = discord.Intents.default()
 
@@ -72,7 +74,9 @@ intents.guilds = True
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-bot = commands.Bot(command_prefix='-', intents=intents, help_command = None)
+bot: commands.Bot = commands.Bot(command_prefix='-', intents=intents, help_command = None)
+
+#lavalink_client = lavalink.Client(bot.user.id)
 
 @bot.event
 async def on_ready():
@@ -84,6 +88,10 @@ async def on_ready():
     await bot.add_cog(AdminCog(bot, server_manager))
     cache_manager.start()  # Start the cache manager
     print("Cache manager started")
+
+    core.extensions.lavalink_client = lavalink.Client(bot.user.id)
+    core.extensions.lavalink_client.add_node('localhost', 2333, 'HEYthisIsAReallyHardPAss0rdToGu3ss', 'na', 'axlebot-lavalink')
+    bot.lavalink = core.extensions.lavalink_client
 
     print("All cogs loaded")
 

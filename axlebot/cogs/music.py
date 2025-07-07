@@ -6,10 +6,14 @@ from models.song import Song, LyricsStatus
 import asyncio
 from utils.message_crafter import *
 from core.server_manager import ServerManager
+from core.lavalink import LavalinkVoiceClient
 from models.client import Client
 from music.songs_queue import SongQueue
 from discord.ext.commands import BucketType, CommandOnCooldown
 from utils import parse_seek_time
+#import lavalink
+import core.extensions
+import traceback
 
 PAID_COOLDOWN : float = 1
 NON_PAID_COOLDOWN : float = 5
@@ -20,37 +24,37 @@ class MusicPlaybackButtons(discord.ui.View):
         self.ctx = ctx
         self.client = client
 
-    @discord.ui.button(style=discord.ButtonStyle.gray, label='⏯ Pause/Resume')
-    @commands.check(in_voice_channel)
-    async def pause_resume_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        try:
-            await in_voice_channel_interaction(interaction)
-        except NotInVoiceChannelCheckFailure as e:
-            await interaction.response.send_message(str(e), ephemeral=True)
-            return
+    # @discord.ui.button(style=discord.ButtonStyle.gray, label='⏯ Pause/Resume')
+    # @commands.check(in_voice_channel)
+    # async def pause_resume_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+    #     try:
+    #         await in_voice_channel_interaction(interaction)
+    #     except NotInVoiceChannelCheckFailure as e:
+    #         await interaction.response.send_message(str(e), ephemeral=True)
+    #         return
 
-        voice_client = self.client.voice_client
+    #     voice_client = self.client.voice_client
 
-        if voice_client is None:
-            await interaction.response.send_message("The bot is not connected to a voice channel", ephemeral = True)
+    #     if voice_client is None:
+    #         await interaction.response.send_message("The bot is not connected to a voice channel", ephemeral = True)
 
-        if voice_client.is_playing():
-            voice_client.pause()
-            self.client.queue.current_song.stop()
-            await interaction.message.add_reaction('⏸️')
-            # await interaction.message.clear_reaction('▶️')
-            await interaction.response.defer()
+    #     if voice_client.is_playing():
+    #         await voice_client.pause()
+    #         self.client.queue.current_song.stop()
+    #         await interaction.message.add_reaction('⏸️')
+    #         # await interaction.message.clear_reaction('▶️')
+    #         await interaction.response.defer()
 
-        elif voice_client.is_paused():
-            voice_client.resume()
-            self.client.queue.current_song.play()
-            #await interaction.message.add_reaction('▶️')
-            await interaction.message.remove_reaction('⏸️', interaction.guild.me)
-            await interaction.response.defer()
-        else:
-            await self.ctx.send("Cannot pause/resume song, due to some complications", ephemeral = True)
+    #     elif voice_client.is_paused():
+    #         voice_client.resume()
+    #         self.client.queue.current_song.play()
+    #         #await interaction.message.add_reaction('▶️')
+    #         await interaction.message.remove_reaction('⏸️', interaction.guild.me)
+    #         await interaction.response.defer()
+    #     else:
+    #         await self.ctx.send("Cannot pause/resume song, due to some complications", ephemeral = True)
 
-    @discord.ui.button(style=discord.ButtonStyle.gray, label='⏭️ Skip')
+    @discord.ui.button(style=discord.ButtonStyle.gray, label='⏭️ Skip', row = 1)
     @commands.check(in_voice_channel)
     async def skip_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
@@ -64,8 +68,8 @@ class MusicPlaybackButtons(discord.ui.View):
         if self.client.voice_client is None:
             await self.ctx.send("The bot is not connected to a voice channel", ephemeral = True)
 
-        if self.client.voice_client.is_playing() and len(self.client.queue) > 0:
-            self.client.voice_client.stop()
+        if "self.client.voice_client.is_playing() and " and len(self.client.queue) > 0:
+            await self.client.voice_client.stop()
             self.client.queue.current_song.stop()
 
             await interaction.message.remove_reaction('⏭️', interaction.guild.me)
@@ -73,7 +77,7 @@ class MusicPlaybackButtons(discord.ui.View):
         else:
             await self.ctx.send("No song is currently playing", ephemeral = True)
 
-    @discord.ui.button(style=discord.ButtonStyle.gray, label='🔁 Repeat')
+    @discord.ui.button(style=discord.ButtonStyle.gray, label='🔁 Repeat', row = 1)
     @commands.check(in_voice_channel)
     async def repeat_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
@@ -95,7 +99,7 @@ class MusicPlaybackButtons(discord.ui.View):
             await self.ctx.send(e)
         
 
-    @discord.ui.button(style=discord.ButtonStyle.gray, label='🔂 Loop')
+    @discord.ui.button(style=discord.ButtonStyle.gray, label='🔂 Loop', row = 1)
     @commands.check(in_voice_channel)
     async def loop_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
@@ -118,6 +122,69 @@ class MusicPlaybackButtons(discord.ui.View):
 
         except Exception as e:
             await interaction.response.send_message(e, ephemeral = True)
+
+    @discord.ui.button(style=discord.ButtonStyle.gray, label='⏪ 10s', row = 0)
+    @commands.check(in_voice_channel)
+    async def seek_backwards_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            await in_voice_channel_interaction(interaction)
+        except NotInVoiceChannelCheckFailure as e:
+            await interaction.response.send_message(str(e), ephemeral=True)
+            return
+
+        await interaction.response.defer()
+        try:
+            await self.ctx.bot.get_cog('MusicCog').seek_by(self.ctx, -10)
+        except Exception as e:
+            await interaction.followup.send(f"Failed to seek: {e}", ephemeral=True)
+
+    @discord.ui.button(style=discord.ButtonStyle.gray, label='⏯ Pause/Resume', row = 0)
+    @commands.check(in_voice_channel)
+    async def pause_resume_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            await in_voice_channel_interaction(interaction)
+        except NotInVoiceChannelCheckFailure as e:
+            await interaction.response.send_message(str(e), ephemeral=True)
+            return
+
+        voice_client = self.client.voice_client
+
+        if voice_client is None:
+            await interaction.response.send_message("The bot is not connected to a voice channel", ephemeral = True)
+
+        if voice_client.is_playing():
+            print("Pausing song")
+            await voice_client.pause()
+            self.client.queue.current_song.stop()
+            await interaction.message.add_reaction('⏸️')
+            # await interaction.message.clear_reaction('▶️')
+            await interaction.response.defer()
+
+        elif voice_client.is_paused():
+            print("Resuming song")
+            await voice_client.resume()
+            self.client.queue.current_song.play()
+            #await interaction.message.add_reaction('▶️')
+            await interaction.message.remove_reaction('⏸️', interaction.guild.me)
+            await interaction.response.defer()
+        else:
+            await self.ctx.send("Cannot pause/resume song, due to some complications", ephemeral = True)
+
+    @discord.ui.button(style=discord.ButtonStyle.gray, label='10s ⏩', row = 0)
+    @commands.check(in_voice_channel)
+    async def seek_forward_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            await in_voice_channel_interaction(interaction)
+        except NotInVoiceChannelCheckFailure as e:
+            await interaction.response.send_message(str(e), ephemeral=True)
+            return
+
+        await interaction.response.defer()
+        try:
+            await self.ctx.bot.get_cog('MusicCog').seek_by(self.ctx, 10)
+        except Exception as e:
+            await interaction.followup.send(f"Failed to seek: {e}", ephemeral=True)
+
 
 
 class MusicCog(commands.Cog):
@@ -142,6 +209,52 @@ class MusicCog(commands.Cog):
         song.progress_message = progress_message
         #asyncio.create_task(update_progress_bar_embed(song, embed, progress_message)) # function updates the progress bar in the embed (every set interval seconds)
         asyncio.create_task(update_progress_bar_embed(song, embed, "progress_message")) # function updates the progress bar in the embed (every set interval seconds)
+
+    @commands.command()
+    async def test(self, ctx, *, query):
+        client = await self.server_manager.get_client(ctx.guild.id, ctx)
+
+        print("Client for guild found", client)
+        print("Client queue", client.queue.queue)
+        print("Playing client id", id(client))
+
+        async with client.client_lock:
+            if client.voice_client is None:
+                print("Client voice client is None, connecting to voice channel")
+
+                # ✅ Use LavalinkVoiceClient subclass
+                vc = await ctx.author.voice.channel.connect(cls = LavalinkVoiceClient)
+
+                print("Connected to voice channel", vc.channel.name)
+                client.voice_client = vc
+                #client.lavalink_voice_client = LavalinkVoiceClient(self.bot, ctx.author.voice.channel)
+
+            print("AVAIL NODES", core.extensions.lavalink_client.node_manager.available_nodes)
+            player = client.voice_client.player
+
+            results = await player.node.get_tracks(f"ytsearch:{query}")
+            if not results or not results['tracks']:
+                await ctx.send("No tracks found.")
+                return
+
+            track = results['tracks'][0]
+
+            info = track['info']
+
+            try:
+                print(vars(info))
+            except TypeError:
+                # fallback to dir()
+                for attr in dir(info):
+                    if not attr.startswith('_'):
+                        print(f"{attr}: {getattr(info, attr)}")
+
+            if not player.is_playing:
+                await player.play(track)
+                await ctx.send(f"Now playing: {track['info']['title']}")
+
+
+            
 
 
     @commands.command(aliases = ['mv'])
@@ -183,9 +296,8 @@ class MusicCog(commands.Cog):
     @commands.check(in_voice_channel)
     @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
-    async def play(self, ctx: commands.Context, *args):
+    async def play(self, ctx: commands.Context, *, query):
         try:
-            query = ' '.join(args)
             client = await self.server_manager.get_client(ctx.guild.id, ctx)
 
             print("Client for guild found", client)
@@ -195,7 +307,7 @@ class MusicCog(commands.Cog):
             async with client.client_lock:
                 if client.voice_client is None:
                     print("Client voice client is None, connecting to voice channel")
-                    vc = await ctx.author.voice.channel.connect()
+                    vc = await ctx.author.voice.channel.connect(cls = LavalinkVoiceClient)
                     print("Connected to voice channel", vc.channel.name)
                     client.voice_client = vc
 
@@ -203,7 +315,8 @@ class MusicCog(commands.Cog):
             asyncio.create_task(self.play_song(ctx, client, query))
         except Exception as e:
             print(f"Error in play command: {e}")
-            await ctx.send(embed=craft_general_error())
+            await ctx.send(embed=craft_general_error(), delete_after = 20)
+            traceback.print_exc()
 
 
     async def play_song(self, ctx: commands.Context, client: Client, query: str, position : int = None):
@@ -261,11 +374,11 @@ class MusicCog(commands.Cog):
                         player = await song.player
 
                         if player is None:
-                            await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), silent = True)
+                            await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), delete_after = 20)
                             asyncio.create_task(self.play_next(ctx, client))
                             return
 
-                        voice_client.play(
+                        await voice_client.play(
                             player,
                             after = lambda e: self.bot.loop.call_soon_threadsafe(
                                         lambda: asyncio.ensure_future(self._after_playback(e, ctx, client))
@@ -287,7 +400,8 @@ class MusicCog(commands.Cog):
                 error_occured = True
             
             if error_occured:
-                await ctx.send(embed = craft_general_error("The song could not be found with the provided query"))
+                await fetching_song_message.delete()
+                await ctx.send(embed = craft_general_error("The song could not be found with the provided query"), delete_after = 20)
                 return
 
             await queue.append(song, position)
@@ -300,17 +414,18 @@ class MusicCog(commands.Cog):
                 player = await song.player
 
                 if player is None:
-                    await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), silent = True)
+                    await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), delete_after = 20)
                     asyncio.create_task(self.play_next(ctx, client))
                     return
 
-                voice_client.play(
+                await voice_client.play(
                     player,
                     after = lambda e: self.bot.loop.call_soon_threadsafe(
                                         lambda: asyncio.ensure_future(self._after_playback(e, ctx, client))
                                     )
                 )
             else:
+                await fetching_song_message.delete()
                 if position is None:
                     await ctx.send(f"**{song.name}** has been added to the queue in position `{len(queue)}`", silent = True)
                 else:
@@ -318,7 +433,8 @@ class MusicCog(commands.Cog):
         except Exception as e:
             await fetching_song_message.delete()
             print(f"Error in play command: {e}")
-            await ctx.send(embed=craft_general_error(e))
+            await ctx.send(embed=craft_general_error(), delete_after = 20)
+            traceback.print_exc()
 
         
     async def play_next(self, ctx, client : Client):
@@ -359,11 +475,11 @@ class MusicCog(commands.Cog):
             player = await next_song.player
 
             if player is None:
-                await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{next_song.name}` :(, please try again later"), silent = True)
+                await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{next_song.name}` :(, please try again later"), delete_after = 20)
                 asyncio.create_task(self.play_next(ctx, client))
                 return
             
-            voice_client.play(player, after = lambda e: self.bot.loop.call_soon_threadsafe(
+            await voice_client.play(player, after = lambda e: self.bot.loop.call_soon_threadsafe(
                                         lambda: asyncio.ensure_future(self._after_playback(e, ctx, client))
                                     ))
             # embed = craft_now_playing(next_song)
@@ -371,12 +487,13 @@ class MusicCog(commands.Cog):
             # next_song.progress_message = progress_message
         except Exception as e:
             print(f"Error in play_next: {e}")
-            await ctx.send(embed=craft_general_error())
+            await ctx.send(embed=craft_general_error(), delete_after = 20)
+            traceback.print_exc()
 
     async def _after_playback(self, error, ctx, client):
         if error:
             print(f"Error in play_next: {error}")
-            await ctx.send(embed=craft_general_error())
+            await ctx.send(embed=craft_general_error(), delete_after = 20)
 
         await self.play_next(ctx, client)
 
@@ -392,7 +509,7 @@ class MusicCog(commands.Cog):
             await ctx.send("The bot is not connected to a voice channel")
 
         if voice_client.is_playing():
-            voice_client.pause()
+            await voice_client.pause()
             client.queue.current_song.stop()
 
             await ctx.message.add_reaction('⏸️')
@@ -416,7 +533,7 @@ class MusicCog(commands.Cog):
             await ctx.send("The bot is not connected to a voice channel")
 
         if voice_client.is_paused():
-            voice_client.resume()
+            await voice_client.resume()
             client.queue.current_song.play()
 
             await ctx.message.add_reaction('▶️')
@@ -452,7 +569,7 @@ class MusicCog(commands.Cog):
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def lyrics(self, ctx):
         client = await self.server_manager.get_client(ctx.guild.id)
-        current_song = client.queue.current_song
+        current_song: Song = client.queue.current_song
 
         if current_song is None:
             await ctx.send("No song is currently playing")
@@ -479,7 +596,7 @@ class MusicCog(commands.Cog):
         client = await self.server_manager.get_client(ctx.guild.id)
 
         if client.voice_client is None:
-            vc = await ctx.author.voice.channel.connect()
+            vc = await ctx.author.voice.channel.connect(cls = LavalinkVoiceClient)
             client.voice_client = vc
 
         position = None if len(client.queue) == 0 else 1
@@ -502,7 +619,7 @@ class MusicCog(commands.Cog):
             await ctx.send("The bot is not connected to a voice channel")
 
         if "voice_client.is_playing()" and len(queue) > 0:
-            voice_client.stop()
+            await voice_client.stop()
             queue.current_song.stop()
 
             await ctx.message.add_reaction('⏭️')
@@ -529,7 +646,7 @@ class MusicCog(commands.Cog):
         # await ctx.send(embed=embed, delete_after=delete_after)
 
         # client.queue.current_song.stop()
-        # voice_client.stop()
+        # await voice_client.stop()
         # await voice_client.disconnect(); client.voice_client = None
         # client.queue.clear()
 
@@ -541,7 +658,7 @@ class MusicCog(commands.Cog):
     #     await ctx.send(embed=embed, delete_after=delete_after)
 
     #     client.queue.current_song.stop()
-    #     client.voice_client.stop()
+    #     client.await voice_client.stop()
     #     await client.voice_client.disconnect(); client.voice_client = None
     #     client.queue.clear()
 
@@ -678,33 +795,39 @@ class MusicCog(commands.Cog):
         current_song: Song = client.queue.current_song
 
         try:
-            seconds_into_song = parse_seek_time(new_time)
+            mseconds_into_song = int(parse_seek_time(new_time) * 1000)
         except ValueError as e:
-            await ctx.send(embed=craft_general_error(f"Invalid time format: `{new_time}`. Please use one of the formats mentioned below.\n{info_msg}"))
-            return
-
-        new_player = await current_song.get_fresh_player(additional_before_options= f"-ss {new_time}")
-        if new_player is None:
-            await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_time}`. Please ensure the format is correct.\n{info_msg}"))
+            await ctx.send(embed=craft_general_error(f"Invalid time format: `{new_time}`. Please use one of the formats mentioned below.\n{info_msg}"), delete_after = 90)
             return
         
-        was_paused = client.voice_client.is_paused()
-        client.vc_stopped_due_to_seek = True  # Set this flag to indicate that the voice client was stopped due to seeking
-        client.voice_client.stop()
-        current_song.stop()
-        client.voice_client.play(
-            new_player,
-            after=lambda e: self.bot.loop.call_soon_threadsafe(
-                lambda: asyncio.ensure_future(self._after_playback(e, ctx, client))
-            )
-        )
-        if was_paused:
-            client.voice_client.pause()
-            current_song.stop()
-        else:
-            current_song.play()
-        current_song.seconds_played = seconds_into_song
-        #current_song.player = new_player 
+        try:
+            await client.voice_client.player.seek(mseconds_into_song)
+        except Exception as e:
+            await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_time}`. Please ensure the format is correct.\n{info_msg}"), delete_after = 90)
+            return
+
+        # new_player = await current_song.get_fresh_player(additional_before_options= f"-ss {new_time}")
+        # if new_player is None:
+        #     await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_time}`. Please ensure the format is correct.\n{info_msg}"))
+        #     return
+        
+        # was_paused = client.voice_client.is_paused()
+        # client.vc_stopped_due_to_seek = True  # Set this flag to indicate that the voice client was stopped due to seeking
+        # await client.voice_client.stop()
+        # current_song.stop()
+        # await client.voice_client.play(
+        #     new_player,
+        #     after=lambda e: self.bot.loop.call_soon_threadsafe(
+        #         lambda: asyncio.ensure_future(self._after_playback(e, ctx, client))
+        #     )
+        # )
+        # if was_paused:
+        #     await client.voice_client.pause()
+        #     current_song.stop()
+        # else:
+        #     current_song.play()
+        current_song.seconds_played = mseconds_into_song // 1000
+        # #current_song.player = new_player 
         
 
 
@@ -719,7 +842,7 @@ class MusicCog(commands.Cog):
             await ctx.send("You must provide a non-zero number of seconds to seek.")
             return False
 
-        new_position = client.queue.current_song.seconds_played + seconds
+        new_position = (client.queue.current_song.seconds_played + seconds) * 1000 # Convert seconds to milliseconds
         if new_position < 0:
             new_position = 0  # Clamp to start of song
 
@@ -733,30 +856,35 @@ class MusicCog(commands.Cog):
             """
 
         current_song: Song = client.queue.current_song
-        new_player = await current_song.get_fresh_player(additional_before_options=f"-ss {new_position}")
+        try:
+            await client.voice_client.player.seek(new_position)
+        except Exception as e:
+            await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_position}`. Please ensure the format is correct.\n{info_msg}"), delete_after = 90)
+            return
+        # new_player = await current_song.get_fresh_player(additional_before_options=f"-ss {new_position}")
 
-        if new_player is None:
-            await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_position}` seconds. Please ensure the format is correct.\n{info_msg}"))
-            return False
+        # if new_player is None:
+        #     await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_position}` seconds. Please ensure the format is correct.\n{info_msg}"))
+        #     return False
 
-        was_paused = client.voice_client.is_paused()
-        client.vc_stopped_due_to_seek = True
-        client.voice_client.stop()
-        current_song.stop()
-        client.voice_client.play(
-            new_player,
-            after=lambda e: self.bot.loop.call_soon_threadsafe(
-                lambda: asyncio.ensure_future(self._after_playback(e, ctx, client))
-            )
-        )
-        if was_paused:
-            client.voice_client.pause()
-        else:
-            current_song.play()
+        # was_paused = client.voice_client.is_paused()
+        # client.vc_stopped_due_to_seek = True
+        # await client.voice_client.stop()
+        # current_song.stop()
+        # await client.voice_client.play(
+        #     new_player,
+        #     after=lambda e: self.bot.loop.call_soon_threadsafe(
+        #         lambda: asyncio.ensure_future(self._after_playback(e, ctx, client))
+        #     )
+        # )
+        # if was_paused:
+        #     await client.voice_client.pause()
+        # else:
+        #     current_song.play()
         
-        current_song.seconds_played = new_position
+        current_song.seconds_played = new_position // 1000
         #current_song.player = new_player
-        return True
+        # return True
 
 
     @commands.command(aliases=['fwd', 'fw'])

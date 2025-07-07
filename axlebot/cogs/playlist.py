@@ -13,14 +13,15 @@ from cogs.music import MusicCog
 from discord.ext.commands import BucketType
 from copy import deepcopy
 import random
+from core.lavalink import LavalinkVoiceClient
 
-class CreatePlaylistModal(discord.ui.Modal, title='Create a Playlist'):
+class CreatePlaylistModal(discord.ui.Modal):
 
-    def __init__(self, name, ctx: commands.Context):
-        super().__init__(timeout = 300)
+    def __init__(self, name, ctx: commands.Context, title = 'Create a Playlist'):
+        super().__init__(timeout = 300, title=title)
         self.playlist_name: str = name
         self.ctx = ctx
-        self.name_input = discord.ui.TextInput(label='Playlist Name', style=discord.TextStyle.short, default=f"{self.playlist_name}", required=True)
+        self.name_input = discord.ui.TextInput(label='Playlist Name', style=discord.TextStyle.short, default=self.playlist_name, required=True)
         self.song_links_input = discord.ui.TextInput(label='Songs', required=False, style=discord.TextStyle.paragraph, placeholder="https://www.youtube.com/watch?v=video_id\nhttps://open.spotify.com/track/track_id\nRick Roll\n...")
 
         self.add_item(self.name_input)
@@ -45,14 +46,15 @@ class CreatePlaylistModal(discord.ui.Modal, title='Create a Playlist'):
         #await PlaylistCog.add_songs_to_playlist(playlist_name=playlist_name, urls = song_links, ctx=self.ctx)
 
 class AddSongsButton(discord.ui.View):
-    def __init__(self, name, ctx):
+    def __init__(self, name, ctx, title = None):
         super().__init__()
         self.name = name
         self.ctx = ctx
+        self.title = title
 
     @discord.ui.button(style=discord.ButtonStyle.success, label='Add Songs')
     async def add_songs(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(CreatePlaylistModal(self.name, self.ctx))
+        await interaction.response.send_modal(CreatePlaylistModal(self.name, self.ctx, self.title))
 
 
 
@@ -96,9 +98,10 @@ class PlaylistCog(commands.Cog):
 
         await ctx.send(embed = embed, view=AddSongsButton(name, ctx))
 
+
     async def add_songs_to_playlist(self, playlist_name: str | None, urls: list[str], ctx: commands.Context, client: Client | None = None, playlist: Playlist | None = None):
         """
-        Adds songs to the playlist from the given list of urls.
+        Adds songs to the playlist from the given list of urls, with up to 5 processed concurrently.
         """
         if not client:
             client = await self.server_manager.get_client(ctx.guild.id, ctx)
@@ -111,54 +114,62 @@ class PlaylistCog(commands.Cog):
 
         if not playlist:
             pl_not_found = craft_no_playlist_found(playlist_name)
-            await ctx.send(embed = pl_not_found)
+            await ctx.send(embed=pl_not_found)
             return
-        
+
         added_songs = []
         error_songs = []
+        semaphore = asyncio.Semaphore(2) # Limit concurrent processing
 
-        errors = False
+        adding_songs_msg = await ctx.send("Adding songs...", silent=True)
+        limit_reached = False
 
-        adding_songs_msg = await ctx.send("Adding songs...", silent = True)
+        async def process_url(url: str):
+            nonlocal limit_reached
+            async with semaphore:
+                type_of_query = determine_query_type(url)
+                if type_of_query == self.YT_SONG:
+                    url = convert_to_standard_youtube_url(url)
+                    song = await Song.SongFromYouTubeURL(url)
+                elif type_of_query == self.SPOT_SONG:
+                    song = await Song.SongFromSpotifyURL(url)
+                elif type_of_query == self.STD_YT_QUERY:
+                    song = await Song.CreateSong(url)
+                else:
+                    error_songs.append(url)
+                    return
 
-        for url in urls:
-            type_of_query = determine_query_type(url)
+                if song is None:
+                    error_songs.append(url)
+                    return
 
-            if type_of_query == self.YT_SONG:
-                url = convert_to_standard_youtube_url(url)
-                song = await Song.SongFromYouTubeURL(url)
-            elif type_of_query == self.SPOT_SONG:
-                song = await Song.SongFromSpotifyURL(url)
-            elif type_of_query == self.STD_YT_QUERY:
-                song = await Song.CreateSong(url)
-            else:
-                error_songs.append(url)
-                errors = True
-                continue
+                try:
+                    playlist.add_song(song)
+                    added_songs.append(song)
+                except ValueError as e:
+                    limit_reached = True
+                    print(f"SONG LIMIT REACHED (guild_id: {ctx.guild.id}): e: [{e}]")
+                    raise ValueError("Stopped adding songs due to error") from e
 
-            if song is None:
-                error_songs.append(url)
-                errors = True
-                continue
+        try:
+            async with asyncio.TaskGroup() as tg:
+                for url in urls:
+                    tg.create_task(process_url(url))
+            #await asyncio.gather(*(process_url(url) for url in urls))
+        except Exception:
+            pass
 
-            try: 
-                playlist.add_song(song)
-                added_songs.append(song)
-            except ValueError as e:
-                songs_added_embed = craft_songs_added_to_playlist(playlist.name, added_songs)
-                await ctx.send(embed=songs_added_embed)
-                await ctx.send(str(e) + "\n" + "No more songs will be added to the playlist")
-                return
-            
-        if len(added_songs) > 0:
+        if added_songs:
             songs_added_embed = craft_songs_added_to_playlist(playlist.name, added_songs)
             await ctx.send(embed=songs_added_embed)
-
             await client.update_playlist_changes_db()
+
+        if limit_reached:
+            await ctx.send("No more songs will be added to the playlist\nYou have reached the maximum number of songs allowed in a playlist.")
 
         await adding_songs_msg.delete()
 
-        if errors:
+        if error_songs:
             error_urls_embed = craft_songs_not_added(error_songs)
             await ctx.send(embed=error_urls_embed)
 
@@ -170,7 +181,8 @@ class PlaylistCog(commands.Cog):
         client = await self.server_manager.get_client(ctx.guild.id, ctx)
 
         if not args:
-            await ctx.send("You didn't provide any songs to add", silent = True)
+            await ctx.send("You can use the button below to add songs to a playlist of your choice", view=AddSongsButton(None, ctx, title = "Add songs to a playlist"))
+            #await ctx.send("You didn't provide any songs to add", silent = True)
             return
         
         playlist_name = args[0]; 
@@ -192,11 +204,11 @@ class PlaylistCog(commands.Cog):
     @commands.check(in_voice_channel)
     @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
-    async def add_song(self, ctx: commands.Context, *args) -> None:
+    async def add_song(self, ctx: commands.Context, *, playlist_name) -> None:
         """
         Adds the current playing to a playlist with the given name.
         """
-        if not args:
+        if not playlist_name:
             await ctx.send("You didn't provide a playlist name")
             return
 
@@ -207,7 +219,6 @@ class PlaylistCog(commands.Cog):
             await ctx.send("No song is currently playing", silent = True)
             return
         
-        playlist_name = " ".join(args)
         playlist = client.get_playlist_by_name(playlist_name)
 
         if not playlist:
@@ -220,7 +231,8 @@ class PlaylistCog(commands.Cog):
         try:
             playlist.add_song(current_song)
         except ValueError as e:
-            await ctx.send(str(e))
+            await ctx.send(embed = craft_general_error(str(e)))
+            return
 
         await client.update_playlist_changes_db()
 
@@ -235,58 +247,62 @@ class PlaylistCog(commands.Cog):
         """
         Queues the playlist with the given name.
         """
-        if not args:
-            await ctx.send("You didn't provide a playlist name")
-            return
-        shuffle = False
-        if args[-1] == "-s" or args[-1] == "--shuffle" or args[-1] == "-sh" or args[-1] == "-shuffle" \
-            or args[-1] == "--shuffled" or args[-1] == "-shuffled":
-            shuffle = True
-            print("Shuffling playlist before playing")
+        try:
+            if not args:
+                await ctx.send("You didn't provide a playlist name")
+                return
+            shuffle = False
+            if args[-1] == "-s" or args[-1] == "--shuffle" or args[-1] == "-sh" or args[-1] == "-shuffle" \
+                or args[-1] == "--shuffled" or args[-1] == "-shuffled":
+                shuffle = True
+                print("Shuffling playlist before playing")
 
-        name = " ".join(args[:-1]) if shuffle else " ".join(args)
-        client = await self.server_manager.get_client(ctx.guild.id, ctx)
-        playlist = client.get_playlist_by_name(name)
+            name = " ".join(args[:-1]) if shuffle else " ".join(args)
+            client = await self.server_manager.get_client(ctx.guild.id, ctx)
+            playlist = client.get_playlist_by_name(name)
 
-        if not playlist:
-            no_pl_found = craft_no_playlist_found(name)
-            await ctx.send(embed = no_pl_found)
-            return
+            if not playlist:
+                no_pl_found = craft_no_playlist_found(name)
+                await ctx.send(embed = no_pl_found)
+                return
 
-        if client.voice_client is None:
-            vc = await ctx.author.voice.channel.connect()
-            client.voice_client = vc
+            if client.voice_client is None:
+                vc = await ctx.author.voice.channel.connect(cls = LavalinkVoiceClient)
+                client.voice_client = vc
 
-        queue = client.queue
+            queue = client.queue
 
-        playlist = deepcopy(playlist)
+            playlist = deepcopy(playlist)
 
-        if shuffle:
-            random.shuffle(playlist.songs)
+            if shuffle:
+                random.shuffle(playlist.songs)
 
-        pl_added = craft_custom_playlist_queued(name, playlist, shuffle=shuffle)
+            pl_added = craft_custom_playlist_queued(name, playlist, shuffle=shuffle)
 
-        await ctx.send(embed = pl_added)
+            await ctx.send(embed = pl_added)
 
-        for song in playlist.songs:
-            await queue.append(song)
+            for song in playlist.songs:
+                await queue.append(song)
 
-            if len(queue) == 1:
-                song.is_first_in_queue = True
-                await self.music_cog.send_play_song_embed(ctx, song, client)
+                if len(queue) == 1:
+                    song.is_first_in_queue = True
+                    await self.music_cog.send_play_song_embed(ctx, song, client)
 
-                player = await song.player
+                    player = await song.player
 
-                if player is None:
-                    await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), silent = True)
-                    asyncio.create_task(self.music_cog.play_next(ctx, client))
-                    return
+                    if player is None:
+                        await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), delete_after = 20)
+                        asyncio.create_task(self.music_cog.play_next(ctx, client))
+                        return
 
-                client.voice_client.play(
-                    player,
-                    after = lambda e: self.bot.loop.call_soon_threadsafe(
-                                    lambda: asyncio.ensure_future(self.music_cog._after_playback(e, ctx, client)))
-                )
+                    await client.voice_client.play(
+                        player,
+                        after = lambda e: self.bot.loop.call_soon_threadsafe(
+                                        lambda: asyncio.ensure_future(self.music_cog._after_playback(e, ctx, client)))
+                    )
+        except Exception as e:
+            print(f"Error in queue playlist command: {e}")
+            await ctx.send(embed=craft_general_error(), delete_after = 20)
 
     @commands.command(aliases = ['pls', 'playlist_info', 'playlistinfo'])
     @commands.check(bot_use_permissions)

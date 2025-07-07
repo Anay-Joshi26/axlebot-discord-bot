@@ -9,12 +9,14 @@ import discord
 from discord.ext import commands
 from utils.message_crafter import craft_bot_music_stopped
 from models.server_config import ServerConfig
+from core.lavalink import LavalinkVoiceClient
+
 
 class Client:
     def __init__(self, server_id):
         self.queue : SongQueue = SongQueue(server_id=server_id)
         self.server_id = server_id
-        self.voice_client : discord.VoiceClient = None
+        self.voice_client : LavalinkVoiceClient = None
         self.last_message_time = None
         self.acceptable_delay = 5
         self.time_to_wait_precision = 2
@@ -45,6 +47,8 @@ class Client:
         self.client_lock = asyncio.Lock()  # Lock to prevent concurrent modifications to the client
         self.server_config: ServerConfig = ServerConfig(self)
         self.vc_stopped_due_to_seek = False
+        #print("TEST TEST", core.extensions.lavalink_client.node_manager.available_nodes)
+        #self.lavalink_player = core.extensions.lavalink_client.player_manager.get(server_id) or core.extensions.lavalink_client.player_manager.create(server_id)
 
     @staticmethod
     async def from_guild_id(guild_id):
@@ -169,7 +173,7 @@ class Client:
         if self.queue.current_song is not None:
             self.queue.current_song.stop()
         if self.voice_client is not None:
-            self.voice_client.stop()
+            await self.voice_client.stop()
             await self.voice_client.disconnect(); self.voice_client = None
         await self.queue.clear()
 

@@ -45,7 +45,7 @@ async def craft_now_playing(song: Song, is_looping = False):
     title=(
         f"Now playing{' from YouTube Playlist' if song.is_playlist else ''}..." 
         if song.type == 'yt' 
-        else f"Now playing from Spotify{' from Spotify Playlist' if song.is_playlist else ''}..."
+        else f"Now playing from Spotify{' Playlist' if song.is_playlist else ''}..."
     ),
     #description=f"[{song.name}]({song.yt_url})", # uncomment this to make the song name a link to the song
     description=f"{song.name}",
@@ -70,7 +70,7 @@ async def craft_now_playing(song: Song, is_looping = False):
 
 def craft_playlist_added(type_of_playlist):
     embed = discord.Embed(title = f"{'Spotify' if type_of_playlist == 'spot' else 'YouTube'} Playlist Queued",
-                    description=f"You have just queued a playlist.\n\nIt may take some time to queue every song in the playlist. There are some playlist specific commands you can use while a playlist is being played.\n\n**The first song should start to be queued shortly...**\n\nYou can inspect the queue to see the added songs via `-queue` or `q` (the songs will be added slowly).",
+                    description=f"You have just queued a playlist.\n\nIt may take some time to queue every song in the playlist. *The songs are not guaranteed to show up in the original order*.\n\n**The first song should start to be queued shortly...**\n\nYou can inspect the queue to see the added songs via `-queue` or `q` (the songs will be added slowly).",
                     colour=0x1ED760 if type_of_playlist == "spot" else 0xFF0033)
 
     return embed
@@ -103,13 +103,13 @@ async def update_progress_bar_embed(song: Song, progress_embed: discord.Embed, s
     bar_length = 18
 
     if update_interval is None:
-        update_interval = max(1, (song.duration/bar_length) * 0.5)
+        update_interval = max(1, (song.duration/bar_length) * 0.4)
 
     print(f"Update interval: {update_interval} seconds")
 
     progress_bar: str = None # str
 
-    while progress < 96:
+    while progress < 98:
         #print("tick", song.name)
         if song.is_playing:
             progress = calculate_progress(song)
@@ -282,7 +282,7 @@ def craft_songs_added_to_playlist(name: str, songs_added: list) -> discord.Embed
     songs_description = "\n".join([f"{i+1}. **{song.name}**" for i,song in enumerate(songs_added)])
     
     embed = discord.Embed(
-        title=f"Songs successfully added to {name}",
+        title=f"Songs successfully added to `{name}`",
         description=f"The following songs were successfully added:\n\n{songs_description}",
         colour=COLOURS["success"]
     )
@@ -358,7 +358,7 @@ def craft_songs_not_added(urls: list):
     
     embed = discord.Embed(
         title="Songs not added",
-        description=f"The following \"urls\" could not be converted into songs:\n\n{urls_description}",
+        description=f"The following queries could not be converted into songs:\n\n{urls_description}",
         colour=COLOURS["error"]
     )
     
@@ -404,7 +404,7 @@ def craft_songs_in_playlist(playlist_name: str, songs: list) -> discord.Embed:
 
     description = "\n".join([f"{i+1}. {song.name}" for i,song in enumerate(songs)])
 
-    embed = discord.Embed(title=f"Songs in {playlist_name}",
+    embed = discord.Embed(title=f"Songs in `{playlist_name}`",
                       description=f"The playlist named `{playlist_name}` currently has `{n}` songs{', they are:' if n != 0 else '.'}\n\n{description}",
                       colour=0x00b0f4)
 
@@ -498,12 +498,13 @@ def craft_custom_playlist_help_command():
         "You can add YouTube or Spotify track URLs, or just type a query for the song name.\n\n"
 
         "__To add songs to a playlist__\n"
+        "Run `-add_songs` and then provide the playlist name and the songs you want to add. OR\n"
         "`-add_songs \"<Playlist name>\" <url 1> <url 2> \"<Song name>\" ...`\n"
         "Wrap the playlist name in double quotes. If the song is **not** a URL, wrap the name in double quotes as well.\n\n"
 
         "__To queue/play a playlist__\n"
-        "`-queue_playlist <Playlist name>`\n"
-        "Aliases: `qp`, `queuepl`, `queueplaylist`, `qpl`, `pp`, `playplaylist`, `playpl`, `queue_pl`\n\n"
+        "`-queue_playlist <Playlist name> <-s : Optional to shuffle>`\n"
+        "Aliases: `qp`, `queuepl`, `queueplaylist`, `qpl`, `pp`, `playplaylist`, `playpl`, `queue_pl`*\n\n"
 
         "__To add the current playing song to a playlist__\n"
         "`-add_song <Playlist name>` (`-addsong` also works)\n\n"

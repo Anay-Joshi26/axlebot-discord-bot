@@ -5,3 +5,6 @@ venv
 axlebot/account_key.json
 axlebot/Lavalink.jar
 .cache
+axlebot/plugins
+axlebot/logs
+axlebot/application.yml
