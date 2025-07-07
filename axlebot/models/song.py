@@ -263,7 +263,7 @@ class Song:
     
     @classmethod
     async def CreateSong(cls, query: str):
-        print("Searching song...")
+        print(f"Searching song... query = {query}")
 
         # Search via Lavalink node
         #search_result = await player.node.get_tracks(f"scsearch:{query}")
@@ -276,10 +276,6 @@ class Song:
         # Use the first track
         track = search_result['tracks'][0]
         info = track['info'].raw.get('info', {})
-
-        print(info)
-        print(type(info))
-        print(info.keys())
 
         name = info.get('title', 'Unknown Title')
 
@@ -331,18 +327,22 @@ class Song:
         return song
 
     @classmethod
-    async def SpotifyPlaylistSongList(cls, spotify_playlist_url, max_concurrent_song_loadings: int = 5):
+    async def SpotifyPlaylistSongList(cls, spotify_playlist_url, max_concurrent_song_loadings: int = 5, stop_event=None):
         all_tracks_info = await cls.get_spotify_info(spotify_playlist_url)
 
-        semaphore = asyncio.Semaphore(max_concurrent_song_loadings)
+        BATCH_SIZE = max_concurrent_song_loadings
+        RATE = 3
+        DELAY_PER_BATCH = BATCH_SIZE * RATE
+
+        semaphore = asyncio.Semaphore(BATCH_SIZE)
         unique_playlist_id = uuid1().int >> 64
 
         async def process_track(track, sleep_time=0) -> Song:
+            if sleep_time > 0:
+                await asyncio.sleep(sleep_time)
+
             async with semaphore:
                 try:
-                    if sleep_time > 0:
-                        await asyncio.sleep(sleep_time)
-
                     song = await Song.SpotifySong(track[0], track[1], track[2])
                     if song:
                         song.is_playlist = True
@@ -352,16 +352,46 @@ class Song:
                     print(f"Error processing URL {track}: {e}")
                     return None
 
-        # Set initial sleep_time = 0, then increase by 5s each time
+        # Create tasks with staggered start times based on batch
         tasks = [
-            process_track(track, sleep_time=i * 2)
+            asyncio.create_task(
+                process_track(track, sleep_time=(i // BATCH_SIZE) * DELAY_PER_BATCH)
+            )
             for i, track in enumerate(all_tracks_info)
         ]
 
-        for next_loaded_song in asyncio.as_completed(tasks):
-            song = await next_loaded_song
-            if song:
-                yield song
+        try:
+            while tasks:
+                done, pending = await asyncio.wait(
+                    tasks, return_when=asyncio.FIRST_COMPLETED
+                )
+
+                if isinstance(stop_event, asyncio.Event) and stop_event.is_set():
+                    print("[GENERATOR] Stop event triggered. Cancelling all tasks.")
+                    for task in pending:
+                        task.cancel()
+                    await asyncio.gather(*pending, return_exceptions=True)
+                    break
+
+                for finished in done:
+                    try:
+                        song = await finished
+                        if song:
+                            yield song
+                    except asyncio.CancelledError:
+                        print("[GENERATOR] Task was cancelled.")
+                    except Exception as e:
+                        print(f"[GENERATOR] Task raised error: {e}")
+                    tasks.remove(finished)
+
+        except asyncio.CancelledError:
+            print("[GENERATOR] Function was externally cancelled.")
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            raise
+
 
 
     @staticmethod
@@ -397,6 +427,7 @@ class Song:
         song: Song = await cls.CreateSong(f"{name} by {artist} audio")
         song.thumbnail_url = thumbnail_url
         song.type = "spot"; song.is_spot = True; song.is_yt = False
+        song.name = name ; song.artist = artist
         return song
         # yt_url, _ , duration = await Song.search_youtube_video(f"{name} by {artist} audio")
         # loop = asyncio.get_running_loop()
@@ -442,36 +473,73 @@ class Song:
         return data['lyrics']
 
     @classmethod
-    async def YouTubePlaylistSongList(cls, yt_playlist_link, max_concurrent_song_loadings: int = 5):
+    async def YouTubePlaylistSongList(cls, yt_playlist_link, max_concurrent_song_loadings: int = 5, stop_event=None):
         yt_playlist_urls = await Song.get_youtube_playlist_info(yt_playlist_link)
 
-        semaphore = asyncio.Semaphore(max_concurrent_song_loadings)
+        BATCH_SIZE = max_concurrent_song_loadings
+        RATE = 3 # proportional to batch size, what multiplier to use for sleep time
+        # e.g if BATCH_SIZE = 5 and RATE = 2, then sleep time for each batch is 10 seconds
+        # so for 10 songs, it will take 20 seconds to process all of them
+        # if BATCH_SIZE = 10 and RATE = 5, then sleep time for each batch is 50 seconds
+        # so for 10 songs, it will take 50 seconds to process all of them
+        DELAY_PER_BATCH = BATCH_SIZE * RATE
+
+        semaphore = asyncio.Semaphore(BATCH_SIZE)
 
         async def process_url(url, sleep_time = 0) -> Song:
+            if sleep_time > 0:
+                await asyncio.sleep(sleep_time)
+
             async with semaphore:
                 try:
                     song = await Song.SongFromYouTubeURL(url)
                     if song:
                         song.is_playlist = True
 
-                    if sleep_time > 0:
-                        await asyncio.sleep(sleep_time)
-
                     return song
                 except Exception as e:
                     print(f"Error processing URL {url}: {e}")
                     return None
 
-        # Set initial sleep_time = 0, then increase by 5s each time
+        # Create tasks with staggered start times based on batch
         tasks = [
-            process_url(track, sleep_time=i * 2)
+            asyncio.create_task(
+                process_url(track, sleep_time=(i // BATCH_SIZE) * DELAY_PER_BATCH)
+            )
             for i, track in enumerate(yt_playlist_urls)
         ]
 
-        for next_loaded_song in asyncio.as_completed(tasks):
-            song = await next_loaded_song
-            if song:
-                yield song
+        try:
+            while tasks:
+                done, pending = await asyncio.wait(
+                    tasks, return_when=asyncio.FIRST_COMPLETED
+                )
+
+                if isinstance(stop_event, asyncio.Event) and stop_event.is_set():
+                    print("[GENERATOR] Stop event triggered. Cancelling all tasks.")
+                    for task in pending:
+                        task.cancel()
+                    await asyncio.gather(*pending, return_exceptions=True)
+                    break
+
+                for finished in done:
+                    try:
+                        song = await finished
+                        if song:
+                            yield song
+                    except asyncio.CancelledError:
+                        print("[GENERATOR] Task was cancelled.")
+                    except Exception as e:
+                        print(f"[GENERATOR] Task raised error: {e}")
+                    tasks.remove(finished)
+
+        except asyncio.CancelledError:
+            print("[GENERATOR] Function was externally cancelled.")
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            raise
             
     @classmethod
     @alru_cache(maxsize=64, ttl=86400)

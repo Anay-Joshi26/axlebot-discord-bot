@@ -47,6 +47,7 @@ class Client:
         self.client_lock = asyncio.Lock()  # Lock to prevent concurrent modifications to the client
         self.server_config: ServerConfig = ServerConfig(self)
         self.vc_stopped_due_to_seek = False
+        self.stop_event = None
         #print("TEST TEST", core.extensions.lavalink_client.node_manager.available_nodes)
         #self.lavalink_player = core.extensions.lavalink_client.player_manager.get(server_id) or core.extensions.lavalink_client.player_manager.create(server_id)
 
@@ -164,6 +165,10 @@ class Client:
         """
         This function stops the client from playing any music, clears the queue, and disconnects from the voice channel.
         """
+        if isinstance(self.stop_event, asyncio.Event):
+            self.stop_event.set()
+            print("self.stop_event", id(self.stop_event))
+
         if send_embed:
             embed = craft_bot_music_stopped(delete_after=delete_after)
             await ctx.send(embed=embed, delete_after=delete_after)
