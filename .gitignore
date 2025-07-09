@@ -8,3 +8,4 @@ axlebot/Lavalink.jar
 axlebot/plugins
 axlebot/logs
 axlebot/application.yml
+.spotify_token_cache

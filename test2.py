@@ -1,118 +1,73 @@
-import aiohttp
-from PIL import Image
-import io
-import asyncio
-from youtubesearchpython.__future__ import Search, Playlist, Video, VideosSearch
 import os
 import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
-from pprint import pprint
+from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv, find_dotenv
+
 load_dotenv(find_dotenv())
 
+import random
+import string
 
-client_id = os.getenv("SPOTIFY_CLIENT_ID") 
-client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")  
+def generate_random_string(length=17):  # 0 to 16 inclusive = 17 characters
+    charset = string.ascii_lowercase + string.digits
+    return ''.join(random.choice(charset) for _ in range(length))
 
-# Create an instance of the Spotipy client
-client_credentials_manager = SpotifyClientCredentials(
-    client_id=client_id, client_secret=client_secret
+
+sp_oauth = SpotifyOAuth(
+    client_id = 'ee20120b0624492e81d7d3b2839b5b64', #os.getenv("SPOTIFY_CLIENT_ID")
+    client_secret = '671f8a5f2a0d41fdb71f1b59e09e97a8', #os.getenv("SPOTIFY_CLIENT_SECRET")
+    redirect_uri='https://mystictide.github.io/explore-spotify',
+    scope="user-read-private user-top-read playlist-modify-private",
+    cache_path=".spotify_token_cache",
+    state = generate_random_string()
 )
-sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
-async def extract_embed_color(thumbnail_url):
-    print(f"Extracting color from thumbnail URL: {thumbnail_url}")
+sp = spotipy.Spotify(auth_manager=sp_oauth)
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(thumbnail_url) as response:
-            response.raise_for_status()
-            image_data = await response.read()
+track = sp.track("0VjIjW4GlUZAMYd2vXMi3b")
+print(track["name"])
 
-    image = Image.open(io.BytesIO(image_data)).convert("RGB")
-    image = image.resize((100, 100))
+recs = sp.recommendations(seed_tracks=["0VjIjW4GlUZAMYd2vXMi3b"], limit=10)
+print(recs["tracks"])
 
-    left, top = 25, 25
-    right, bottom = 75, 75
+# auth_url = sp_oauth.get_authorize_url().replace("response_type=token", "response_type=code")
+# print("Open this in a browser:\n", auth_url)
 
-    cropped_image = image.crop((left, top, right, bottom))
-    print(f"Cropped image size: {cropped_image.size}")
-    print(f"Cropped image mode: {cropped_image.mode}")
+# # # from urllib.parse import urlparse, parse_qs
 
-    average_color = cropped_image.resize((1, 1)).getpixel((0, 0))
-    print(f"Average color: {average_color}")
-
-    hex_color = (average_color[0] << 16) + (average_color[1] << 8) + average_color[2]
-
-    return hex_color
-
-async def search_youtube_video_by_url(url):
-    video = await Video.getInfo(url)
-    title = video['title']
-
-    if 'secondsText' in video['duration']:
-        video_length = int(video['duration']['secondsText'])
-    # else:
-    #     video_length = Song._time_string_to_seconds(video['duration'])
-
-    return title, video_length
-
-def get_spotify_info(query):
-    list_type = None
-    if "open.spotify.com/album/" in query:
-        list_type = "album"
-    elif "open.spotify.com/playlist/" in query:
-        list_type = "playlist"
-    else:
-        raise ValueError("Invalid Spotify URL. Must be an album or playlist.")
-
-    if list_type == 'playlist':
-        playlist_tracks = sp.playlist_tracks(query)
-        track_info = [
-            (
-                track["track"]["name"],
-                track["track"]["artists"][0]["name"],
-                track["track"]["album"]["images"][0]["url"]
-                or track["track"]["artist"]["images"][0]["url"],
-            )
-            for track in playlist_tracks["items"]
-        ]
-        print(track_info)
-        return track_info
-    elif list_type == 'album':
-        album = sp.album(query)
-        album_thumbnail = album['images'][0]['url']
-
-        tracks = album['tracks']['items']
-
-        track_info = []
-        for track in tracks:
-            track_name = track['name']
-            artist_name = track['artists'][0]['name']
-            track_info.append((
-                track_name,
-                artist_name,
-                album_thumbnail
-            ))
-        return track_info
-    
-    return None
-
-async def run():
-    # thumbnail_url = "https://i.scdn.co/image/ab67616d0000b273806c160566580d6335d1f16c"
-    # color = await extract_embed_color(thumbnail_url)
-    # print(f"Extracted color: {color:#06x}")
-
-    # url = 'https://www.youtube.com/watch?v=XXYuWEuKI&pp=ygUWc2F2ZSB5b3VyIHRlYXJzIHdlZWtuZA%3D%3D'
-    # title, video_length = await search_youtube_video_by_url(url)
-    # print(f"Title: {title}, Video Length: {video_length} seconds")
-
-    #url = 'https://open.spotify.com/album/3Gt7rOjcZQoHCfnKl5AkK7'
-    url = 'https://open.spotify.com/playlist/5yY9EbSoqW4MeThXYUwYo9'
-
-    track_info = get_spotify_info(url)
-    print("Track Info:", track_info)
-
-if __name__ == "__main__":
-    asyncio.run(run())
+# response = input("Paste the full redirect URL here: ").strip()
 
 
+# code = sp_oauth.parse_response_code(response)
+# token_info = sp_oauth.get_access_token(code)
+# access_token = token_info["access_token"]
+# print("Access Token:", access_token)
+
+# import spotipy
+# from spotipy.oauth2 import SpotifyOAuth
+# # Spotify API credentials
+# CLIENT_ID = 'ee20120b0624492e81d7d3b2839b5b64'#os.getenv("SPOTIFY_CLIENT_ID")
+# CLIENT_SECRET = '671f8a5f2a0d41fdb71f1b59e09e97a8'#os.getenv("SPOTIFY_CLIENT_SECRET")
+# REDIRECT_URI = 'http://127.0.0.1:8888/callback'
+# SCOPE = None
+# # Initialize Spotify client
+# sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
+#     client_id=CLIENT_ID,
+#     client_secret=CLIENT_SECRET,
+#     redirect_uri=REDIRECT_URI,
+#     scope=SCOPE
+# ))
+# def get_recommendations(seed_tracks, seed_genres, limit=20):
+#     try:
+#         recommendations = sp.recommendations(seed_tracks=seed_tracks, seed_genres=seed_genres, limit=limit)
+#         return [track['id'] for track in recommendations['tracks']]
+#     except spotipy.exceptions.SpotifyException as e:
+#         print(f"Error fetching recommendations: {e}")
+#         return []
+# # Example usage
+# track = sp.track("0VjIjW4GlUZAMYd2vXMi3b")
+# print(track["name"])
+
+# seed_tracks = ['0cGG2EouYCEEC3xfa0tDFV', '7lQ8MOhq6IN2w8EYcFNSUk']
+# seed_genres = ['pop']
+# print(get_recommendations(seed_tracks, seed_genres))

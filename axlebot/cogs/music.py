@@ -478,7 +478,7 @@ class MusicCog(commands.Cog):
             
             if next_song is None and client.server_config.auto_play:
                 # The queue is empty, but auto play is enabled, so we will play a song from the recommendations
-                recommendations = await Song.get_song_recommendations([last_song], limit = 3)
+                recommendations = await Song.get_song_recommendations([last_song], limit = 5)
                 if not recommendations:
                     await ctx.send(embed=craft_general_error("No recommendations found :("), delete_after = 20)
                     embed = craft_queue_empty()
@@ -486,8 +486,10 @@ class MusicCog(commands.Cog):
                     if client.voice_client is not None:
                         await client.start_inactivity_timer(ctx) 
                     return
+                
                 next_song = recommendations[0]
-                await queue.append(next_song)
+                for s in recommendations:
+                    await client.queue.append(s)
             
             await self.send_play_song_embed(ctx, next_song, client)
 

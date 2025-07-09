@@ -110,7 +110,7 @@ yt_dl = YoutubeDL(yt_dl_options)
 class Song:
     def __init__(self, duration, artist, yt_url, player, name, thumbnail_url, audio_url, song_type = None, 
                  is_spot=False, is_yt=True, is_playlist = False, belongs_to = None, all_untried_song_streams: List[str] = None,
-                 lavalink_track_id: str = None):
+                 lavalink_track_id: str = None, auto_play = False):
         self.yt_url = yt_url
         self.name = name
         self.artist = artist
@@ -142,6 +142,7 @@ class Song:
         self.is_first_in_queue = False  # Indicates if the song is currently active in the queue
         self.all_untried_song_streams = all_untried_song_streams # list of all song urls incase a url is invalid, we can try the next one
         self.lavalink_track_id = lavalink_track_id 
+        self.auto_play = auto_play  # Indicates if this song was added automatically (e.g., from a recommendation or autoplay feature)
         #self.track = lavalink_track  # For Lavalink 4.x, this is the track object
 
     @property
@@ -486,25 +487,58 @@ class Song:
         return data['lyrics']
     
     @staticmethod
-    async def get_song_recommendations(seed_songs: list, limit = 3) -> List["Song"]:
+    async def get_song_recommendations(seed_songs: list, limit = 3, set_auto_play = True,
+                                       sort_by_popularity = True) -> List["Song"]:
         """
         Fetches song recommendations based on the current song.
+
+        Args:
+            seed_songs (list): A list of Song objects to use as seeds for recommendations.
+            limit (int): The maximum number of recommendations to return.
+            set_auto_play (bool): Whether to set the auto_play attribute for the returned songs.
+            sort_by_popularity (bool): Whether to sort the recommendations by popularity (descending order).
+        
+        Returns:
+            List[Song]: A list of recommended Song objects.
         """
         if not seed_songs:
             return []
 
         print(seed_songs)
         
-        seed_tracks = [sp.search(f'{song.name} {song.artist}', limit=1)['tracks']['items'][0]['id'] for song in seed_songs]
+        seed_tracks = []
+        seed_artists = []
+        seed_genres = []
+
+        for song in seed_songs:
+            results = sp.search(f'{song.name} {song.artist}', limit=1)
+            items = results['tracks']['items']
+            if items:
+                track = items[0]
+                seed_tracks.append(track['id'])
+                
+                # Add artist ID
+                if track['artists']:
+                    artist_id = track['artists'][0]['id']
+                    seed_artists.append(artist_id)
+
+                    # Get genres for the artist
+                    artist_info = sp.artist(artist_id)
+                    if artist_info['genres']:
+                        seed_genres.extend(artist_info['genres'])
 
         try:
-            results = sp_rec.recommendations(seed_tracks=seed_tracks, limit=limit)
+            results = sp_rec.recommendations(seed_tracks=seed_tracks, seed_artists=seed_artists, seed_genres=seed_genres, limit=limit)
+            tracks = sorted(results['tracks'], key=lambda x: x['popularity'], reverse=True) if sort_by_popularity else results['tracks']
             recommendations = []
-            for track in results['tracks']:
+            for track in tracks:
                 name = track['name']
                 artist = track['artists'][0]['name']
                 thumbnail_url = track['album']['images'][0]['url'] if track['album']['images'] else None
-                recommendations.append(await Song.SpotifySong(name, artist, thumbnail_url))
+                song = await Song.SpotifySong(name, artist, thumbnail_url)
+                if set_auto_play:
+                    song.auto_play = True
+                recommendations.append(song)
             return recommendations
         except Exception as e:
             print(f"Error fetching recommendations: {e}")
