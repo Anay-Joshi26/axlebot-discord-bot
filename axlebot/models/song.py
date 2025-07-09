@@ -8,7 +8,7 @@ from yt_dlp import YoutubeDL
 #from pytube import YouTube, Playlist, Search
 from youtubesearchpython.__future__ import Search, Playlist, Video, VideosSearch
 import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
+from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
 import os
 from dotenv import load_dotenv, find_dotenv
 from typing import List
@@ -18,7 +18,7 @@ import re
 from async_lru import alru_cache
 from functools import lru_cache
 from uuid import uuid1
-from utils import time_string_to_seconds
+from utils import time_string_to_seconds, generate_random_string
 from core.api.wrapper import *
 from core.api.lyrics import LyricsStatus
 import lavalink
@@ -35,7 +35,20 @@ client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
 client_credentials_manager = SpotifyClientCredentials(
     client_id=client_id, client_secret=client_secret
 )
+
 sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
+
+sp_oauth = SpotifyOAuth(
+    client_id = os.getenv("REC_SPOTIFY_CLIENT_ID"),
+    client_secret = os.getenv("REC_SPOTIFY_CLIENT_SECRET"),
+    redirect_uri=os.getenv("REC_SPOTIFY_REDIRECT_URI"),
+    scope=None,
+    cache_path=os.getenv("REC_CACHE_PATH"),
+    state = generate_random_string()
+)
+
+
+sp_rec = spotipy.Spotify(auth_manager=sp_oauth)
 
 # yt_dl_options = {
 #     "format": "bestaudio/best",
@@ -471,6 +484,32 @@ class Song:
         self._lyrics_status = LyricsStatus[data['status']]
         self.lyrics = data.get('lyrics', None)
         return data['lyrics']
+    
+    @staticmethod
+    async def get_song_recommendations(seed_songs: list, limit = 3) -> List["Song"]:
+        """
+        Fetches song recommendations based on the current song.
+        """
+        if not seed_songs:
+            return []
+
+        print(seed_songs)
+        
+        seed_tracks = [sp.search(f'{song.name} {song.artist}', limit=1)['tracks']['items'][0]['id'] for song in seed_songs]
+
+        try:
+            results = sp_rec.recommendations(seed_tracks=seed_tracks, limit=limit)
+            recommendations = []
+            for track in results['tracks']:
+                name = track['name']
+                artist = track['artists'][0]['name']
+                thumbnail_url = track['album']['images'][0]['url'] if track['album']['images'] else None
+                recommendations.append(await Song.SpotifySong(name, artist, thumbnail_url))
+            return recommendations
+        except Exception as e:
+            print(f"Error fetching recommendations: {e}")
+            return []
+        
 
     @classmethod
     async def YouTubePlaylistSongList(cls, yt_playlist_link, max_concurrent_song_loadings: int = 5, stop_event=None):

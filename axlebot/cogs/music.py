@@ -463,9 +463,11 @@ class MusicCog(commands.Cog):
                 except discord.NotFound:
                     print("Progress message not found, it might have been deleted already")
 
+            last_song = queue.current_song
+
             next_song: Song = await queue.next()
 
-            if next_song is None:
+            if next_song is None and not client.server_config.auto_play:
                 # queue is empty, let them know
 
                 embed = craft_queue_empty()
@@ -473,6 +475,19 @@ class MusicCog(commands.Cog):
                 if client.voice_client is not None:
                     await client.start_inactivity_timer(ctx) 
                 return
+            
+            if next_song is None and client.server_config.auto_play:
+                # The queue is empty, but auto play is enabled, so we will play a song from the recommendations
+                recommendations = await Song.get_song_recommendations([last_song], limit = 3)
+                if not recommendations:
+                    await ctx.send(embed=craft_general_error("No recommendations found :("), delete_after = 20)
+                    embed = craft_queue_empty()
+                    await ctx.send(embed = embed)
+                    if client.voice_client is not None:
+                        await client.start_inactivity_timer(ctx) 
+                    return
+                next_song = recommendations[0]
+                await queue.append(next_song)
             
             await self.send_play_song_embed(ctx, next_song, client)
 

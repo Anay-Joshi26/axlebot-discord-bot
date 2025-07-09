@@ -4,6 +4,8 @@ A file for utility functions
 
 from typing import Tuple
 from datetime import datetime, timedelta
+import random
+import string
 # USE CONVERTORS FROM DISCORD PYTHON LIBRARY
 
 def discord_tag_to_id(tag: str) -> Tuple[int, str] | Tuple[None, None]:
@@ -99,3 +101,7 @@ def parse_seek_time(time_str: str) -> float:
             raise ValueError("Invalid time format")
     except ValueError:
         raise ValueError("Failed to parse time string")
+
+def generate_random_string(length=17):  # 0 to 16 inclusive = 17 characters
+    charset = string.ascii_lowercase + string.digits
+    return ''.join(random.choice(charset) for _ in range(length))

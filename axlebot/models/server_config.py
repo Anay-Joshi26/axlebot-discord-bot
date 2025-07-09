@@ -13,9 +13,22 @@ class ServerConfig:
         self.delete_message_after_play = False
         self.MAX_PERMITTED_ROLES = 10
         self.MAX_PERMITTED_CHANNELS = 10
+        self.auto_play = False # Never keeps the queue empty, always recommends a song to play next
 
     async def _trigger_update(self):
         await self.client.update_changes_by_attribute("server_config", self.to_dict())
+
+    async def update_auto_play(self, value: bool, update_db: bool = True):
+        """
+        Sets whether to automatically play a song when the queue is empty.
+        This is useful for servers that want to keep the music playing without user intervention.
+        New music is served up based on recommendations on the queue of music.
+
+        :param value: True to enable auto play, False to disable.
+        """
+        self.auto_play = value
+        if update_db:
+            await self._trigger_update()
 
     async def add_permitted_role(self, role_id: int, update_db: bool = True):
         """
@@ -90,7 +103,8 @@ class ServerConfig:
             "permitted_channels_of_use": [],
             "delete_message_after_play": False,
             "MAX_PERMITTED_ROLES": 10,
-            "MAX_PERMITTED_CHANNELS": 10
+            "MAX_PERMITTED_CHANNELS": 10,
+            "auto_play": False
         }
 
     def to_dict(self) -> dict:
