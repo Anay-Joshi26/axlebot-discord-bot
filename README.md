@@ -47,6 +47,25 @@ Axlebot is a feature-rich Discord music bot that supports YouTube and Spotify pl
 *Note: The `application.yml` in `main` is simply an example*
 
 ### Running the Bot
+
+Ensure you are in the `/axlebot-discord-bot` directory.
+
+To run the bot and all its services run:
+
+```bash
+./start.sh
+```
+
+To stop the bot and all its services run:
+
+```bash
+./stop.sh
+```
+
+*Note: Both shell scripts should have executable permissions*
+
+**Alternatively, to run each service separately, follow the below steps**
+
 1. Start the Lavalink server (in a separate terminal):
    ```bash
    java -jar Lavalink.jar
@@ -55,7 +74,7 @@ Axlebot is a feature-rich Discord music bot that supports YouTube and Spotify pl
    ```bash
    PYTHONPATH=./axlebot uvicorn core.api:app --reload
    ```
-3. Start the bot:
+3. Start the bot (in a separate terminal):
    ```bash
    python axlebot/bot.py
    ```
@@ -72,7 +91,7 @@ The FastAPI service is written to be an integrated module, but it can be run sep
   - `-move <from> <to>`: Move a song in the queue
   - `-shuffle`: Shuffle the queue
   - `-lyrics`: Show lyrics for the current song
-  - ...and more (see `cogs/*.py` for all commands)
+  - ...and many more (see `cogs/*.py` for all commands)
   - See all commands via `-help`
 
 ## FastAPI Service
