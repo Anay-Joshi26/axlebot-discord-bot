@@ -89,6 +89,9 @@ async def bot_use_permissions(ctx: commands.Context, client = None):
     return True
 
 def cooldown_time(ctx):
+    if ctx.author.id == 253477867717918721: # my ID
+        print("I get special treatment :)")
+        return commands.Cooldown(2, 1)
 
     client = server_manager.active_clients.get(ctx.guild.id)
 

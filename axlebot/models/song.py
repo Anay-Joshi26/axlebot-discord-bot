@@ -18,7 +18,7 @@ import re
 from async_lru import alru_cache
 from functools import lru_cache
 from uuid import uuid1
-from utils import time_string_to_seconds, generate_random_string
+from utils import time_string_to_seconds, generate_random_string, clean_song_name
 from core.api.wrapper import *
 from core.api.lyrics import LyricsStatus
 import lavalink
@@ -110,7 +110,7 @@ yt_dl = YoutubeDL(yt_dl_options)
 class Song:
     def __init__(self, duration, artist, yt_url, player, name, thumbnail_url, audio_url, song_type = None, 
                  is_spot=False, is_yt=True, is_playlist = False, belongs_to = None, all_untried_song_streams: List[str] = None,
-                 lavalink_track_id: str = None, auto_play = False):
+                 lavalink_track_id: str = None, auto_play = False, lyrics: str = None):
         self.yt_url = yt_url
         self.name = name
         self.artist = artist
@@ -130,7 +130,7 @@ class Song:
         self.thumbnail_url = thumbnail_url if thumbnail_url else "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/eb777e7a-7d3c-487e-865a-fc83920564a1/d7kpm65-437b2b46-06cd-4a86-9041-cc8c3737c6f0.jpg/v1/fill/w_800,h_800,q_75,strp/no_album_art__no_cover___placeholder_picture_by_cmdrobot_d7kpm65-fullview.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9ODAwIiwicGF0aCI6IlwvZlwvZWI3NzdlN2EtN2QzYy00ODdlLTg2NWEtZmM4MzkyMDU2NGExXC9kN2twbTY1LTQzN2IyYjQ2LTA2Y2QtNGE4Ni05MDQxLWNjOGMzNzM3YzZmMC5qcGciLCJ3aWR0aCI6Ijw9ODAwIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmltYWdlLm9wZXJhdGlvbnMiXX0.8yjX5CrFjxVH06LB59TpJLu6doZb0wz8fGQq4tM64mg"
         self.duration = duration
         self._audio_url = audio_url
-        self.lyrics = None
+        self.lyrics = lyrics
         self._lyrics_status = LyricsStatus.NOT_STARTED
         self.progress_message : discord.Message = None
         self.seconds_played = 0
@@ -143,6 +143,7 @@ class Song:
         self.all_untried_song_streams = all_untried_song_streams # list of all song urls incase a url is invalid, we can try the next one
         self.lavalink_track_id = lavalink_track_id 
         self.auto_play = auto_play  # Indicates if this song was added automatically (e.g., from a recommendation or autoplay feature)
+        self.increment_seconds_time_delay = 1 # seconds
         #self.track = lavalink_track  # For Lavalink 4.x, this is the track object
 
     @property
@@ -284,8 +285,14 @@ class Song:
         search_result = await core.extensions.lavalink_client.get_tracks(f"ytsearch:{query}")
 
         if not search_result or not search_result['tracks']:
-            print(f"Failed to fetch song info for query: {query}")
-            return None
+            print(f"Failed to fetch song info for query: {query}, trying SoundCloud search")
+
+            search_result = await core.extensions.lavalink_client.get_tracks(f"scsearch:{query}")
+
+            if not search_result or not search_result['tracks']:
+                print(f"Failed to fetch song info for query: {query} from SoundCloud as well")
+                return None
+
 
         # Use the first track
         track = search_result['tracks'][0]
@@ -482,6 +489,9 @@ class Song:
 
         self._lyrics_status = LyricsStatus.FETCHING
         data = await get_lyrics(self.name, self.artist)
+        if data is None:
+            self._lyrics_status = LyricsStatus.NO_LYRICS_FOUND
+            return None
         self._lyrics_status = LyricsStatus[data['status']]
         self.lyrics = data.get('lyrics', None)
         return data['lyrics']
@@ -503,42 +513,40 @@ class Song:
         """
         if not seed_songs:
             return []
-
-        print(seed_songs)
         
         seed_tracks = []
-        seed_artists = []
-        seed_genres = []
-
+        average_popularity = 0
         for song in seed_songs:
-            results = sp.search(f'{song.name} {song.artist}', limit=1)
-            items = results['tracks']['items']
-            if items:
-                track = items[0]
-                seed_tracks.append(track['id'])
-                
-                # Add artist ID
-                if track['artists']:
-                    artist_id = track['artists'][0]['id']
-                    seed_artists.append(artist_id)
-
-                    # Get genres for the artist
-                    artist_info = sp.artist(artist_id)
-                    if artist_info['genres']:
-                        seed_genres.extend(artist_info['genres'])
+            search_term = clean_song_name(song.name, song.artist)
+            result = sp.search(f"{search_term} {song.artist if song.type == 'spot' else ''}", limit=1)['tracks']['items']
+            if result:
+                track_id = result[0]['id']
+                seed_tracks.append(track_id)
+                print(f"SEED TRACK:  {search_term} -> {result[0]['name']} | {track_id}")
+            else:
+                print(f"No result for SF: {search_term}")
+            average_popularity += result[0]['popularity']
+        
+        average_popularity /= len(seed_tracks)
+        print(f"Average popularity of seed tracks: {average_popularity}")
+        if average_popularity < 30:
+            average_popularity *= 1.15  # safeguard against too low popularity
+        print(f"LIMIT: {limit}")
 
         try:
-            results = sp_rec.recommendations(seed_tracks=seed_tracks, seed_artists=seed_artists, seed_genres=seed_genres, limit=limit)
-            tracks = sorted(results['tracks'], key=lambda x: x['popularity'], reverse=True) if sort_by_popularity else results['tracks']
+            results = sp_rec.recommendations(seed_tracks=seed_tracks, limit=limit, min_popularity=25)
+            tracks = results['tracks']#sorted(results['tracks'], key=lambda x: x['popularity'], reverse=True) if sort_by_popularity else results['tracks']
             recommendations = []
-            for track in tracks:
+            for track in tracks[:limit]:
                 name = track['name']
+                print(f"Recommending track: {name} | {track['id']}")
                 artist = track['artists'][0]['name']
                 thumbnail_url = track['album']['images'][0]['url'] if track['album']['images'] else None
                 song = await Song.SpotifySong(name, artist, thumbnail_url)
                 if set_auto_play:
                     song.auto_play = True
                 recommendations.append(song)
+            print(f"Total recommendations fetched: {len(recommendations)}")
             return recommendations
         except Exception as e:
             print(f"Error fetching recommendations: {e}")
@@ -772,7 +780,7 @@ class Song:
         """Private method to increment seconds in the background."""
 
         while self.seconds_played <= self.duration:
-            await asyncio.sleep(1)  # Wait for 1 second
+            await asyncio.sleep(self.increment_seconds_time_delay)
             self.seconds_played += 1
     
     def play(self):

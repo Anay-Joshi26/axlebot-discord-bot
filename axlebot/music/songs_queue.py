@@ -3,18 +3,22 @@ from collections import deque
 from typing import List, Union
 import random
 import asyncio
+from utils.message_crafter import craft_queue
+import discord
 
 
 class SongQueue:
-    def __init__(self, server_id : int):
-        self.server_id = server_id
+    def __init__(self, client):
+        self.client = client
         self.queue : List[Song] = []
         #self.queue : asyncio.Queue[Song] = asyncio.Queue()
         self.lock = asyncio.Lock()
         self.loop_current = False
+        self.NUM_OF_AUTOPLAY_SONGS_TO_HOLD = 5
+        self.auto_play_queue : List[Song] = []
+        self.last_seed_songs : set[str] = set()  # To keep track of the last seed songs used for recommendations
 
-
-    async def append(self, song: Song, index=None) -> None:
+    async def append(self, song: Song, index=None, update_auto_play = True) -> None:
         """
         Appends a song to the queue at the end or at a specific index
         """
@@ -23,6 +27,56 @@ class SongQueue:
                 self.queue.insert(index, song)
             else:
                 self.queue.append(song)
+
+            if self.client.server_config.auto_play and update_auto_play:
+                # now that the queue has one more song, we can update the auto play songs
+                asyncio.create_task(self.update_auto_play_songs())
+        
+        self.update_live_queue_message()
+
+    def update_live_queue_message(self):
+        """
+        Updates the live queue message with the current queue.
+        This is useful for live updates to the queue.
+        """
+        if hasattr(self.client, 'live_queue_message'):
+            try:
+                asyncio.create_task(self.client.live_queue_message.edit(
+                    embed=craft_queue(self.client, num=None, live = True)
+                ))
+            except discord.NotFound:
+                print("Live queue message no longer exists. Removing reference.")
+                delattr(self.client, 'live_queue_message')
+            except Exception as e:
+                print(f"Error updating live queue message: {e}")
+            
+    async def update_auto_play_songs(self, num_of_seed_tracks : int = 5, manual_seed_tracks: List[Song] = None) -> None:
+        """
+        Updates the auto play songs in the queue based on the current queue.
+        Spotify only supports up to 5 seed tracks, so we will use that as the default.
+        """
+        async with self.lock:
+            seed_songs = self.queue[:num_of_seed_tracks] + self.auto_play_queue[:num_of_seed_tracks - len(self.queue[:num_of_seed_tracks])]
+            seed_songs_set = set(song.lavalink_track_id for song in seed_songs)
+            if seed_songs_set == self.last_seed_songs:
+                print("No change in seed songs, skipping auto play update.")
+                if not manual_seed_tracks: return
+            
+            print(f"Updating auto play songs with seed songs: {seed_songs_set}")
+            
+            self.last_seed_songs = seed_songs_set
+            num_to_add = self.NUM_OF_AUTOPLAY_SONGS_TO_HOLD - len(self.auto_play_queue)
+            if manual_seed_tracks is not None:
+                seed_songs = manual_seed_tracks
+            recommendations = await Song.get_song_recommendations(seed_songs, limit=self.NUM_OF_AUTOPLAY_SONGS_TO_HOLD if num_to_add == 0 else num_to_add, set_auto_play=True)
+            
+            if num_to_add == 0:
+                self.auto_play_queue = recommendations
+            else:
+                for song in recommendations[:num_to_add]:
+                    self.auto_play_queue.append(song)
+            
+            self.update_live_queue_message()
 
     @property
     def current_song(self) -> Union[Song, None]:
@@ -36,7 +90,9 @@ class SongQueue:
         Pops a song from the queue at the specified index (default is 0)
         """
         async with self.lock:
-            return self.queue.pop(index)
+            popped = self.queue.pop(index)
+            self.update_live_queue_message()
+            return popped
 
     
     def loop(self) -> None:
@@ -52,6 +108,7 @@ class SongQueue:
 
         self.current_song.is_looping = self.loop_current
 
+        self.update_live_queue_message()
         return self.loop_current
 
     async def repeat(self, num=1) -> None:
@@ -64,6 +121,8 @@ class SongQueue:
             current_song = await self.queue[0].copy()
             for _ in range(num):
                 self.queue.insert(1, current_song)
+
+        self.update_live_queue_message()
 
     
     async def move(self, song_in_question: int, move_to: int) -> None:
@@ -85,6 +144,8 @@ class SongQueue:
 
             self.queue.insert(move_to-1, self.queue.pop(song_in_question-1))
 
+        self.update_live_queue_message()
+
     async def shuffle(self) -> None:
         """
         Shuffles the queue (except the currently playing song)
@@ -95,11 +156,14 @@ class SongQueue:
             random.shuffle(subqueue)
             self.queue = [self.queue[0]] + subqueue
 
+        self.update_live_queue_message()
+
     async def next(self) -> Song:
         """
         Returns the next song in the queue
         """
-        if len(self.queue) == 0:
+        if len(self.queue) == 0 and not self.client.server_config.auto_play:
+            self.update_live_queue_message()
             return None
         
         self.current_song.stop()
@@ -116,12 +180,26 @@ class SongQueue:
 
             next_song.is_looping = self.loop_current # True
             next_song.is_first_in_queue = True
+            self.update_live_queue_message()
             return next_song
 
-        await self.pop()
+        popped = await self.pop()
         
         if len(self.queue) == 0:
-            return None
+            if not self.client.server_config.auto_play:
+                self.update_live_queue_message()
+                return None
+
+            if len(self.auto_play_queue) == 0:
+                print("No songs in auto play queue, updating auto play songs")
+                await self.update_auto_play_songs(manual_seed_tracks=[popped])
+            next_song = self.auto_play_queue.pop(0)
+            self.queue.append(next_song)
+            next_song.is_first_in_queue = True
+            asyncio.create_task(self.update_auto_play_songs())
+            self.update_live_queue_message()
+            return next_song
+            
         
         next_song = self.queue[0]
         
@@ -129,11 +207,13 @@ class SongQueue:
         #     await next_song.refresh_audio_url_and_player()
 
         next_song.is_first_in_queue = True
+        self.update_live_queue_message()
         return next_song
     
     async def clear(self) -> None:
         async with self.lock:
             self.queue.clear()
+        self.update_live_queue_message()
 
     def __len__(self) -> int:
         """

@@ -14,7 +14,7 @@ from core.lavalink import LavalinkVoiceClient
 
 class Client:
     def __init__(self, server_id):
-        self.queue : SongQueue = SongQueue(server_id=server_id)
+        self.queue : SongQueue = SongQueue(self)
         self.server_id = server_id
         self.voice_client : LavalinkVoiceClient = None
         self.last_message_time = None
@@ -181,6 +181,9 @@ class Client:
             await self.voice_client.stop()
             await self.voice_client.disconnect(); self.voice_client = None
         await self.queue.clear()
+        self.queue.auto_play_queue = []
+        self.queue.last_seed_songs = set()
+        await self.voice_client.player.clear_filters()
 
         self.interupt_inactivity_timer()
 

@@ -11,9 +11,12 @@ from models.client import Client
 from music.songs_queue import SongQueue
 from discord.ext.commands import BucketType, CommandOnCooldown
 from utils import parse_seek_time
+from copy import deepcopy
 #import lavalink
 import core.extensions
 import traceback
+from lavalink import Timescale, Vibrato, Rotation, Karaoke, Equalizer
+import shlex
 
 PAID_COOLDOWN : float = 1
 NON_PAID_COOLDOWN : float = 5
@@ -358,6 +361,7 @@ class MusicCog(commands.Cog):
                 # Start the generator to populate the queue
                 position = len(queue) if position is None else position
                 i = 0
+                auto_play_updated = False
                 async for song in song_generator:
                     if song:
                         if i == 0:
@@ -365,9 +369,13 @@ class MusicCog(commands.Cog):
                             embed = craft_playlist_added(qt)
                             await ctx.send(embed = embed)
 
-                        await queue.append(song, position)
+                        await queue.append(song, position, update_auto_play=False)
                         print(f"Added to queue: {song.name}")
                         position += 1
+
+                        if len(queue) == 5:
+                            auto_play_updated = True
+                            await client.queue.update_auto_play_songs()
 
                     # Start playing the first song if it's not already playing
                     if len(queue) == 1:
@@ -391,6 +399,9 @@ class MusicCog(commands.Cog):
                         )
 
                     i += 1
+                if not auto_play_updated and client.server_config.auto_play:
+                    # If we have added songs to the queue, we can update the auto play songs
+                    await client.queue.update_auto_play_songs()
 
                 return        
             elif query_type == self.STD_YT_QUERY:
@@ -569,15 +580,25 @@ class MusicCog(commands.Cog):
     @commands.command(aliases = ['q'])
     @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
-    async def queue(self, ctx, num : int | None = None):
+    async def queue(self, ctx: commands.Context, num : int | None = None, *args):
         client = await self.server_manager.get_client(ctx.guild.id)
         print("num", num)
         if num is None or num > len(client.queue) or num < 1:
             num = None
             print("No number provided or number is invalid, showing full queue")
-        embed = craft_queue(client.queue, num = num)
+        is_live = args and args[-1] in ['-l', '-live', '-livequeue', 'l', 'live', 'livequeue']
+        embed = craft_queue(client, num = num, live = is_live)
         try:
-            await ctx.send(embed = embed)
+            if is_live:
+                if hasattr(client, 'live_queue_message'):
+                    try:
+                        await client.live_queue_message.delete()
+                    except discord.NotFound:
+                        delattr(client, 'live_queue_message')
+                live_queue_message = await ctx.send(embed = embed)
+                client.live_queue_message = live_queue_message
+            else:
+                await ctx.send(embed = embed)
         except Exception as e:
             await ctx.send(embed = discord.Embed(
                 title="Too many songs in queue",
@@ -748,7 +769,7 @@ class MusicCog(commands.Cog):
     @commands.check(in_voice_channel)
     @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
-    async def repeat(self, ctx, num : int = 1):
+    async def repeat(self, ctx, num : int = 1, *args):
         client = await self.server_manager.get_client(ctx.guild.id)
 
         if client.voice_client is None:
@@ -761,21 +782,32 @@ class MusicCog(commands.Cog):
         # except ValueError as e:
         #     await ctx.send("Please provide a valid number (between 1 and 20)")
         #     return
+        print(args)
+        rep_queue = args and (args[-1] in ['-q', '-queue', 'q', 'queue'])
+        print(f"rep_queue: {rep_queue}")
         
         if num < 1:
             await ctx.send("A song cannot be repeated less than 1 time, please provide a valid number (1-20)")
             return
-        if num > 100:
+        if num > 20:
             await ctx.send("A limit of 20 repetitions has been set, please provide a valid number (1-20)")
             return
         
         try:
-            await client.queue.repeat(num)
-            await ctx.send(f"Repeating the current song **{num}** times, run `-q` to see the updated queue")
+            if rep_queue:
+                queue_to_repeat = [await song.copy() for song in client.queue]
+                for _ in range(num):  # Repeat the current queue num times
+                    for song in queue_to_repeat:
+                        await client.queue.append(song, update_auto_play=False)
+                await ctx.send(f"Repeating the **entire queue {num}** times. Run `-q` to see the updated queue.")
+
+            else:
+                await client.queue.repeat(num)
+                await ctx.send(f"Repeating **the current song {num}** times, run `-q` to see the updated queue")
         except ValueError as e:
             await ctx.send(e)
 
-    @commands.command(aliases = ['nowplaying'])
+    @commands.command(aliases = ['nowplaying', 'nwp', 'nowpl', 'nwpl'])
     @commands.check(bot_use_permissions)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     async def now_playing(self, ctx):
@@ -927,7 +959,137 @@ class MusicCog(commands.Cog):
             return
         await self.seek_by(ctx, -seconds)
 
+    @commands.command(
+        aliases=['sf', 'apply_filters', 'applyfilters', 'set_filter', 'setfilter', 'apply_filter']
+    )
+    @commands.check(bot_use_permissions)
+    @commands.dynamic_cooldown(cooldown_time, type=BucketType.user)
+    async def set_filters(self, ctx, *filters):
+        client = await self.server_manager.get_client(ctx.guild.id)
+        player = getattr(client.voice_client, 'player', None)
 
+        ALLOWED_FILTERS = {
+            "timescale_speed",
+            "timescale_pitch",
+            "timescale_rate",
+            "vibrato_depth",
+            "vibrato_frequency",
+            "bassboost",
+            "rotation",
+            "karaoke_level"
+        }
+
+
+        if not player or not player.is_playing:
+            return await ctx.send("No song is currently playing. Use `-p <song name>` to play something.")
+
+        adding = await ctx.send("Setting filters, please wait...")
+
+        try:
+            tokens = shlex.split(" ".join(filters))
+        except ValueError:
+            await adding.delete()
+            return await ctx.send("Invalid filter format. Use quotes if needed.")
+
+        parsed = {}
+        current_key = None
+        for token in tokens:
+            if token.startswith('-'):
+                current_key = token.lstrip('-')
+            elif current_key:
+                print(f"Processing token: {token}, current_key: {current_key}")
+                if current_key not in ALLOWED_FILTERS:
+                    await adding.delete()
+                    return await ctx.send(f"Invalid filter name: `{current_key}`. Allowed filters: {', '.join(ALLOWED_FILTERS)}", delete_after=40)
+                try:
+                    parsed[current_key] = float(token)
+                    current_key = None
+                except ValueError:
+                    await adding.delete()
+                    return await ctx.send(f"Invalid value for `-{current_key}` `{token}`", delete_after=30)
+        
+        if not parsed:
+            await adding.delete()
+            return await ctx.send("No valid filters provided. Use `-sf -<filter_name> <value>` format.", delete_after=30)
+
+        # Prepare filter objects
+        filters_to_apply = []
+
+        # Timescale
+        timescale_kwargs = {}
+        for k in ['timescale_speed', 'timescale_pitch', 'timescale_rate']:
+            if k in parsed:
+                timescale_kwargs[k.split('_')[1]] = parsed[k]
+        if timescale_kwargs:
+            filters_to_apply.append(Timescale(**timescale_kwargs))
+
+        # Vibrato
+        vibrato_kwargs = {}
+        for k in ['vibrato_depth', 'vibrato_frequency']:
+            if k in parsed:
+                vibrato_kwargs[k.split('_')[1]] = parsed[k]
+        if vibrato_kwargs:
+            filters_to_apply.append(Vibrato(**vibrato_kwargs))
+
+        # Rotation
+        if 'rotation' in parsed:
+            filters_to_apply.append(Rotation(rotation_hz=parsed['rotation']))
+
+        # Karaoke
+        if 'karaoke_level' in parsed:
+            filters_to_apply.append(Karaoke(level=parsed['karaoke_level']))
+
+        # Baseboost (Equalizer)
+        if 'bassboost' in parsed:
+            val = max(min(parsed['bassboost'], 1.0), 0.0)
+            eq = Equalizer()
+            eq.update(bands=[
+                (0, val),                  # 25 Hz
+                (1, val / 1.46),            # 40 Hz
+                (2, val / 2),              # 63 Hz
+                (3, val / 3),              # 100 Hz
+                (4, val / 4.1),              # 160 Hz (optional)
+            ])
+            filters_to_apply.append(eq)
+
+        # Apply filters, replacing previous ones
+        try:
+            await player.clear_filters() 
+            await player.set_filters(*filters_to_apply)
+            await asyncio.sleep(5.5)
+            await adding.delete()
+            if "timescale_speed" in parsed or "timescale_rate" in parsed:
+                client.queue.current_song.increment_seconds_time_delay /= parsed.get('timescale_speed', 1.0) * parsed.get('timescale_rate', 1.0)
+            await ctx.send("✅ Filters applied successfully.")
+        except Exception as e:
+            await adding.delete()
+            await ctx.send(f"❌ Failed to apply filters: `{e}`", delete_after = 15)
+
+    
+    @commands.command(
+        aliases=['remove_filters', 'reset_filters', 'resetfilters', 'removefilter', 'clearfilter', 'rmf', 'cf', 'rf'] 
+    )
+    @commands.check(bot_use_permissions)
+    @commands.dynamic_cooldown(cooldown_time, type=BucketType.user)
+    async def clear_filters(self, ctx):
+        """
+        Clears all audio filters for the current song.
+        """
+        client = await self.server_manager.get_client(ctx.guild.id)
+        player = getattr(client.voice_client, 'player', None)
+
+        if not player or not player.is_playing:
+            return await ctx.send("No song is currently playing. Use `-p <song name>` to play something.")
+        
+        clearing = await ctx.send("Clearing filters, please wait...")
+
+        await player.clear_filters()
+        await asyncio.sleep(5.5)
+        await clearing.delete()
+        client.queue.current_song.increment_seconds_time_delay = 1
+        await ctx.send("✅ All filters have been cleared.")
+        #player.set_equalizer()
+        
         
         
 

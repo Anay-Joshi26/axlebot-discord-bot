@@ -205,30 +205,44 @@ def craft_lyrics_embed(lyrics: str, song_name: str, artist: str, status = Lyrics
 
     return embed
 
-def craft_queue_empty():
+def craft_queue_empty(live = False):
     embed = discord.Embed(
-        title="The song queue is empty!",
+        title=f"The song queue is empty! {'[LIVE]' if live else ''}",
         description=f"The queue is empty use `-p [song_name]` to play and add songs to the queue\n\n*AxleBot will leave the voice channel after 3 minutes of inactivity*",
         colour=0x00b0f4)
     return embed
 
-def craft_queue(queue, num = None):
+def craft_queue(client, num=None, live = False):
+    queue = client.queue
     if len(queue) == 0:
-        return craft_queue_empty()
+        return craft_queue_empty(live=live)
+
     nums_to_show = num if num is not None else len(queue)
     opt = ""
+
+    # Main queue display
     for i in range(nums_to_show):
         if i == 0:
             opt += f"[{i+1}] **{queue[i].name}** => Now playing...{' [LOOPED]' if queue.loop_current else ''}\n"
         else:
             opt += f"[{i+1}] **{queue[i].name}**\n"
-    opt += "\n(If a playlist has been added the tracks will be added slowly, so they wont all show up at once)"
+
+    opt += "\n*(If a playlist has been added, the tracks will be added slowly and may not all show up at once.)*"
+
+    # Autoplay queue display if 3 or fewer songs and autoplay queue exists
+    autoplay_queue = getattr(queue, "auto_play_queue", [])
+    if len(queue) <= 10 and autoplay_queue:
+        opt += "\n====================================\n"
+        opt += "**Autoplay is enabled. These tracks will play after the queue ends:**\n\n"
+        for i, track in enumerate(autoplay_queue, start=1):  # Limit to 5
+            opt += f"[A{i}] {track.name}\n"
 
     return discord.Embed(
-        title=f"Queue of Songs{f' (first {num})'if num is not None and num < len(queue) and num > 0 else ''}",
+        title=f"Queue of Songs{f' (first {num})' if num is not None and num < len(queue) and num > 0 else ''} {'[LIVE]' if live else ''}",
         description=opt,
         colour=0x00b0f4,
     )
+
 
 async def extract_embed_color(thumbnail_url):
     print(f"Extracting color from thumbnail URL: {thumbnail_url}")
@@ -255,7 +269,7 @@ async def extract_embed_color(thumbnail_url):
 def craft_playlist_created(name: str) -> discord.Embed:
 
     embed = discord.Embed(title=f"{name}",
-                      description=f"A playlist named \"{name}\" has been created and currently has `0` songs inside it. \n\nTo add your own songs you use the command:\n\n`-add_songs <Optional: Playlist name> <url 1> <url 2> <url 3> ...`\n\n OR\n\n Use the button below to add songs to this newly created playlist\n\nIf you choose to not provide a playlist name the songs will be added to the **last created playlist** which was created.\n\nYou can add up to 30 songs in one playlist, if you enter more than 30 songs only the first 30 will be added.\n\nThe urls can be YouTube links or Spotify links (to individual songs), they **cannot** be Spotify or YouTube Playlist links.",
+                      description=f"A playlist named \"{name}\" has been created and currently has `0` songs inside it. \n\nTo add your own songs you use the command:\n\n`-add_songs \"<Playlist name>\" <url 1> <url 2> \"<Song name>\" ...`\n\n OR\n\n Use the button below to add songs to this newly created playlist\n\nYou can add up to 30 songs in one playlist, if you enter more than 30 songs only the first 30 will be added.\n\nThe urls can be YouTube links or Spotify links (to individual songs), they **cannot** be Spotify or YouTube Playlist links.",
                       colour=0x00b0f4)
 
     #embed.set_author(name=f"Created By {author.display_name}")
@@ -424,7 +438,7 @@ def craft_default_help_command():
 def craft_playing_music_help_command():
 
     embed = discord.Embed(title="Playing Music",
-                      description="AxleBot at its core a powerful music bot which supports music playback from YouTube and Spotify.\n\n__To play a song **with a query**__\n`-p <Query>`\nE.g.,  `-p rick roll`\n\n__To play a song **with a YouTube URL**__\n`-p <YouTube URL>` \nE.g., `-p https://www.youtube.com/watch?v=dQw4w9WgXcQ`\nTo work the URL must be in this format of `https://www.youtube.com/watch?v=<ID>`\n\n__To play a song **with a Spotify Track URL**__\n`-p <Spotify Track URL>` \nE.g., `-p https://open.spotify.com/track/7ixxyJJJKZdo8bsdWwkaB6`\nTo work the URL must be in this format of `https://open.spotify.com/track/<ID>`\n\n---------------------------------------------------------------------------------\n\nAxleBot also lets you queue your own Spotify and YouTube music playlists in the same way!\n\n__To queue and play a playlist__\n`-p <URL of YouTube playlist or Spotify Playlist>`\nE.g., `-p https://open.spotify.com/playlist/2utjwWZnVjfAv2Helpzz69` OR\n\nE.g., `-p https://www.youtube.com/watch?v=Uj1ykZWtPYI&list=PL9JM2aC37BG03vlqyhiYX54NG_thqqvbg`\n\n*Note: For this to work, the playlist should be public*\n\n**`-p` and `-play` are equivalent**\n--------------------------------------------------------------------------------",
+                      description="AxleBot at its core a powerful music bot which supports music playback from YouTube and Spotify. If auto play is enabled in your server songs will continue to play via Spotify's recommendation system.\n\n__To play a song **with a query**__\n`-p <Query>`\nE.g.,  `-p rick roll`\n\n__To play a song **with a YouTube URL**__\n`-p <YouTube URL>` \nE.g., `-p https://www.youtube.com/watch?v=dQw4w9WgXcQ`\nTo work the URL must be in this format of `https://www.youtube.com/watch?v=<ID>`\n\n__To play a song **with a Spotify Track URL**__\n`-p <Spotify Track URL>` \nE.g., `-p https://open.spotify.com/track/7ixxyJJJKZdo8bsdWwkaB6`\nTo work the URL must be in this format of `https://open.spotify.com/track/<ID>`\n\n---------------------------------------------------------------------------------\n\nAxleBot also lets you queue your own Spotify and YouTube music playlists in the same way!\n\n__To queue and play a playlist__\n`-p <URL of YouTube playlist or Spotify Playlist>`\nE.g., `-p https://open.spotify.com/playlist/2utjwWZnVjfAv2Helpzz69` OR\n\nE.g., `-p https://www.youtube.com/watch?v=Uj1ykZWtPYI&list=PL9JM2aC37BG03vlqyhiYX54NG_thqqvbg`\n\n*Note: For this to work, the playlist should be public*\n\n**`-p` and `-play` are equivalent**\n--------------------------------------------------------------------------------",
                       colour=0x00b0f4)
 
     embed.set_author(name="AxleBot Help Commands")
@@ -433,7 +447,7 @@ def craft_playing_music_help_command():
                     value="AxleBot lets you see the lyrics\nto a song (if it can be found).\n\n`-l` or `-lyrics` will display\nthe lyrics of the current \nplaying song",
                     inline=True)
     embed.add_field(name="Queue",
-                    value="AxleBot uses a queue \nsystem to add songs.\nTo view the queue run\n`-q` or `-queue`",
+                    value="AxleBot uses a queue \nsystem to add songs.\nTo view the queue run\n`-q` or `-queue`.\nYou can add a `-live` at the end to see the queue in real-time\n(e.g., `-q -live`)",
                     inline=True)
     embed.add_field(name="Now Playing",
                     value="To see the song playing right now \n run `-nowplaying`",
@@ -443,7 +457,7 @@ def craft_playing_music_help_command():
 
 def craft_music_playback_controls_help_command():
     embed = discord.Embed(title="Music Playback Controls",
-                      description="AxleBot supports all the usual normal playback controls *(with some new features coming later)*.",
+                      description="AxleBot supports all the usual normal playback controls. Some of these can be clicked via buttons in the music playback message, but you can also run the commands in the chat.",
                       colour=0x00b0f4)
 
     embed.set_author(name="AxleBot Help Commands")
@@ -461,7 +475,7 @@ def craft_music_playback_controls_help_command():
                     value="`-loop` or `-lp`\nWill toggle looping\nof the current playing song.\nIf on the song will be stuck on loop.\nRun `-loop` to toggle it off",
                     inline=True)
     embed.add_field(name="Repeat",
-                    value="`-rep <Optional: number>` or `-repeat`\nWill repeat the current playing song\n`number` times.\nIf no number is provided it will repeat the song once.",
+                    value="`-rep <Optional: num>` or `-repeat`\nWill repeat the current playing song\n`num` times.\nIf no number is provided it will repeat the song once.\nAdding a `q` or -q` at the end or similar will repeat the entire queue\nE.g., `-rep 3 -q` will repeat the queue 3 times",
                     inline=True)
     embed.add_field(name="Play Next",
                     value="`-pn <any -p param>`\nWill take in anything `-p` \ncan play, and will queue it next up\n(right after the current song)",
@@ -477,6 +491,96 @@ def craft_music_playback_controls_help_command():
                     inline=True)
     
     return embed
+
+def craft_music_playback_controls_help_command_page_2():
+    embed = discord.Embed(title="Music Playback Controls (cont.)",
+                      description="",
+                      colour=0x00b0f4)
+
+    embed.set_author(name="AxleBot Help Commands")
+
+    embed.add_field(name="Shuffle",
+                    value="`-sh` or `-shuffle`\nWill shuffle the current queue\nand play the songs in a random order",
+                    inline=True)
+    embed.add_field(name="Seek",
+                    value="`-seek <seconds, timestamp>`\nWill seek the current playing song to\n`seconds` or `timestamp` into the song.\nE.g., `-seek 30` will seek to 30 seconds in the song\nE.g., `-seek 01:30` will seek to 1 minute and 30 seconds in the song",
+                    inline=True)
+    embed.add_field(name="Rewind",
+                    value="`-rewind <seconds>`\nWill rewind the current playing song by\n`seconds` seconds.\nE.g., `-rewind 10` will rewind the song by 10 seconds",
+                    inline=True)
+    embed.add_field(name="Forward",
+                    value="`-forward <seconds>`\nWill forward the current playing song by\n`seconds` seconds.\nE.g., `-forward 10` will forward the song by 10 seconds",
+                    inline=True)
+    
+    return embed
+
+def craft_music_filters_help_command():
+    desc = """
+            Music filters modify the audio that's currently playing — things like speeding it up, boosting bass, adding vibrato, or rotating the stereo channels. Axlebot supports several filters you can apply to enhance your listening experience.
+
+            ---
+
+            **Available Filters and Their Values:**
+
+            - `timescale_speed` — Playback speed multiplier without pitch change  
+            (e.g., `1.0` = normal, `1.5` = 50% faster, `0.75` = 25% slower)
+
+            - `timescale_pitch` — Pitch multiplier  
+            (e.g., `1.0` = normal pitch, `1.2` = higher, `0.8` = lower)
+
+            - `timescale_rate` — Playback rate multiplier (changes speed *with* pitch)  
+            (e.g., `1.0` = normal, `1.3` = faster and higher-pitched)
+
+            - `vibrato_depth` — Depth of vibrato effect  
+            (`0.0` to `1.0` — how much the pitch wobbles)
+
+            - `vibrato_frequency` — Frequency of vibrato (in Hz)  
+            (e.g., `4.0` = faster vibrato)
+
+            - `bassboost` — Amount of bass boost  
+            (`0.0` to `1.0`, higher = stronger bass)
+
+            - `rotation` — Rotates audio across stereo channels giving the 8D audio effect
+            (e.g., `0.1` = slow circular motion, `3.0` = very fast)
+
+            - `karaoke_level` — Attempts to remove vocals by filtering center frequencies (simulating the karaoke effect)
+            (`0.0` to `1.0`, higher = stronger vocal reduction)
+
+            ---
+
+            **How to Apply Filters:**
+
+            Use the `-set_filtesr` command followed by one or more filters and their values.
+
+            Format:  
+            `-set_filters -filter_name value -filter_name value ...`
+
+            Example:  
+            `-set_filters -timescale_speed 1.2 -bassboost 0.6 -rotation 0.3`
+
+            This will speed up playback, add bass, and rotate audio in stereo to give the 8D effect.
+
+            Each `-set_filters` command will overwrite any previous filters set. Ensure that you combine required filters in one command.
+
+            ---
+
+            **How to Clear Filters:**
+
+            To remove all filters and return to normal playback, use:  
+            `-clear_filters`
+
+            This will reset all audio effects and playback settings to their defaults.
+            """
+
+
+    embed = discord.Embed(title="Music Filters",
+                      description=desc,
+                      colour=0x00b0f4)
+
+    embed.set_author(name="AxleBot Help Commands")
+    
+    return embed
+
 
 def craft_custom_playlist_help_command():
     # embed = discord.Embed(title="Custom Playlist Commands",
@@ -601,6 +705,9 @@ def craft_admin_help_command():
                     inline=True)
     embed.add_field(name="Delete message after playing",
                     value="To delete song message after \nplaying run:\n`-delete_message_after_play \n<true or false>`\n*This can help to de-clutter song\nmessages*\n\nAliases: `del_message_after_play`, `del_msg_after_play`, `dmap`",
+                    inline=True)
+    embed.add_field(name="Auto play songs",
+                    value="To enable or disable auto play run:\n`-autoplay <true or false>`\n*Auto play will automatically queue songs based on the current queue using Spotify's recommendation algorithm*\n\nAliases: `autoplay`, `ap`",
                     inline=True)
     embed.add_field(name="See all config",
                     value="To see the bots entire configuration run:\n`-see_all_config` (or `-sac`)",

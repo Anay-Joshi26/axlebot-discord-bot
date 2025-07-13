@@ -5,6 +5,7 @@ A file for utility functions
 from typing import Tuple
 from datetime import datetime, timedelta
 import random
+import re
 import string
 # USE CONVERTORS FROM DISCORD PYTHON LIBRARY
 
@@ -105,3 +106,33 @@ def parse_seek_time(time_str: str) -> float:
 def generate_random_string(length=17):  # 0 to 16 inclusive = 17 characters
     charset = string.ascii_lowercase + string.digits
     return ''.join(random.choice(charset) for _ in range(length))
+
+def remove_extra_spaces(text: str) -> str:
+    return re.sub(r'\s{2,}', ' ', text)
+
+def clean_song_name(name: str, artist: str) -> str:
+    ignore_words = [
+        "(official video)", "(official audio)", "(lyrics)", "[official music video]",
+        "official", "audio", "video", "lyrics", "music video", "(video)", "(audio)",
+        "(lyric video)", "(lyric)", "(music video)", "(official lyric video)",
+        "(official lyric)", "()", "~", "( )", "( Music )", "visualiser", "visualizer",
+        "(visualiser)", "(visualizer)", "[]", "[ ]", artist, " - ", "ft.", "feat.", "-", "- ", " -",
+        ".", "(", ")", "[", "]", "|"
+    ]
+
+    if " - " in name:
+        # Split by " - " and take the first part
+        name = name.split(" - ")[1].strip()
+
+    name = re.sub(r"\[.*?\]|\(.*?\)|\{.*?\}", "", name)
+
+    for word in ignore_words:
+        name = re.sub(re.escape(word), "", name, flags=re.IGNORECASE).strip()
+
+    for token in ["ft.", "feat."]:
+        if token in name:
+            name = name[:name.index(token)].strip()
+
+    name = remove_extra_spaces(name)
+
+    return name
