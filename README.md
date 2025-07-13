@@ -53,12 +53,14 @@ Axlebot is a feature-rich Discord music bot that supports YouTube and Spotify pl
    ```
 2. Start the FastAPI lyrics service (in a separate terminal):
    ```bash
-   uvicorn axlebot.core.api:app
+   PYTHONPATH=./axlebot uvicorn core.api:app --reload
    ```
 3. Start the bot:
    ```bash
    python axlebot/bot.py
    ```
+
+The FastAPI service is written to be an integrated module, but it can be run separately if needed.
 
 ### Usage
 - Invite the bot to your server using the OAuth2 URL from the Discord developer portal.

@@ -90,7 +90,15 @@ async def on_ready():
     print("Cache manager started")
 
     core.extensions.lavalink_client = lavalink.Client(bot.user.id)
-    core.extensions.lavalink_client.add_node('localhost', 2333, 'HEYthisIsAReallyHardPAss0rdToGu3ss', 'na', 'axlebot-lavalink')
+    core.extensions.lavalink_client.add_node('localhost', 2333, 'HEYthisIsAReallyHardPAss0rdToGu3ss', 'au', 'axlebot-lavalink')
+    # core.extensions.lavalink_client.add_node(
+    #     'lavahatry4.techbyte.host',  # Host
+    #     3000,                         # Port
+    #     'NAIGLAVA-dash.techbyte.host',  # Password (yes, it's a URL)
+    #     'au',                        # Region (Australia or whatever's closest)
+    #     'axlebot-lavalink'            # Node name (can be anything you want)
+    # )
+
     bot.lavalink = core.extensions.lavalink_client
 
     print("All cogs loaded")
@@ -154,6 +162,73 @@ async def on_command_error(ctx: commands.Context, error):
     else:
         print(f"An error occurred: {error}")
 
+# class NextPageButton(discord.ui.Button):
+#     def __init__(self):
+#         super().__init__(label="Next Page", style=discord.ButtonStyle.primary)
+
+#     async def callback(self, interaction: discord.Interaction):
+#         view = self.view
+#         view.current_page = 2
+#         view.clear_nav_buttons()
+#         view.add_nav_button(PreviousPageButton())
+#         await interaction.response.edit_message(embed=craft_custom_playlist_help_command_page_2(), view=view)
+
+# class PreviousPageButton(discord.ui.Button):
+#     def __init__(self):
+#         super().__init__(label="Previous Page", style=discord.ButtonStyle.secondary)
+
+#     async def callback(self, interaction: discord.Interaction):
+#         view = self.view
+#         view.current_page = 1
+#         view.clear_nav_buttons()
+#         view.add_nav_button(NextPageButton())
+#         await interaction.response.edit_message(embed=craft_custom_playlist_help_command(), view=view)
+
+# class HelpOptions(discord.ui.Select):
+#     def __init__(self):
+#         options=[
+#             discord.SelectOption(label="General"),
+#             discord.SelectOption(label="Playing Music",emoji="🎵"),
+#             discord.SelectOption(label="Music Playback Controls",emoji="⏯", description="To pause, resume, skip, delete, etc."),
+#             discord.SelectOption(label="Custom Playlist Commands",emoji="🎶"),
+#             ]
+        
+#         super().__init__(placeholder="Select an option",max_values=1,min_values=1,options=options)
+
+#     async def callback(self, interaction: discord.Interaction):
+#         view = self.view
+#         # Clear any existing navigation buttons
+#         view.clear_nav_buttons()
+        
+#         if self.values[0] == "Playing Music":
+#             await interaction.response.edit_message(embed=craft_playing_music_help_command(), view=view)
+#         elif self.values[0] == "Music Playback Controls":
+#             await interaction.response.edit_message(embed=craft_music_playback_controls_help_command(), view=view)
+#         elif self.values[0] == "Custom Playlist Commands":
+#             # Reset to page 1 and add Next Page button
+#             view.current_page = 1
+#             view.current_section = "Custom Playlist Commands"
+#             view.add_nav_button(NextPageButton())
+#             await interaction.response.edit_message(embed=craft_custom_playlist_help_command(), view=view)
+#         elif self.values[0] == "General":
+#             await interaction.response.edit_message(embed=craft_default_help_command(), view=view)
+
+# class HelpView(discord.ui.View):
+#     def __init__(self, *, timeout=None):
+#         super().__init__(timeout=timeout)
+#         self.current_section = "General"
+#         self.current_page = 1
+#         self.select = HelpOptions()
+#         self.add_item(self.select)
+    
+#     def clear_nav_buttons(self):
+#         # Remove all items except the select dropdown
+#         self.clear_items()
+#         self.add_item(self.select)
+    
+#     def add_nav_button(self, button):
+#         self.add_item(button)
+
 class NextPageButton(discord.ui.Button):
     def __init__(self):
         super().__init__(label="Next Page", style=discord.ButtonStyle.primary)
@@ -163,7 +238,15 @@ class NextPageButton(discord.ui.Button):
         view.current_page = 2
         view.clear_nav_buttons()
         view.add_nav_button(PreviousPageButton())
-        await interaction.response.edit_message(embed=craft_custom_playlist_help_command_page_2(), view=view)
+
+        if view.current_section == "Custom Playlist Commands":
+            await interaction.response.edit_message(
+                embed=craft_custom_playlist_help_command_page_2(), view=view
+            )
+        elif view.current_section == "Music Playback Controls":
+            await interaction.response.edit_message(
+                embed=craft_music_playback_controls_help_command_page_2(), view=view
+            )
 
 class PreviousPageButton(discord.ui.Button):
     def __init__(self):
@@ -174,36 +257,52 @@ class PreviousPageButton(discord.ui.Button):
         view.current_page = 1
         view.clear_nav_buttons()
         view.add_nav_button(NextPageButton())
-        await interaction.response.edit_message(embed=craft_custom_playlist_help_command(), view=view)
+
+        if view.current_section == "Custom Playlist Commands":
+            await interaction.response.edit_message(
+                embed=craft_custom_playlist_help_command(), view=view
+            )
+        elif view.current_section == "Music Playback Controls":
+            await interaction.response.edit_message(
+                embed=craft_music_playback_controls_help_command(), view=view
+            )
 
 class HelpOptions(discord.ui.Select):
     def __init__(self):
-        options=[
+        options = [
             discord.SelectOption(label="General"),
-            discord.SelectOption(label="Playing Music",emoji="🎵"),
-            discord.SelectOption(label="Music Playback Controls",emoji="⏯", description="To pause, resume, skip, delete, etc."),
-            discord.SelectOption(label="Custom Playlist Commands",emoji="🎶"),
-            ]
-        
-        super().__init__(placeholder="Select an option",max_values=1,min_values=1,options=options)
+            discord.SelectOption(label="Playing Music", emoji="🎵"),
+            discord.SelectOption(label="Music Playback Controls", emoji="⏯", description="To pause, resume, skip, delete, etc."),
+            discord.SelectOption(label="Music Filters", emoji="🔧", description="To apply various audio filters like bassboosting, speeding up etc"),
+            discord.SelectOption(label="Custom Playlist Commands", emoji="🎶"),
+        ]
+
+        super().__init__(placeholder="Select an option", max_values=1, min_values=1, options=options)
 
     async def callback(self, interaction: discord.Interaction):
         view = self.view
-        # Clear any existing navigation buttons
         view.clear_nav_buttons()
-        
-        if self.values[0] == "Playing Music":
+
+        selected = self.values[0]
+        view.current_section = selected
+        view.current_page = 1
+
+        if selected == "General":
+            await interaction.response.edit_message(embed=craft_default_help_command(), view=view)
+
+        elif selected == "Playing Music":
             await interaction.response.edit_message(embed=craft_playing_music_help_command(), view=view)
-        elif self.values[0] == "Music Playback Controls":
+
+        elif selected == "Music Playback Controls":
+            view.add_nav_button(NextPageButton())
             await interaction.response.edit_message(embed=craft_music_playback_controls_help_command(), view=view)
-        elif self.values[0] == "Custom Playlist Commands":
-            # Reset to page 1 and add Next Page button
-            view.current_page = 1
-            view.current_section = "Custom Playlist Commands"
+
+        elif selected == "Music Filters":
+            await interaction.response.edit_message(embed=craft_music_filters_help_command(), view=view)
+
+        elif selected == "Custom Playlist Commands":
             view.add_nav_button(NextPageButton())
             await interaction.response.edit_message(embed=craft_custom_playlist_help_command(), view=view)
-        elif self.values[0] == "General":
-            await interaction.response.edit_message(embed=craft_default_help_command(), view=view)
 
 class HelpView(discord.ui.View):
     def __init__(self, *, timeout=None):
@@ -212,14 +311,14 @@ class HelpView(discord.ui.View):
         self.current_page = 1
         self.select = HelpOptions()
         self.add_item(self.select)
-    
+
     def clear_nav_buttons(self):
-        # Remove all items except the select dropdown
         self.clear_items()
         self.add_item(self.select)
-    
+
     def add_nav_button(self, button):
         self.add_item(button)
+
 
 @bot.command()
 @commands.dynamic_cooldown(lambda x: commands.Cooldown(1,1), type=commands.BucketType.user)

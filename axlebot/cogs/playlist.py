@@ -50,7 +50,7 @@ class AddSongsButton(discord.ui.View):
         super().__init__()
         self.name = name
         self.ctx = ctx
-        self.title = title
+        self.title = 'Create a Playlist' if title is None else title
 
     @discord.ui.button(style=discord.ButtonStyle.success, label='Add Songs')
     async def add_songs(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -280,9 +280,14 @@ class PlaylistCog(commands.Cog):
             pl_added = craft_custom_playlist_queued(name, playlist, shuffle=shuffle)
 
             await ctx.send(embed = pl_added)
+            auto_play_updated = False
 
             for song in playlist.songs:
-                await queue.append(song)
+                await queue.append(song, update_auto_play = False)
+
+                if len(queue) == 5:
+                    auto_play_updated = True
+                    await client.queue.update_auto_play_songs()
 
                 if len(queue) == 1:
                     song.is_first_in_queue = True
@@ -300,6 +305,9 @@ class PlaylistCog(commands.Cog):
                         after = lambda e: self.bot.loop.call_soon_threadsafe(
                                         lambda: asyncio.ensure_future(self.music_cog._after_playback(e, ctx, client)))
                     )
+            if not auto_play_updated and client.server_config.auto_play:
+                # If auto play is enabled, update the auto play songs
+                await client.queue.update_auto_play_songs()
         except Exception as e:
             print(f"Error in queue playlist command: {e}")
             await ctx.send(embed=craft_general_error(), delete_after = 20)

@@ -172,6 +172,38 @@ class AdminCog(commands.Cog):
 
         await ctx.send(f"Delete message after play set to `{value.capitalize()}`.")
 
+    @commands.command(aliases = ['ap', 'autoplay'])
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.check(has_manage_guild)
+    async def auto_play(self, ctx: commands.Context, *args):
+        """
+        Toggles the auto play setting for the server.
+        Auto play will automatically add songs to the queue based on the current queue.
+        """
+        if not args:
+            await ctx.send("Please provide 'true' or 'false'.")
+            return
+        
+        value: str = args[0].lower()
+
+        if value not in ["true", "false"]:
+            await ctx.send("Please provide 'true' or 'false'.")
+            return
+        
+        client: Client = await self.server_manager.get_client(ctx.guild.id)
+
+        await client.server_config.update_auto_play(value == "true")
+
+        await ctx.send(f"Auto play has been set to `{value.capitalize()}`.")
+
+        if not value == "true":
+            client.queue.auto_play_queue = []
+            client.queue.update_live_queue_message()
+        else:
+            # If auto play is enabled, we should update the auto play songs based on the current queue
+            if len(client.queue.queue) > 0:
+                await client.queue.update_auto_play_songs()
+
     @commands.command(aliases = ['sac'])
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
     @commands.check(has_manage_guild)

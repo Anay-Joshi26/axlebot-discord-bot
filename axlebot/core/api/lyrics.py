@@ -2,6 +2,7 @@ import aiohttp
 import re
 import urllib.parse
 from enum import Enum, auto
+from utils import clean_song_name
 
 class LyricsStatus(Enum):
     NOT_STARTED = auto()
@@ -10,33 +11,7 @@ class LyricsStatus(Enum):
     NO_LYRICS_FOUND = auto()
     ERROR = auto()
 
-def remove_extra_spaces(text: str) -> str:
-    return re.sub(r'\s{2,}', ' ', text)
-
-def clean_song_name(name: str, artist: str) -> str:
-    ignore_words = [
-        "(official video)", "(official audio)", "(lyrics)", "[official music video]",
-        "official", "audio", "video", "lyrics", "music video", "(video)", "(audio)",
-        "(lyric video)", "(lyric)", "(music video)", "(official lyric video)",
-        "(official lyric)", "()", "~", "( )", "( Music )", "visualiser", "visualizer",
-        "(visualiser)", "(visualizer)", "[]", "[ ]", artist, " - ", "ft.", "feat.", "-", "- ", " -",
-        ".", "(", ")", "[", "]", "|"
-    ]
-
-    name = re.sub(r"\[.*?\]|\(.*?\)|\{.*?\}", "", name)
-
-    for word in ignore_words:
-        name = re.sub(re.escape(word), "", name, flags=re.IGNORECASE).strip()
-
-    for token in ["ft.", "feat."]:
-        if token in name:
-            name = name[:name.index(token)].strip()
-
-    name = remove_extra_spaces(name)
-
-    return name
-
-async def fetch_lyrics(name: str, artist: str, timeout = 5) -> dict:
+async def fetch_lyrics(name: str, artist: str, timeout = 5, retry=False) -> dict:
     print(f"Fetching lyrics for: {name} by {artist}")
     clean_name = clean_song_name(name, artist)
     lyrics = None
@@ -66,7 +41,12 @@ async def fetch_lyrics(name: str, artist: str, timeout = 5) -> dict:
                     # 404 but still a valid JSON with an error message
                     data = await response.json()
                     if data.get("error") == "No lyrics found":
+                        if "-" in name and (retry == False):
+                            print("RETRYING with modified artist name")
+                            new_artist = name.split("-")[0].strip()
+                            await fetch_lyrics(name, new_artist, timeout=timeout, retry=True)
                         status = LyricsStatus.NO_LYRICS_FOUND
+
                     else:
                         status = LyricsStatus.ERROR
 
