@@ -28,6 +28,7 @@ Axlebot is a feature-rich Discord music bot that supports YouTube and Spotify pl
 - Lavalink server (for audio streaming)
 - FFmpeg installed and available in your PATH
 - Dependencies inside the `requirements.txt` file
+- Lavalink YouTube plugin, follow [this guide](https://github.com/lavalink-devs/youtube-source#plugin) to add that and update the `application.yml` file as needed
 
 ### Installation
 1. Clone this repository:
