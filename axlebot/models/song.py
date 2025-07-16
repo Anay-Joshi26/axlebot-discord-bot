@@ -152,7 +152,7 @@ class Song:
     @staticmethod
     async def get_dominant_colour(thumbnail_url: str = None) -> discord.Color:
         if thumbnail_url is None:
-                return discord.Color.default()
+            return discord.Color.default()
 
         print(f"Extracting color from thumbnail URL: {thumbnail_url}")
 
