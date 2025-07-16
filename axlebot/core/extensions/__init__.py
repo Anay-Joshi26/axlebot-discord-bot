@@ -3,16 +3,18 @@ from core.caching.caches import RedisCache, InMemoryCache, FirestoreCache
 from core.extensions.firebase import fbc
 from datetime import timedelta
 import lavalink
+import discord
+from discord.ext import commands
 
 
-# intents = discord.Intents.default()
+intents = discord.Intents.default()
 
-# intents.voice_states = True
-# intents.message_content = True
-# intents.messages = True
-# intents.guilds = True
+intents.voice_states = True
+intents.message_content = True
+intents.messages = True
+intents.guilds = True
 
-# bot: commands.Bot = commands.Bot(command_prefix='-', intents=intents, help_command = None)
+bot: commands.Bot = commands.Bot(command_prefix='-', intents=intents, help_command = None)
 # bot.run(os.getenv("SECRET_KEY"))
 # create the caches, with priorities (order doesnt matter here, but for readability it is sorted by priority)
 # higher the priority means it will be checked first

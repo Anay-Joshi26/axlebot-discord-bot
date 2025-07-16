@@ -80,7 +80,7 @@ class MusicPlaybackButtons(discord.ui.View):
         else:
             await self.ctx.send("No song is currently playing", ephemeral = True)
 
-    @discord.ui.button(style=discord.ButtonStyle.gray, label='🔁 Repeat', row = 1)
+    @discord.ui.button(style=discord.ButtonStyle.gray, label='🔂 Repeat', row = 1)
     @commands.check(in_voice_channel)
     async def repeat_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
@@ -97,12 +97,12 @@ class MusicPlaybackButtons(discord.ui.View):
         
         try:
             await self.client.queue.repeat()
-            await self.ctx.send(f"The current playing song will repeat, run `-q` to see the updated queue")
+            await self.ctx.send(f"The current playing song will repeat, run `-q` to see the updated queue", delete_after=15)
         except ValueError as e:
             await self.ctx.send(e)
         
 
-    @discord.ui.button(style=discord.ButtonStyle.gray, label='🔂 Loop', row = 1)
+    @discord.ui.button(style=discord.ButtonStyle.gray, label='🔁 Loop', row = 1)
     @commands.check(in_voice_channel)
     async def loop_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
@@ -116,10 +116,10 @@ class MusicPlaybackButtons(discord.ui.View):
         try:
             is_looping = self.client.queue.loop()
             if is_looping:
-                await interaction.message.add_reaction('🔂')
+                await interaction.message.add_reaction('🔁')
             else:
                 try:
-                    await interaction.message.remove_reaction('🔂', interaction.guild.me)
+                    await interaction.message.remove_reaction('🔁', interaction.guild.me)
                 except discord.NotFound:
                     print("Reaction not found")
 
@@ -213,53 +213,6 @@ class MusicCog(commands.Cog):
         #asyncio.create_task(update_progress_bar_embed(song, embed, progress_message)) # function updates the progress bar in the embed (every set interval seconds)
         asyncio.create_task(update_progress_bar_embed(song, embed, "progress_message")) # function updates the progress bar in the embed (every set interval seconds)
 
-    @commands.command()
-    async def test(self, ctx, *, query):
-        client = await self.server_manager.get_client(ctx.guild.id, ctx)
-
-        print("Client for guild found", client)
-        print("Client queue", client.queue.queue)
-        print("Playing client id", id(client))
-
-        async with client.client_lock:
-            if client.voice_client is None:
-                print("Client voice client is None, connecting to voice channel")
-
-                # ✅ Use LavalinkVoiceClient subclass
-                vc = await ctx.author.voice.channel.connect(cls = LavalinkVoiceClient)
-
-                print("Connected to voice channel", vc.channel.name)
-                client.voice_client = vc
-                #client.lavalink_voice_client = LavalinkVoiceClient(self.bot, ctx.author.voice.channel)
-
-            print("AVAIL NODES", core.extensions.lavalink_client.node_manager.available_nodes)
-            player = client.voice_client.player
-
-            results = await player.node.get_tracks(f"ytsearch:{query}")
-            if not results or not results['tracks']:
-                await ctx.send("No tracks found.")
-                return
-
-            track = results['tracks'][0]
-
-            info = track['info']
-
-            try:
-                print(vars(info))
-            except TypeError:
-                # fallback to dir()
-                for attr in dir(info):
-                    if not attr.startswith('_'):
-                        print(f"{attr}: {getattr(info, attr)}")
-
-            if not player.is_playing:
-                await player.play(track)
-                await ctx.send(f"Now playing: {track['info']['title']}")
-
-
-            
-
-
     @commands.command(aliases = ['mv'])
     @commands.check(in_voice_channel)
     @commands.check(bot_use_permissions)
@@ -303,10 +256,6 @@ class MusicCog(commands.Cog):
         try:
             client = await self.server_manager.get_client(ctx.guild.id, ctx)
 
-            print("Client for guild found", client)
-            print("Client queue", client.queue.queue)
-            print("Playing client id", id(client))
-
             async with client.client_lock:
                 if client.voice_client is None:
                     print("Client voice client is None, connecting to voice channel")
@@ -345,10 +294,6 @@ class MusicCog(commands.Cog):
 
                 stop_event = asyncio.Event()
                 client.stop_event = stop_event
-
-                print("client.stop_event", id(client.stop_event))
-                print("stop_event", id(stop_event))
-                print("stop_event is set?", stop_event.is_set())
 
                 if query_type == self.SPOT_PLAYLIST:
                     song_generator = Song.SpotifyPlaylistSongList(query, max_concurrent_song_loadings=client.max_concurrent_song_loadings, stop_event=stop_event)
@@ -456,12 +401,11 @@ class MusicCog(commands.Cog):
         """
         Plays the next song in the queue, or informs the user that the queue is empty
         """
-        if client.vc_stopped_due_to_seek:
-            # If the voice client was stopped due to seeking, we don't want to play the next song
-            client.vc_stopped_due_to_seek = False
+        if hasattr(client, "stop_command_called") and client.stop_command_called:
+            # If the stop_command was called, we do not play the next song
+            client.stop_command_called = False
             return
         try:
-            print(client)
             queue, voice_client = client.queue, client.voice_client
 
             last_progress_message = queue.current_song.progress_message
@@ -489,6 +433,8 @@ class MusicCog(commands.Cog):
             
             if next_song is None and client.server_config.auto_play:
                 # The queue is empty, but auto play is enabled, so we will play a song from the recommendations
+                # if client.voice_client is None:
+                #     return
                 recommendations = await Song.get_song_recommendations([last_song], limit = 5)
                 if not recommendations:
                     await ctx.send(embed=craft_general_error("No recommendations found :("), delete_after = 20)
@@ -585,7 +531,7 @@ class MusicCog(commands.Cog):
         print("num", num)
         if num is None or num > len(client.queue) or num < 1:
             num = None
-            print("No number provided or number is invalid, showing full queue")
+            #print("No number provided or number is invalid, showing full queue")
         is_live = args and args[-1] in ['-l', '-live', '-livequeue', 'l', 'live', 'livequeue']
         embed = craft_queue(client, num = num, live = is_live)
         try:
@@ -676,6 +622,7 @@ class MusicCog(commands.Cog):
     async def stop(self, ctx: commands.Context):
         client = await self.server_manager.get_client(ctx.guild.id)
         voice_client = client.voice_client
+        client.stop_command_called = True
 
         if voice_client is None:
             await ctx.send("The bot is not connected to a voice channel")
@@ -761,7 +708,7 @@ class MusicCog(commands.Cog):
         
         try:
             await client.queue.shuffle()
-            await ctx.send(f"The queue has been shuffled, run `-q` to see the updated queue")
+            await ctx.send(f"The queue has been shuffled, run `-q` to see the updated queue", delete_after=15)
         except ValueError as e:
             await ctx.send(e)
 
@@ -782,7 +729,6 @@ class MusicCog(commands.Cog):
         # except ValueError as e:
         #     await ctx.send("Please provide a valid number (between 1 and 20)")
         #     return
-        print(args)
         rep_queue = args and (args[-1] in ['-q', '-queue', 'q', 'queue'])
         print(f"rep_queue: {rep_queue}")
         
@@ -855,6 +801,7 @@ class MusicCog(commands.Cog):
         
         try:
             await client.voice_client.player.seek(mseconds_into_song)
+            await ctx.message.add_reaction('✅') 
         except Exception as e:
             await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_time}`. Please ensure the format is correct.\n{info_msg}"), delete_after = 90)
             return
@@ -911,6 +858,7 @@ class MusicCog(commands.Cog):
         current_song: Song = client.queue.current_song
         try:
             await client.voice_client.player.seek(new_position)
+            await ctx.message.add_reaction('✅') 
         except Exception as e:
             await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_position}`. Please ensure the format is correct.\n{info_msg}"), delete_after = 90)
             return
@@ -1060,7 +1008,8 @@ class MusicCog(commands.Cog):
             await adding.delete()
             if "timescale_speed" in parsed or "timescale_rate" in parsed:
                 client.queue.current_song.increment_seconds_time_delay /= parsed.get('timescale_speed', 1.0) * parsed.get('timescale_rate', 1.0)
-            await ctx.send("✅ Filters applied successfully.")
+            #await ctx.send("✅ Filters applied successfully.")
+            await ctx.message.add_reaction('✅') 
         except Exception as e:
             await adding.delete()
             await ctx.send(f"❌ Failed to apply filters: `{e}`", delete_after = 15)
@@ -1087,7 +1036,8 @@ class MusicCog(commands.Cog):
         await asyncio.sleep(5.5)
         await clearing.delete()
         client.queue.current_song.increment_seconds_time_delay = 1
-        await ctx.send("✅ All filters have been cleared.")
+        #await ctx.send("✅ All filters have been cleared.")
+        await ctx.message.add_reaction('✅') 
         #player.set_equalizer()
         
         

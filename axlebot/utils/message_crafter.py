@@ -269,7 +269,7 @@ async def extract_embed_color(thumbnail_url):
 def craft_playlist_created(name: str) -> discord.Embed:
 
     embed = discord.Embed(title=f"{name}",
-                      description=f"A playlist named \"{name}\" has been created and currently has `0` songs inside it. \n\nTo add your own songs you use the command:\n\n`-add_songs \"<Playlist name>\" <url 1> <url 2> \"<Song name>\" ...`\n\n OR\n\n Use the button below to add songs to this newly created playlist\n\nYou can add up to 30 songs in one playlist, if you enter more than 30 songs only the first 30 will be added.\n\nThe urls can be YouTube links or Spotify links (to individual songs), they **cannot** be Spotify or YouTube Playlist links.",
+                      description=f"A playlist named `{name}` has been created and currently has `0` songs inside it. \n\nTo add your own songs you use the command:\n\n`-add_songs \"<Playlist name>\" <url 1> <url 2> \"<Song name>\" ...`\n\n OR\n\n Use the button below to add songs to this newly created playlist\n\nYou can add up to 30 songs in one playlist, if you enter more than 30 songs only the first 30 will be added.\n\nThe urls can be YouTube links or Spotify links (to individual songs), they **cannot** be Spotify or YouTube Playlist links.",
                       colour=0x00b0f4)
 
     #embed.set_author(name=f"Created By {author.display_name}")
@@ -333,7 +333,7 @@ def craft_playlist_deleted(name: str) -> discord.Embed:
     
     embed = discord.Embed(
         title=f"Playlist deleted",
-        description=f'The playlist named "{name}" has been successfully deleted',
+        description=f'The playlist named `{name}` has been successfully deleted',
         colour=COLOURS["success"]
     )
     
@@ -403,7 +403,7 @@ def craft_view_all_playlists(playlists: list) -> discord.Embed:
     return embed
 
 
-def craft_songs_in_playlist(playlist_name: str, songs: list) -> discord.Embed:
+def craft_songs_in_playlist(playlist) -> discord.Embed:
     """
     Creates an embed message to show all the songs in a playlist.
 
@@ -413,6 +413,8 @@ def craft_songs_in_playlist(playlist_name: str, songs: list) -> discord.Embed:
 
     :return: A discord.Embed object
     """
+    playlist_name = playlist.name
+    songs = playlist.songs
 
     n = len(songs)
 
@@ -421,6 +423,10 @@ def craft_songs_in_playlist(playlist_name: str, songs: list) -> discord.Embed:
     embed = discord.Embed(title=f"Songs in `{playlist_name}`",
                       description=f"The playlist named `{playlist_name}` currently has `{n}` songs{', they are:' if n != 0 else '.'}\n\n{description}",
                       colour=0x00b0f4)
+
+    embed.add_field(name="Total Songs", value=f"{len(songs)}", inline=True)
+    embed.add_field(name="Total Duration", value=convert_duration(playlist.total_duration), inline=True)
+    embed.add_field(name="Playlist Created At", value=datetime.fromtimestamp(playlist.created_at).strftime('%d/%m/%Y %H:%M'), inline=True)
 
     return embed
 
@@ -472,10 +478,10 @@ def craft_music_playback_controls_help_command():
                     value="`-skip` or `-skp`\nWill skip the current playing\nsong (if possible)",
                     inline=True)
     embed.add_field(name="Loop",
-                    value="`-loop` or `-lp`\nWill toggle looping\nof the current playing song.\nIf on the song will be stuck on loop.\nRun `-loop` to toggle it off",
+                    value="`-loop` or `-lp`\nWill toggle looping\nof the current playing song.\nIf on the song will be stuck on loop.\nRun `-loop` again to toggle it off",
                     inline=True)
     embed.add_field(name="Repeat",
-                    value="`-rep <Optional: num>` or `-repeat`\nWill repeat the current playing song\n`num` times.\nIf no number is provided it will repeat the song once.\nAdding a `q` or -q` at the end or similar will repeat the entire queue\nE.g., `-rep 3 -q` will repeat the queue 3 times",
+                    value="`-rep <Optional: num>` or `-repeat`\nWill repeat the current playing song\n`num` times.\nIf no number is provided it will repeat the song once.\nAdding a `q` or `-q` at the end or similar will repeat the entire queue\nE.g., `-rep 3 -q` will repeat the queue 3 times",
                     inline=True)
     embed.add_field(name="Play Next",
                     value="`-pn <any -p param>`\nWill take in anything `-p` \ncan play, and will queue it next up\n(right after the current song)",

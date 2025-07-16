@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+import core.extensions
 
 class ServerConfig:
     def __init__(self, client):
@@ -130,16 +131,33 @@ class ServerConfig:
     def from_dict(cls, data: dict, client) -> "ServerConfig":
         """
         Dynamically creates an instance from a dictionary.
-        Converts lists back to sets if the original attribute is a set.
+        Converts lists back to sets and removes any invalid (deleted) roles/channels.
         """
         obj = cls(client)
 
+        guild = core.extensions.bot.get_guild(int(client.server_id))  # Get the current guild object
+
         for key, value in data.items():
-            if hasattr(obj, key):
-                original_type = type(getattr(obj, key))
-                if original_type is set and isinstance(value, list):
-                    setattr(obj, key, set(value))
-                else:
-                    setattr(obj, key, value)
+            if not hasattr(obj, key):
+                continue
+
+            original_type = type(getattr(obj, key))
+
+            if original_type is set and isinstance(value, list):
+                print(value)
+                filtered = set(value)
+
+                if key == "permitted_channels_of_use":
+                    # Remove channel IDs that no longer exist
+                    filtered = {cid for cid in filtered if guild.get_channel(cid) is not None}
+
+                elif key == "permitted_roles_of_use":
+                    # Remove role IDs that no longer exist
+                    filtered = {rid for rid in filtered if guild.get_role(rid) is not None}
+
+                setattr(obj, key, filtered)
+
+            else:
+                setattr(obj, key, value)
 
         return obj

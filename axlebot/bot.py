@@ -65,16 +65,18 @@ from core.extensions import cache_manager
 import lavalink
 import core.extensions
 
-intents = discord.Intents.default()
 
-intents.voice_states = True
-intents.message_content = True
-intents.messages = True
-intents.guilds = True
+# intents = discord.Intents.default()
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# intents.voice_states = True
+# intents.message_content = True
+# intents.messages = True
+# intents.guilds = True
 
-bot: commands.Bot = commands.Bot(command_prefix='-', intents=intents, help_command = None)
+# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# bot: commands.Bot = commands.Bot(command_prefix='-', intents=intents, help_command = None)
+from core.extensions import bot
 
 #lavalink_client = lavalink.Client(bot.user.id)
 
@@ -137,9 +139,27 @@ async def on_guild_join(guild: discord.Guild):
                 await guild.system_channel.send(embed=craft_default_help_command(), view=HelpView())
                 break
         
+@bot.event
+async def on_guild_channel_delete(channel):
+    if isinstance(channel, discord.TextChannel):
+        admin_cog: AdminCog = bot.get_cog("AdminCog")
+        if not admin_cog:
+            return
+        client = await server_manager.get_client(channel.guild.id)
+        if not client:
+            return
+        await admin_cog.change_use_channel(client, channel.id, "remove")
 
-    
-
+@bot.event
+async def on_guild_role_delete(role):
+    if isinstance(role, discord.Role):
+        admin_cog: AdminCog = bot.get_cog("AdminCog")
+        if not admin_cog:
+            return
+        client = await server_manager.get_client(role.guild.id)
+        if not client:
+            return
+        await admin_cog.change_use_role(client, role.id, "remove")
 
 @bot.event
 async def on_command_error(ctx: commands.Context, error):

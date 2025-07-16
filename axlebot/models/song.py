@@ -111,7 +111,7 @@ class Song:
     def __init__(self, duration, artist, yt_url, player, name, thumbnail_url, audio_url, song_type = None, 
                  is_spot=False, is_yt=True, is_playlist = False, belongs_to = None, all_untried_song_streams: List[str] = None,
                  lavalink_track_id: str = None, auto_play = False, lyrics: str = None):
-        self.yt_url = yt_url
+        self.yt_url = yt_url # could be soundcloud or youtube url
         self.name = name
         self.artist = artist
         self._player = player
@@ -155,24 +155,64 @@ class Song:
 
             if self.lavalink_track_id:
                 return await core.extensions.lavalink_client.decode_track(self.lavalink_track_id)
-            
-            search_query = self.yt_url if self.yt_url else self.name
+
+            if self.yt_url:
+                search_query = self.yt_url
+                # Check if it's a YouTube or SoundCloud URL
+                if "youtube.com" in search_query or "youtu.be" in search_query:
+                    is_yt = True
+                    is_sc = False
+                elif "soundcloud.com" in search_query:
+                    is_yt = False
+                    is_sc = True
+                else:
+                    is_yt = False
+                    is_sc = False
+            else:
+                search_query = self.name
+                is_yt = False
+                is_sc = False
+
             if search_query is None:
                 print("No search query provided for song player retrieval.")
                 return None
             
-            search_result = await core.extensions.lavalink_client.get_tracks(f"ytsearch:{search_query}")
+            if is_yt:
+                # YouTube URL, try YouTube search first
+                search_result = await core.extensions.lavalink_client.get_tracks(f"ytsearch:{search_query}")
+                if not search_result or not search_result['tracks']:
+                    print(f"Failed to fetch song info for YouTube search query: {search_query}, trying SoundCloud search")
+                    # Fall back to SoundCloud search using song name
+                    search_result = await core.extensions.lavalink_client.get_tracks(f"scsearch:{self.name}")
+
+            elif is_sc:
+                # SoundCloud URL, try SoundCloud search first
+                search_result = await core.extensions.lavalink_client.get_tracks(f"scsearch:{search_query}")
+                if not search_result or not search_result['tracks']:
+                    print(f"Failed to fetch song info for SoundCloud search query: {search_query}, trying YouTube search")
+                    # Fall back to YouTube search using song name
+                    search_result = await core.extensions.lavalink_client.get_tracks(f"ytsearch:{self.name}")
+
+            else:
+                # No URL, just search by name (default behavior)
+                search_result = await core.extensions.lavalink_client.get_tracks(f"ytsearch:{search_query}")
+                if not search_result or not search_result['tracks']:
+                    print(f"Failed to fetch song info for search query: {search_query}, trying SoundCloud search")
+                    # Fall back to SoundCloud search using song name
+                    search_result = await core.extensions.lavalink_client.get_tracks(f"scsearch:{self.name}")
 
             if not search_result or not search_result['tracks']:
-                print(f"Failed to fetch song info for query: {self.name}")
+                print(f"Failed to fetch song info for query: {search_query}")
                 return None
 
             # Use the first track
             track = search_result['tracks'][0]
             self._player = track
+            self.duration = int(track.duration / 1000)  # Convert milliseconds to seconds
             return track
 
         return self._player
+
     
     # async def get_player(self) -> lavalink.AudioTrack | None:
     #     """
@@ -495,6 +535,10 @@ class Song:
         self._lyrics_status = LyricsStatus[data['status']]
         self.lyrics = data.get('lyrics', None)
         return data['lyrics']
+
+    @staticmethod
+    def _self_weighted_mean(values):
+        return sum(x**2 for x in values) / sum(values)
     
     @staticmethod
     async def get_song_recommendations(seed_songs: list, limit = 3, set_auto_play = True,
@@ -516,25 +560,37 @@ class Song:
         
         seed_tracks = []
         average_popularity = 0
+        popularities = []
         for song in seed_songs:
             search_term = clean_song_name(song.name, song.artist)
-            result = sp.search(f"{search_term} {song.artist if song.type == 'spot' else ''}", limit=1)['tracks']['items']
+            query = f'{search_term.lower()}'
+            if song.type == "spot" or song.artist.lower() in song.name.lower():
+                query += f' {song.artist}'
+                #pass
+            query = query.strip()
+            #print(f"Searching for seed track: {query}")
+            result = sp_rec.search(q=query, type="track", limit=1)['tracks']['items']
+            #print(result)
+
             if result:
                 track_id = result[0]['id']
                 seed_tracks.append(track_id)
-                print(f"SEED TRACK:  {search_term} -> {result[0]['name']} | {track_id}")
+                print(f"SEED TRACK:  {query} -> {result[0]['name']} | {track_id}")
             else:
-                print(f"No result for SF: {search_term}")
+                print(f"No result for SF: {query}")
             average_popularity += result[0]['popularity']
+            popularities.append(result[0]['popularity'])
         
-        average_popularity /= len(seed_tracks)
-        print(f"Average popularity of seed tracks: {average_popularity}")
-        if average_popularity < 30:
-            average_popularity *= 1.15  # safeguard against too low popularity
-        print(f"LIMIT: {limit}")
+        #average_popularity /= len(seed_tracks)
+        #print(f"Average popularity of seed tracks: {average_popularity}")
+        average_popularity = Song._self_weighted_mean(popularities)
+        print(f"Self weighted popularity of seed tracks: {average_popularity}")
+        if average_popularity < 45:
+            average_popularity = min(80, average_popularity * 2)  # safeguard against too low popularity
+        #print(f"LIMIT: {limit}")
 
         try:
-            results = sp_rec.recommendations(seed_tracks=seed_tracks, limit=limit, min_popularity=25)
+            results = sp_rec.recommendations(seed_tracks=seed_tracks, limit=limit, min_popularity=int(max(average_popularity*0.90, 30)))
             tracks = results['tracks']#sorted(results['tracks'], key=lambda x: x['popularity'], reverse=True) if sort_by_popularity else results['tracks']
             recommendations = []
             for track in tracks[:limit]:
@@ -546,7 +602,7 @@ class Song:
                 if set_auto_play:
                     song.auto_play = True
                 recommendations.append(song)
-            print(f"Total recommendations fetched: {len(recommendations)}")
+            #print(f"Total recommendations fetched: {len(recommendations)}")
             return recommendations
         except Exception as e:
             print(f"Error fetching recommendations: {e}")

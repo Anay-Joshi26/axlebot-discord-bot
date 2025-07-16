@@ -173,6 +173,7 @@ class Client:
             embed = craft_bot_music_stopped(delete_after=delete_after)
             await ctx.send(embed=embed, delete_after=delete_after)
 
+        await self.voice_client.player.clear_filters()
         print(self.queue, self.voice_client, self.queue.current_song)
 
         if self.queue.current_song is not None:
@@ -180,10 +181,9 @@ class Client:
         if self.voice_client is not None:
             await self.voice_client.stop()
             await self.voice_client.disconnect(); self.voice_client = None
-        await self.queue.clear()
         self.queue.auto_play_queue = []
         self.queue.last_seed_songs = set()
-        await self.voice_client.player.clear_filters()
+        await self.queue.clear()
 
         self.interupt_inactivity_timer()
 

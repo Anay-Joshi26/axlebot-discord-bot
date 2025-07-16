@@ -123,15 +123,15 @@ def clean_song_name(name: str, artist: str) -> str:
     if " - " in name:
         # Split by " - " and take the first part
         name = name.split(" - ")[1].strip()
+    
+    for token in ["ft.", "feat."]:
+        if token in name:
+            name = name[:name.index(token)].strip()
 
     name = re.sub(r"\[.*?\]|\(.*?\)|\{.*?\}", "", name)
 
     for word in ignore_words:
         name = re.sub(re.escape(word), "", name, flags=re.IGNORECASE).strip()
-
-    for token in ["ft.", "feat."]:
-        if token in name:
-            name = name[:name.index(token)].strip()
 
     name = remove_extra_spaces(name)
 

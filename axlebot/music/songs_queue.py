@@ -17,8 +17,9 @@ class SongQueue:
         self.NUM_OF_AUTOPLAY_SONGS_TO_HOLD = 5
         self.auto_play_queue : List[Song] = []
         self.last_seed_songs : set[str] = set()  # To keep track of the last seed songs used for recommendations
+        self._auto_play_update_task = None
 
-    async def append(self, song: Song, index=None, update_auto_play = True) -> None:
+    async def append(self, song: Song, index=None, update_auto_play=True) -> None:
         """
         Appends a song to the queue at the end or at a specific index
         """
@@ -29,10 +30,21 @@ class SongQueue:
                 self.queue.append(song)
 
             if self.client.server_config.auto_play and update_auto_play:
-                # now that the queue has one more song, we can update the auto play songs
-                asyncio.create_task(self.update_auto_play_songs())
-        
+                # Cancel existing debounce task if running
+                if self._auto_play_update_task and not self._auto_play_update_task.done():
+                    self._auto_play_update_task.cancel()
+
+                # Start new debounce task
+                self._auto_play_update_task = asyncio.create_task(self._debounced_update_auto_play())
+
         self.update_live_queue_message()
+
+    async def _debounced_update_auto_play(self, timeout=8):
+        try:
+            await asyncio.sleep(timeout)  # Debounce delay
+            await self.update_auto_play_songs()
+        except asyncio.CancelledError:
+            pass  # Ignore if cancelled
 
     def update_live_queue_message(self):
         """
@@ -40,22 +52,27 @@ class SongQueue:
         This is useful for live updates to the queue.
         """
         if hasattr(self.client, 'live_queue_message'):
-            try:
-                asyncio.create_task(self.client.live_queue_message.edit(
-                    embed=craft_queue(self.client, num=None, live = True)
-                ))
-            except discord.NotFound:
-                print("Live queue message no longer exists. Removing reference.")
-                delattr(self.client, 'live_queue_message')
-            except Exception as e:
-                print(f"Error updating live queue message: {e}")
+            async def updater():
+                try:
+                    await self.client.live_queue_message.edit(
+                        embed=craft_queue(self.client, num=None, live=True)
+                    )
+                except discord.NotFound:
+                    print("Live queue message no longer exists. Removing reference.")
+                    delattr(self.client, 'live_queue_message')
+                except Exception as e:
+                    print(f"Error updating live queue message: {e}")
+
+            asyncio.create_task(updater())
             
-    async def update_auto_play_songs(self, num_of_seed_tracks : int = 5, manual_seed_tracks: List[Song] = None) -> None:
+    async def update_auto_play_songs(self, num_of_seed_tracks : int = 5, manual_seed_tracks: List[Song] = None, delay_execution=None) -> None:
         """
         Updates the auto play songs in the queue based on the current queue.
         Spotify only supports up to 5 seed tracks, so we will use that as the default.
         """
         async with self.lock:
+            if delay_execution is not None and isinstance(delay_execution, (int, float)) and delay_execution > 0:
+                await asyncio.sleep(delay_execution)
             seed_songs = self.queue[:num_of_seed_tracks] + self.auto_play_queue[:num_of_seed_tracks - len(self.queue[:num_of_seed_tracks])]
             seed_songs_set = set(song.lavalink_track_id for song in seed_songs)
             if seed_songs_set == self.last_seed_songs:
@@ -166,6 +183,9 @@ class SongQueue:
             self.update_live_queue_message()
             return None
         
+        if self.current_song is None:
+            return None
+        
         self.current_song.stop()
         self.current_song.is_first_in_queue = False
         
@@ -196,7 +216,13 @@ class SongQueue:
             next_song = self.auto_play_queue.pop(0)
             self.queue.append(next_song)
             next_song.is_first_in_queue = True
-            asyncio.create_task(self.update_auto_play_songs())
+            # Cancel any previous debounced update
+            if self._auto_play_update_task and not self._auto_play_update_task.done():
+                self._auto_play_update_task.cancel()
+
+            # Start new debounce task
+            self._auto_play_update_task = asyncio.create_task(self._debounced_update_auto_play())
+
             self.update_live_queue_message()
             return next_song
             

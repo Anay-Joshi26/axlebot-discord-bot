@@ -25,9 +25,10 @@ Axlebot is a feature-rich Discord music bot that supports YouTube and Spotify pl
 ### Prerequisites
 - Python 3.11+ (mainly for `asyncio` features)
 - Discord bot token (create one at https://discord.com/developers/applications)
-- Lavalink server (for audio streaming)
+- Lavalink server (for audio streaming) with suitable Java version installed
 - FFmpeg installed and available in your PATH
 - Dependencies inside the `requirements.txt` file
+- Firestore account + database with `account_key.json` file
 - Lavalink YouTube plugin, follow [this guide](https://github.com/lavalink-devs/youtube-source#plugin) to add that and update the `application.yml` file as needed
 
 ### Installation
@@ -45,7 +46,7 @@ Axlebot is a feature-rich Discord music bot that supports YouTube and Spotify pl
    - Set your Discord bot token in the config file or as an environment variable.
    - Ensure `Lavalink.jar` is present and configured (see Lavalink docs).
 
-*Note: The `application.yml` in `main` is simply an example*
+*Note: Any `application.yml` in any branch is simply an example*
 
 ### Running the Bot
 
@@ -57,7 +58,7 @@ To run the bot and all its services run:
 ./start.sh
 ```
 
-To stop the bot and all its services run:
+To stop the bot and all its services run you can either simply press `CTRL+C` or run:
 
 ```bash
 ./stop.sh
@@ -71,7 +72,7 @@ To stop the bot and all its services run:
    ```bash
    java -jar Lavalink.jar
    ```
-2. Start the FastAPI lyrics service (in a separate terminal):
+2. Start the FastAPI lyrics service (in a separate terminal) (remove the reload flag for prod):
    ```bash
    PYTHONPATH=./axlebot uvicorn core.api:app --reload
    ```

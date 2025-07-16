@@ -297,14 +297,14 @@ class PlaylistCog(commands.Cog):
 
                     if player is None:
                         await ctx.send(embed=craft_general_error(f"YouTube has temporarily blocked `{song.name}` :(, please try again later"), delete_after = 20)
-                        asyncio.create_task(self.music_cog.play_next(ctx, client))
-                        return
-
-                    await client.voice_client.play(
-                        player,
-                        after = lambda e: self.bot.loop.call_soon_threadsafe(
-                                        lambda: asyncio.ensure_future(self.music_cog._after_playback(e, ctx, client)))
-                    )
+                        # asyncio.create_task(self.music_cog.play_next(ctx, client))
+                        # return
+                    else:
+                        await client.voice_client.play(
+                            player,
+                            after = lambda e: self.bot.loop.call_soon_threadsafe(
+                                            lambda: asyncio.ensure_future(self.music_cog._after_playback(e, ctx, client)))
+                        )
             if not auto_play_updated and client.server_config.auto_play:
                 # If auto play is enabled, update the auto play songs
                 await client.queue.update_auto_play_songs()
@@ -334,7 +334,7 @@ class PlaylistCog(commands.Cog):
                 await ctx.send(embed = no_pl_found)
                 return
             
-            playlist_embed = craft_songs_in_playlist(playlist_name, playlist.songs)
+            playlist_embed = craft_songs_in_playlist(playlist)
             await ctx.send(embed = playlist_embed)
 
         else:

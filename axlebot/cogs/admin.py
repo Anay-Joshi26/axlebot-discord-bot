@@ -225,7 +225,7 @@ class AdminCog(commands.Cog):
                     if role:
                         role_names.append(role.name)
                     else:
-                        role_names.append(f"[Unknown Role {role_id}]")
+                        role_names.append(f"<Unknown/Deleted Role {role_id}>")
                 display_value = "[" + ", ".join(role_names) + "]"
 
             elif key == channel_id_fields:
@@ -235,7 +235,7 @@ class AdminCog(commands.Cog):
                     if channel:
                         channel_names.append(channel.name)
                     else:
-                        channel_names.append(f"[Unknown Channel {channel_id}]")
+                        channel_names.append(f"<Unknown/Deleted Channel {channel_id}>")
                 display_value = "[" + ", ".join(channel_names) + "]"
 
             else:

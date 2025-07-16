@@ -44,7 +44,7 @@ async def fetch_lyrics(name: str, artist: str, timeout = 5, retry=False) -> dict
                         if "-" in name and (retry == False):
                             print("RETRYING with modified artist name")
                             new_artist = name.split("-")[0].strip()
-                            await fetch_lyrics(name, new_artist, timeout=timeout, retry=True)
+                            return await fetch_lyrics(name, new_artist, timeout=5, retry=True)
                         status = LyricsStatus.NO_LYRICS_FOUND
 
                     else:
