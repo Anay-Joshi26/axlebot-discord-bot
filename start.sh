@@ -17,9 +17,9 @@ trap cleanup SIGINT
 
 # Start Lavalink silently
 cd axlebot || exit 1
-echo "Starting Lavalink silently..."
-java -jar Lavalink.jar > /dev/null 2>&1 &
-LAVALINK_PID=$!
+# echo "Starting Lavalink silently..."
+# java -jar Lavalink.jar > /dev/null 2>&1 &
+# LAVALINK_PID=$!
 
 sleep 2  # wait for Lavalink to start
 

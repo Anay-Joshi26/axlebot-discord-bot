@@ -2,19 +2,11 @@
 """
 This file is the primary message crafter. It will craft discord Embeds to send out. To use it, find the function, and pass in any neccessary params
 """
-
-import requests
-from PIL import Image
 import asyncio
-import time
-import io
 import discord
-from typing import Optional, Literal
 from models.song import Song, LyricsStatus
-from discord.ext import commands
 from models.playlist import Playlist
 from datetime import datetime
-import aiohttp
 from utils import convert_duration
 
 # Colours for the embeds
@@ -49,7 +41,7 @@ async def craft_now_playing(song: Song, is_looping = False):
     ),
     #description=f"[{song.name}]({song.yt_url})", # uncomment this to make the song name a link to the song
     description=f"{song.name}",
-    colour=await extract_embed_color(song.thumbnail_url),
+    colour=await song.get_embed_color(),
     )
     
     embed.set_thumbnail(url=song.thumbnail_url)
@@ -242,29 +234,6 @@ def craft_queue(client, num=None, live = False):
         description=opt,
         colour=0x00b0f4,
     )
-
-
-async def extract_embed_color(thumbnail_url):
-    print(f"Extracting color from thumbnail URL: {thumbnail_url}")
-
-    async with aiohttp.ClientSession() as session:
-        async with session.get(thumbnail_url) as response:
-            response.raise_for_status()
-            image_data = await response.read()
-
-    image = Image.open(io.BytesIO(image_data)).convert("RGB")
-    image = image.resize((100, 100))
-
-    left, top = 25, 25
-    right, bottom = 75, 75
-
-    cropped_image = image.crop((left, top, right, bottom))
-
-    average_color = cropped_image.resize((1, 1)).getpixel((0, 0))
-
-    hex_color = (average_color[0] << 16) + (average_color[1] << 8) + average_color[2]
-
-    return hex_color
 
 def craft_playlist_created(name: str) -> discord.Embed:
 

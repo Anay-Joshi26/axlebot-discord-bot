@@ -1,9 +1,10 @@
 import asyncio
 import requests
 import urllib.parse
-from enum import Enum, auto
 import aiohttp
 import discord
+from PIL import Image
+import io
 from yt_dlp import YoutubeDL
 #from pytube import YouTube, Playlist, Search
 from youtubesearchpython.__future__ import Search, Playlist, Video, VideosSearch
@@ -12,13 +13,13 @@ from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
 import os
 from dotenv import load_dotenv, find_dotenv
 from typing import List
-from datetime import datetime, timedelta
 import time
 import re
 from async_lru import alru_cache
 from functools import lru_cache
 from uuid import uuid1
 from utils import time_string_to_seconds, generate_random_string, clean_song_name
+#from utils.message_crafter import extract_embed_color
 from core.api.wrapper import *
 from core.api.lyrics import LyricsStatus
 import lavalink
@@ -144,7 +145,49 @@ class Song:
         self.lavalink_track_id = lavalink_track_id 
         self.auto_play = auto_play  # Indicates if this song was added automatically (e.g., from a recommendation or autoplay feature)
         self.increment_seconds_time_delay = 1 # seconds
+        self._embed_color_future = None
+        self._start_color_fetch()
         #self.track = lavalink_track  # For Lavalink 4.x, this is the track object
+
+    @staticmethod
+    async def get_dominant_colour(thumbnail_url: str = None) -> discord.Color:
+        if thumbnail_url is None:
+            if self.thumbnail_url is None:
+                return discord.Color.default()
+            thumbnail_url = self.thumbnail_url
+
+        print(f"Extracting color from thumbnail URL: {thumbnail_url}")
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(thumbnail_url) as response:
+                response.raise_for_status()
+                image_data = await response.read()
+
+        image = Image.open(io.BytesIO(image_data)).convert("RGB")
+        image = image.resize((100, 100))
+
+        left, top = 25, 25
+        right, bottom = 75, 75
+
+        cropped_image = image.crop((left, top, right, bottom))
+
+        average_color = cropped_image.resize((1, 1)).getpixel((0, 0))
+
+        hex_color = (average_color[0] << 16) + (average_color[1] << 8) + average_color[2]
+
+        return hex_color
+
+    def _start_color_fetch(self):
+        # Start background color fetch as soon as the song is created
+        if self.thumbnail_url:
+            self._embed_color_future = asyncio.create_task(
+                Song.get_dominant_colour(self.thumbnail_url)
+            )
+
+    async def get_embed_color(self):
+        if self._embed_color_future:
+            return await self._embed_color_future
+        return discord.Color.default()
 
     @property
     async def player(self) -> lavalink.AudioTrack | None:
