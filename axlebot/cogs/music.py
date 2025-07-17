@@ -216,7 +216,7 @@ class MusicCog(commands.Cog):
     @commands.command(aliases = ['mv'])
     @commands.check(in_voice_channel)
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def move(self, ctx, *args):
         """
         Moves a song from one position in the queue to another
@@ -251,7 +251,7 @@ class MusicCog(commands.Cog):
     @commands.command(aliases = ['p'])
     @commands.check(in_voice_channel)
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def play(self, ctx: commands.Context, *, query):
         try:
             client = await self.server_manager.get_client(ctx.guild.id, ctx)
@@ -478,7 +478,7 @@ class MusicCog(commands.Cog):
     @commands.command(aliases = ['ps'])
     @commands.check(in_voice_channel)
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def pause(self, ctx):
         client = await self.server_manager.get_client(ctx.guild.id)
         voice_client = client.voice_client
@@ -502,7 +502,7 @@ class MusicCog(commands.Cog):
     @commands.command(aliases = ['res'])
     @commands.check(in_voice_channel)
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def resume(self, ctx):
         client = await self.server_manager.get_client(ctx.guild.id)
         voice_client = client.voice_client
@@ -525,7 +525,7 @@ class MusicCog(commands.Cog):
 
     @commands.command(aliases = ['q'])
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def queue(self, ctx: commands.Context, num : int | None = None, *args):
         client = await self.server_manager.get_client(ctx.guild.id)
         print("num", num)
@@ -554,7 +554,7 @@ class MusicCog(commands.Cog):
 
     @commands.command(aliases = ['l'])
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def lyrics(self, ctx):
         client = await self.server_manager.get_client(ctx.guild.id)
         current_song: Song = client.queue.current_song
@@ -571,7 +571,7 @@ class MusicCog(commands.Cog):
     @commands.command(aliases = ['pn', 'qn'])
     @commands.check(in_voice_channel)
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def queue_next(self, ctx, *args):
         """
         In cases where a song wants to played directly after the current playing song without waiting for the other songs in the queue to finish this command can be used.
@@ -598,7 +598,7 @@ class MusicCog(commands.Cog):
     @commands.command(aliases = ['skp', 'sk'])
     @commands.check(in_voice_channel)
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def skip(self, ctx):
         client = await self.server_manager.get_client(ctx.guild.id)
         queue, voice_client = client.queue, client.voice_client
@@ -618,7 +618,7 @@ class MusicCog(commands.Cog):
     @commands.command(aliases=['stp'])
     @commands.check(in_voice_channel)
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def stop(self, ctx: commands.Context):
         client = await self.server_manager.get_client(ctx.guild.id)
         voice_client = client.voice_client
@@ -654,7 +654,7 @@ class MusicCog(commands.Cog):
     @commands.command(aliases = ['lp'])
     @commands.check(in_voice_channel)
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def loop(self, ctx):
         client = await self.server_manager.get_client(ctx.guild.id)
         try:
@@ -673,7 +673,7 @@ class MusicCog(commands.Cog):
     @commands.command(aliases = ['del'])
     @commands.check(in_voice_channel)
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def delete(self, ctx, pos : int):
         
         client = await self.server_manager.get_client(ctx.guild.id)
@@ -698,7 +698,7 @@ class MusicCog(commands.Cog):
     @commands.command(aliases = ['shuf', 'sh', 'shuff'])
     @commands.check(in_voice_channel)
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def shuffle(self, ctx):
         client = await self.server_manager.get_client(ctx.guild.id)
 
@@ -715,7 +715,7 @@ class MusicCog(commands.Cog):
     @commands.command(aliases = ['rep'])
     @commands.check(in_voice_channel)
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def repeat(self, ctx, num : int = 1, *args):
         client = await self.server_manager.get_client(ctx.guild.id)
 
@@ -755,7 +755,7 @@ class MusicCog(commands.Cog):
 
     @commands.command(aliases = ['nowplaying', 'nwp', 'nowpl', 'nwpl'])
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def now_playing(self, ctx):
         client = await self.server_manager.get_client(ctx.guild.id)
 
@@ -774,7 +774,7 @@ class MusicCog(commands.Cog):
 
     @commands.command()
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def seek(self, ctx, new_time: str):
         client = await self.server_manager.get_client(ctx.guild.id)
 
@@ -890,7 +890,7 @@ class MusicCog(commands.Cog):
 
     @commands.command(aliases=['fwd', 'fw'])
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type=BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type=BucketType.guild)
     async def forward(self, ctx, seconds: int):
         if seconds < 0:
             await ctx.send("Cannot forward a song by a negative amount of seconds, please provide a positive number")
@@ -900,7 +900,7 @@ class MusicCog(commands.Cog):
 
     @commands.command(aliases=['rw', 'rew'])
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type=BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type=BucketType.guild)
     async def rewind(self, ctx, seconds: int):
         if seconds < 0:
             await ctx.send("Cannot rewind a song by a negative amount of seconds, please provide a positive number")
@@ -911,7 +911,7 @@ class MusicCog(commands.Cog):
         aliases=['sf', 'apply_filters', 'applyfilters', 'set_filter', 'setfilter', 'apply_filter']
     )
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type=BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type=BucketType.guild)
     async def set_filters(self, ctx, *filters):
         client = await self.server_manager.get_client(ctx.guild.id)
         player = getattr(client.voice_client, 'player', None)
@@ -1019,7 +1019,7 @@ class MusicCog(commands.Cog):
         aliases=['remove_filters', 'reset_filters', 'resetfilters', 'removefilter', 'clearfilter', 'rmf', 'cf', 'rf'] 
     )
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type=BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type=BucketType.guild)
     async def clear_filters(self, ctx):
         """
         Clears all audio filters for the current song.

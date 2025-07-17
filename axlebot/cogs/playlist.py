@@ -73,7 +73,7 @@ class PlaylistCog(commands.Cog):
 
     @commands.command(aliases = ['np', "newplaylist", "newpl", "createplaylist", "createpl", "create_playlist"])
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def new_playlist(self, ctx: commands.Context, *args):
         """
         Creates a new playlist with the given name.
@@ -175,7 +175,7 @@ class PlaylistCog(commands.Cog):
 
     @commands.command(aliases = ['as', 'addsongs'])
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def add_songs(self, ctx: commands.Context, *args):
 
         client = await self.server_manager.get_client(ctx.guild.id, ctx)
@@ -203,7 +203,7 @@ class PlaylistCog(commands.Cog):
     @commands.command(aliases = ['addsong'])
     @commands.check(in_voice_channel)
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def add_song(self, ctx: commands.Context, *, playlist_name) -> None:
         """
         Adds the current playing to a playlist with the given name.
@@ -242,7 +242,7 @@ class PlaylistCog(commands.Cog):
     @commands.command(aliases = ['qp', 'queuepl', 'queueplaylist', 'qpl', 'pp', 'playplaylist', 'playpl', 'queue_pl'])
     @commands.check(in_voice_channel)
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def queue_playlist(self, ctx: commands.Context, *args):
         """
         Queues the playlist with the given name.
@@ -314,7 +314,7 @@ class PlaylistCog(commands.Cog):
 
     @commands.command(aliases = ['pls', 'playlist_info', 'playlistinfo'])
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def playlists(self, ctx: commands.Context, *args):
         """
         Lists all the playlists created by the user
@@ -344,7 +344,7 @@ class PlaylistCog(commands.Cog):
     
     @commands.command(aliases = ['dp', 'deletepl', 'deleteplaylist'])
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def delete_playlist(self, ctx: commands.Context, *args):
         """
         Deletes the playlist with the given name
@@ -373,7 +373,7 @@ class PlaylistCog(commands.Cog):
         
     @commands.command(aliases = ['remove_song', 'removesong', 'rs', "del_from_playlist","deletefromplaylist", "dfp", "del_from_pl"])
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def delete_song_from_playlist(self, ctx: commands.Context, *args):
         """
         Deletes the song at the given position from the playlist with the given name
@@ -417,7 +417,7 @@ class PlaylistCog(commands.Cog):
 
     @commands.command(aliases = ["renameplaylist", "renamepl", "rename_pl"])
     @commands.check(bot_use_permissions)
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def rename_playlist(self, ctx: commands.Context, *args):
         """
         `-rename_pl "<Old Name>" "<New Name>"`

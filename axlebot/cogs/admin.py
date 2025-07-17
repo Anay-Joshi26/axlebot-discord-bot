@@ -66,7 +66,7 @@ class AdminCog(commands.Cog):
 
 
     @commands.command()
-    @commands.dynamic_cooldown(cooldown_time, type=BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type=BucketType.guild)
     @commands.check(has_manage_guild)
     async def add_use_role(self, ctx: commands.Context, *args):
         client = await self.server_manager.get_client(ctx.guild.id)
@@ -79,7 +79,7 @@ class AdminCog(commands.Cog):
         )
 
     @commands.command()
-    @commands.dynamic_cooldown(cooldown_time, type=BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type=BucketType.guild)
     @commands.check(has_manage_guild)
     async def remove_use_role(self, ctx: commands.Context, *args):
         client = await self.server_manager.get_client(ctx.guild.id)
@@ -92,7 +92,7 @@ class AdminCog(commands.Cog):
         )
 
     @commands.command()
-    @commands.dynamic_cooldown(cooldown_time, type=BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type=BucketType.guild)
     @commands.check(has_manage_guild)
     async def add_use_channel(self, ctx: commands.Context, *args):
         client = await self.server_manager.get_client(ctx.guild.id)
@@ -105,7 +105,7 @@ class AdminCog(commands.Cog):
         )
 
     @commands.command()
-    @commands.dynamic_cooldown(cooldown_time, type=BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type=BucketType.guild)
     @commands.check(has_manage_guild)
     async def remove_use_channel(self, ctx: commands.Context, *args):
         client = await self.server_manager.get_client(ctx.guild.id)
@@ -125,7 +125,7 @@ class AdminCog(commands.Cog):
         await getattr(client.server_config, f"{action}_permitted_role")(role_id)
 
     @commands.command()
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     @commands.check(has_manage_guild)
     async def see_access_channels(self, ctx: commands.Context):
         client: Client = await self.server_manager.get_client(ctx.guild.id)
@@ -137,7 +137,7 @@ class AdminCog(commands.Cog):
         await ctx.send(embed = craft_see_access_embed("channel", channel_names))
         
     @commands.command()
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     @commands.check(has_manage_guild)
     async def see_access_roles(self, ctx: commands.Context):
         client: Client = await self.server_manager.get_client(ctx.guild.id)
@@ -150,7 +150,7 @@ class AdminCog(commands.Cog):
 
 
     @commands.command(aliases = ['del_message_after_play', 'del_msg_after_play', 'dmap'])
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     @commands.check(has_manage_guild)
     async def delete_message_after_play(self, ctx: commands.Context, *args):
         """
@@ -173,7 +173,7 @@ class AdminCog(commands.Cog):
         await ctx.send(f"Delete message after play set to `{value.capitalize()}`.")
 
     @commands.command(aliases = ['ap', 'autoplay'])
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     @commands.check(has_manage_guild)
     async def auto_play(self, ctx: commands.Context, *args):
         """
@@ -205,7 +205,7 @@ class AdminCog(commands.Cog):
                 await client.queue.update_auto_play_songs()
 
     @commands.command(aliases = ['sac'])
-    @commands.dynamic_cooldown(cooldown_time, type = BucketType.user)
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     @commands.check(has_manage_guild)
     async def see_all_config(self, ctx: commands.Context, *args):
         client: Client = await self.server_manager.get_client(ctx.guild.id)

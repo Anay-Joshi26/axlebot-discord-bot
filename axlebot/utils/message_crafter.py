@@ -120,14 +120,14 @@ async def update_progress_bar_embed(song: Song, progress_embed: discord.Embed, s
 
         if song.is_playing:
             if progress > ((bar_length-2)/bar_length)*100:
-                update_interval = 1
+                update_interval *= 0.5
 
     progress_embed.set_field_at(0, name="Progress", value=update_progress_bar(100, bar_length = bar_length))
     await song.progress_message.edit(embed=progress_embed)
 
 def craft_delete_song(song: Song) -> discord.Embed:
     embed = discord.Embed(title=f"Deleted: {song.name}",
-                      description="The song has been **deleted** from the queue, and will not be played.\n\nYou can view the updated queue via `-queue` or `q`.",
+                      description="The song has been **deleted** from the queue, and will not be played.\n\nYou can view the updated queue via `-queue` or `-q`.",
                       colour=0x00b0f4)
 
     #embed.set_author(name=song.artist)
@@ -137,9 +137,10 @@ def craft_delete_song(song: Song) -> discord.Embed:
     return embed
 
 def craft_move_song(song: Song, move_to: int) -> discord.Embed:
-    embed = discord.Embed(title=song.name,
+    embed = discord.Embed(title=f"Moved: {song.name}",
                       description=f"The song has been **moved** to position `{move_to}` in the queue.\n\nYou can view the updated queue via `-queue` or `-q`.",
                       colour=0x00b0f4)
+    embed.set_thumbnail(url=song.thumbnail_url)
     return embed
 
 

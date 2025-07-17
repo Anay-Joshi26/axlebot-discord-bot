@@ -96,7 +96,7 @@ def cooldown_time(ctx):
     client = server_manager.active_clients.get(ctx.guild.id)
 
     if client is None or not client.is_premium:
-        return commands.Cooldown(1, 5)
+        return commands.Cooldown(1, 4) # one message every 4 seconds
     
     print("Active client and premium cooldown")
     return commands.Cooldown(1, 1)
