@@ -318,7 +318,7 @@ class MusicCog(commands.Cog):
                         print(f"Added to queue: {song.name}")
                         position += 1
 
-                        if len(queue) == 5:
+                        if len(queue) == 5 and not auto_play_updated and client.server_config.auto_play:
                             auto_play_updated = True
                             await client.queue.update_auto_play_songs()
 
