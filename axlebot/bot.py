@@ -341,7 +341,7 @@ class HelpView(discord.ui.View):
 
 
 @bot.command()
-@commands.dynamic_cooldown(lambda x: commands.Cooldown(1,1), type=commands.BucketType.user)
+@commands.dynamic_cooldown(lambda x: commands.Cooldown(1,1), type=commands.BucketType.member)
 async def help(ctx: commands.Context, *args):
     """
     Displays the help command with options to navigate through different sections.
