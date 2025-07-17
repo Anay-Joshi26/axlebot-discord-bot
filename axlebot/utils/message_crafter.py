@@ -8,6 +8,8 @@ from models.song import Song, LyricsStatus
 from models.playlist import Playlist
 from datetime import datetime
 from utils import convert_duration
+from discord.ui import View, Button
+from math import ceil
 
 # Colours for the embeds
 COLOURS = {
@@ -15,6 +17,62 @@ COLOURS = {
     "success": 0x00b0f4,
     "warning": 0xff9e42,
 }
+
+class QueuePaginator(View):
+    def __init__(self, client, embeds: list[discord.Embed], timeout=24*60*60, starting_page = 0):
+        super().__init__(timeout=timeout)
+        self.embeds = embeds
+
+        if starting_page < 0 or starting_page >= len(embeds):
+            self.current_page = 0
+        else:
+            self.current_page = starting_page
+        self.client = client
+
+        self.client.live_queue_current_page = self.current_page
+        self.page_indicator.label = self.get_page_info()
+        self.update_buttons()
+
+    def update_buttons(self):
+        self.prev_page.disabled = self.current_page == 0
+        self.next_page.disabled = self.current_page == len(self.embeds) - 1
+        self.first_page.disabled = self.current_page == 0
+        self.last_page.disabled = self.current_page == len(self.embeds) - 1
+
+    def get_page_info(self):
+        return f"{self.current_page + 1}/{len(self.embeds)}"
+
+    async def update_message(self, interaction: discord.Interaction):
+        # Update button states
+        self.update_buttons()
+        self.page_indicator.label = self.get_page_info()
+        self.client.live_queue_current_page = self.current_page
+        await interaction.response.edit_message(embed=self.embeds[self.current_page], view=self)
+
+    @discord.ui.button(label="⏮️", style=discord.ButtonStyle.grey, row=0)
+    async def first_page(self, interaction: discord.Interaction, button: Button):
+        self.current_page = 0
+        await self.update_message(interaction)
+
+    @discord.ui.button(label="◀️", style=discord.ButtonStyle.blurple, row=0)
+    async def prev_page(self, interaction: discord.Interaction, button: Button):
+        self.current_page = max(0, self.current_page - 1)
+        await self.update_message(interaction)
+
+    @discord.ui.button(label="", style=discord.ButtonStyle.grey, disabled=True, row=0, custom_id="page_indicator")
+    async def page_indicator(self, interaction: discord.Interaction, button: Button):
+        pass  # Just a label, no action
+
+    @discord.ui.button(label="▶️", style=discord.ButtonStyle.blurple, row=0)
+    async def next_page(self, interaction: discord.Interaction, button: Button):
+        self.current_page = min(len(self.embeds) - 1, self.current_page + 1)
+        await self.update_message(interaction)
+
+    @discord.ui.button(label="⏭️", style=discord.ButtonStyle.grey, row=0)
+    async def last_page(self, interaction: discord.Interaction, button: Button):
+        self.current_page = len(self.embeds) - 1
+        await self.update_message(interaction)
+
 
 def craft_general_error(error: str = None) -> discord.Embed:
     """
@@ -207,36 +265,49 @@ def craft_queue_empty(live = False):
         colour=0x00b0f4)
     return embed
 
-def craft_queue(client, num=None, live = False):
+def craft_queue(client, num = None, live: bool = False, starting_page = 0):
     queue = client.queue
     if len(queue) == 0:
-        return craft_queue_empty(live=live)
+        embed = craft_queue_empty(live=live)
+        return [embed], None  # Return single embed, no paginator
+    
+    MAX_PER_PAGE = 20  # You can change this
 
-    nums_to_show = num if num is not None else len(queue)
-    opt = ""
+    nums_to_show = min(num if num is not None else len(queue), len(queue))
 
-    # Main queue display
-    for i in range(nums_to_show):
-        if i == 0:
-            opt += f"[{i+1}] **{queue[i].name}** => Now playing...{' [LOOPED]' if queue.loop_current else ''}\n"
-        else:
-            opt += f"[{i+1}] **{queue[i].name}**\n"
+    embeds = []
+    for page_num in range(ceil(nums_to_show / MAX_PER_PAGE)):
+        start = page_num * MAX_PER_PAGE
+        end = min(start + MAX_PER_PAGE, nums_to_show)
+        opt = ""
 
-    opt += "\n*(If a playlist has been added, the tracks will be added slowly and may not all show up at once.)*"
+        for i in range(start, end):
+            if i == 0:
+                opt += f"[{i+1}] **{queue[i].name}** => Now playing...{' [LOOPED]' if queue.loop_current else ''}\n"
+            else:
+                opt += f"[{i+1}] **{queue[i].name}**\n"
 
-    # Autoplay queue display if 3 or fewer songs and autoplay queue exists
-    autoplay_queue = getattr(queue, "auto_play_queue", [])
-    if len(queue) <= 10 and autoplay_queue:
-        opt += "\n====================================\n"
-        opt += "**Autoplay is enabled. These tracks will play after the queue ends:**\n\n"
-        for i, track in enumerate(autoplay_queue, start=1):  # Limit to 5
-            opt += f"[A{i}] {track.name}\n"
+        # Only on the last page, add autoplay queue if needed
+        if page_num == ceil(nums_to_show / MAX_PER_PAGE) - 1:
+            autoplay_queue = getattr(queue, "auto_play_queue", [])
+            if len(queue) <= 10 and autoplay_queue:
+                opt += "\n====================================\n"
+                opt += "**Autoplay is enabled. These tracks will play after the queue ends:**\n\n"
+                for i, track in enumerate(autoplay_queue, start=1):
+                    opt += f"[A{i}] {track.name}\n"
 
-    return discord.Embed(
-        title=f"Queue of Songs{f' (first {num})' if num is not None and num < len(queue) and num > 0 else ''} {'[LIVE]' if live else ''}",
-        description=opt,
-        colour=0x00b0f4,
-    )
+        title_suffix = f" (first {num})" if num is not None and num < len(queue) and num > 0 else ""
+        embed = discord.Embed(
+            title=f"Queue of Songs{title_suffix} {'[LIVE]' if live else ''}",
+            description=opt,
+            colour=0x00b0f4,
+        )
+        embed.set_footer(text=f"Page {page_num+1}")
+        embeds.append(embed)
+
+    paginator = QueuePaginator(client, embeds=embeds, starting_page=starting_page)  
+    return embeds, paginator
+
 
 def craft_playlist_created(name: str) -> discord.Embed:
 

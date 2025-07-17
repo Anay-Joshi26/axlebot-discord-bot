@@ -54,8 +54,13 @@ class SongQueue:
         if hasattr(self.client, 'live_queue_message'):
             async def updater():
                 try:
+                    current_page = 0
+                    if hasattr(self.client, "live_queue_current_page") and self.client.live_queue_current_page:
+                        current_page = self.client.live_queue_current_page    
+
+                    embeds, view = craft_queue(self.client, num=None, live=True, starting_page=current_page)
                     await self.client.live_queue_message.edit(
-                        embed=craft_queue(self.client, num=None, live=True)
+                        embed=embeds[view.current_page], view=view
                     )
                 except discord.NotFound:
                     print("Live queue message no longer exists. Removing reference.")

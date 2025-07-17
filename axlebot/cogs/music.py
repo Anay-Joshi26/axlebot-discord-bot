@@ -533,7 +533,7 @@ class MusicCog(commands.Cog):
             num = None
             #print("No number provided or number is invalid, showing full queue")
         is_live = args and args[-1] in ['-l', '-live', '-livequeue', 'l', 'live', 'livequeue']
-        embed = craft_queue(client, num = num, live = is_live)
+        embeds, view = craft_queue(client, num = num, live = is_live)
         try:
             if is_live:
                 if hasattr(client, 'live_queue_message'):
@@ -541,15 +541,15 @@ class MusicCog(commands.Cog):
                         await client.live_queue_message.delete()
                     except discord.NotFound:
                         delattr(client, 'live_queue_message')
-                live_queue_message = await ctx.send(embed = embed)
+                live_queue_message = await ctx.send(embed = embeds[0], view = view)
                 client.live_queue_message = live_queue_message
             else:
-                await ctx.send(embed = embed)
+                await ctx.send(embed = embeds[0], view = view)
         except Exception as e:
             await ctx.send(embed = discord.Embed(
                 title="Too many songs in queue",
                 description="The queue is too long to send through Discord. But don't worry, the songs are still queued up!",
-                colour=embed.colour,
+                colour=embeds[0].colour,
             ))
 
     @commands.command(aliases = ['l'])
