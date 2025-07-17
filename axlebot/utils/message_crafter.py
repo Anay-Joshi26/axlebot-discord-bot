@@ -100,8 +100,9 @@ async def update_progress_bar_embed(song: Song, progress_embed: discord.Embed, s
     print(f"Update interval: {update_interval} seconds")
 
     progress_bar: str = None # str
+    interval_reduced = False
 
-    while progress < 97:
+    while song.seconds_played < (song.duration - 2):
         #print("tick", song.name)
         if song.is_playing:
             progress = calculate_progress(song)
@@ -118,8 +119,9 @@ async def update_progress_bar_embed(song: Song, progress_embed: discord.Embed, s
             return
         #print(f"Progress: {progress}%")
 
-        if song.is_playing:
+        if song.is_playing and not interval_reduced:
             if progress > ((bar_length-2)/bar_length)*100:
+                interval_reduced = True
                 update_interval = max(1, update_interval * 0.5)  # Decrease the interval time to update more frequently as we approach the end of the song
 
     progress_embed.set_field_at(0, name="Progress", value=update_progress_bar(100, bar_length = bar_length))
