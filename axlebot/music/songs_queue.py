@@ -54,8 +54,14 @@ class SongQueue:
         if hasattr(self.client, 'live_queue_message'):
             async def updater():
                 try:
+                    current_page = 0
+                    if hasattr(self.client, "live_queue_current_page") and self.client.live_queue_current_page:
+                        current_page = self.client.live_queue_current_page    
+
+                    embeds, view = craft_queue(self.client, num=None, live=True, starting_page=current_page)
+                    page_to_show = view.current_page if view is not None else 0
                     await self.client.live_queue_message.edit(
-                        embed=craft_queue(self.client, num=None, live=True)
+                        embed=embeds[page_to_show], view=view
                     )
                 except discord.NotFound:
                     print("Live queue message no longer exists. Removing reference.")
@@ -70,6 +76,9 @@ class SongQueue:
         Updates the auto play songs in the queue based on the current queue.
         Spotify only supports up to 5 seed tracks, so we will use that as the default.
         """
+        if not self.client.server_config.auto_play:
+            return # just a last check
+        
         async with self.lock:
             if delay_execution is not None and isinstance(delay_execution, (int, float)) and delay_execution > 0:
                 await asyncio.sleep(delay_execution)
