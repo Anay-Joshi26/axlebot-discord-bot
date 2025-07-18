@@ -128,16 +128,28 @@ async def on_guild_join(guild: discord.Guild):
                 print(f"Error adding music channel: {e}")
 
     # Optional: send a message to the system channel or first text channel
+    message_content = (
+        f"{'Glad to be back' if not is_new else 'Thank you for adding me to the server'}!\n"
+        f"{'To help you get started see the `-help` command below' if is_new else 'As a returning user, below is a refresher on the `-help` command'}"
+    )
+
     if guild.system_channel and guild.system_channel.permissions_for(guild.me).send_messages:
-        await guild.system_channel.send(f"{'Glad to be back' if not is_new else 'Thank you for adding me to the server'}!\n{'To help you get started see the `-help` command below' if is_new else 'As a returning user, below is a refresher on the `-help` command'}")
-        await guild.system_channel.send(embed=craft_default_help_command(), view=HelpView())
+        await guild.system_channel.send(
+            content=message_content,
+            embed=craft_default_help_command(),
+            view=HelpView()
+        )
     else:
         # Fallback: try first available channel with send permissions
         for channel in guild.text_channels:
             if channel.permissions_for(guild.me).send_messages:
-                await guild.system_channel.send(f"{'Glad to be back' if not is_new else 'Thank you for adding me to the server'}!\n{'To help you get started see the `-help` command below' if is_new else 'As a returning user, below is a refresher on the `-help` command'}")
-                await guild.system_channel.send(embed=craft_default_help_command(), view=HelpView())
+                await channel.send(
+                    content=message_content,
+                    embed=craft_default_help_command(),
+                    view=HelpView()
+                )
                 break
+
         
 @bot.event
 async def on_guild_channel_delete(channel):
