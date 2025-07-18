@@ -11,7 +11,7 @@ class ServerConfig:
         self.client = client
         self.permitted_roles_of_use = set()
         self.permitted_channels_of_use = set()
-        self.delete_message_after_play = False
+        self.delete_message_after_play = True
         self.MAX_PERMITTED_ROLES = 10
         self.MAX_PERMITTED_CHANNELS = 10
         self.auto_play = False # Never keeps the queue empty, always recommends a song to play next

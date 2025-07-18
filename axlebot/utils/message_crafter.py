@@ -475,8 +475,8 @@ def craft_songs_in_playlist(playlist) -> discord.Embed:
 
 def craft_default_help_command():
     embed = discord.Embed(title="Help commands",
-                      description="AxleBot can do many things, scroll through and select the option which you would like to see the help commands for.\n\n**Message spamming**\nEvery command has cooldown to prevent spamming. " \
-                      "This is `4` seconds per command for the whole server. The `-help` command has a `1` second cooldown.\n\n**Other things to note**\nThe bot keeps some persistent info about a server such as playlists created. Sometimes this info can take a few seconds to retrieve if you have been inactive for a while. " \
+                      description="AxleBot can do many things, scroll through and select the option which you would like to see the help commands for.\n\n**Message spamming**\nEvery command has a cooldown to prevent spamming. " \
+                      "This is `3` seconds per command for the whole server. This `-help` command has a `1` second cooldown.\n\n**Other things to note**\nThe bot keeps some persistent info about a server such as playlists created. Sometimes this info can take a few seconds to retrieve if you have been inactive for a while. " \
                       "\n\n**For Admins**\nFor admins with Manage Server permissions, you can configure the bot to only work in certain channels and with certain roles. Run `-help admin` to see how to do that.",
                       colour=0x00b0f4)
 
@@ -737,19 +737,19 @@ def craft_admin_help_command():
                       timestamp=datetime.now())
 
     embed.add_field(name="Add role",
-                    value="To add a role which can \nexecute music commands run:\n`-add_use_role @Role`\n*Note: You can use @everyone here aswell*",
+                    value="To add a role which can \nexecute music commands run:\n`-add_use_role @Role1 @Role2 ...` \n*Note: You can use @everyone here aswell*",
                     inline=True)
     embed.add_field(name="Remove role",
-                    value="To disallow a role to use music\ncommands run:\n`-remove_use_role @Role`\n*Note: You can use @everyone here aswell*",
+                    value="To disallow a role to use music\ncommands run:\n`-remove_use_role @Role1 @Role2 ...`\n*Note: You can use @everyone here aswell*",
                     inline=True)
     embed.add_field(name="See all access roles",
                     value="To see all roles which have\naccess to music commands run:\n`-see_access_roles`",
                     inline=True)
     embed.add_field(name="Add channel",
-                    value="To add a channel which can \nexecute music commands run:\n`-add_use_channel #text-channel`",
+                    value="To add a channel which can \nexecute music commands run:\n`-add_use_channel #text-channel1 #text-channel2 ...`",
                     inline=True)
     embed.add_field(name="Remove channel",
-                    value="To disallow a channel to use music\ncommands run:\n`-remove_use_channel #text-channel`",
+                    value="To disallow a channel to use music\ncommands run:\n`-remove_use_channel #text-channel1 #text-channel2 ...`",
                     inline=True)
     embed.add_field(name="See all access channels",
                     value="To see all channels which have access to music commands run:\n`-see_access_channels`",
@@ -761,7 +761,7 @@ def craft_admin_help_command():
                     value="To enable or disable auto play run:\n`-autoplay <true or false>`\n*Auto play will automatically queue songs based on the current queue using Spotify's recommendation algorithm*\n\nAliases: `autoplay`, `ap`",
                     inline=True)
     embed.add_field(name="See all config",
-                    value="To see the bots entire configuration run:\n`-see_all_config` (or `-sac`)",
+                    value="To see the bots entire configuration run:\n`-see_all_config` or `-sac`",
                     inline=True)
 
     embed.set_footer(text="This information has been sent to you privately")

@@ -97,7 +97,8 @@ class MusicPlaybackButtons(discord.ui.View):
         
         try:
             await self.client.queue.repeat()
-            await self.ctx.send(f"The current playing song will repeat, run `-q` to see the updated queue", delete_after=15)
+            #await self.ctx.send(f"The current playing song will repeat, run `-q` to see the updated queue", delete_after=15)
+            await interaction.message.add_reaction('✅')
         except ValueError as e:
             await self.ctx.send(e)
         
@@ -858,7 +859,6 @@ class MusicCog(commands.Cog):
         current_song: Song = client.queue.current_song
         try:
             await client.voice_client.player.seek(new_position)
-            await ctx.message.add_reaction('✅') 
         except Exception as e:
             await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_position}`. Please ensure the format is correct.\n{info_msg}"), delete_after = 90)
             return
@@ -896,6 +896,7 @@ class MusicCog(commands.Cog):
             await ctx.send("Cannot forward a song by a negative amount of seconds, please provide a positive number")
             return
         await self.seek_by(ctx, seconds)
+        await ctx.message.add_reaction('✅') 
 
 
     @commands.command(aliases=['rw', 'rew'])
@@ -906,6 +907,7 @@ class MusicCog(commands.Cog):
             await ctx.send("Cannot rewind a song by a negative amount of seconds, please provide a positive number")
             return
         await self.seek_by(ctx, -seconds)
+        await ctx.message.add_reaction('✅') 
 
     @commands.command(
         aliases=['sf', 'apply_filters', 'applyfilters', 'set_filter', 'setfilter', 'apply_filter']
