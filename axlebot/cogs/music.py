@@ -405,6 +405,11 @@ class MusicCog(commands.Cog):
         if hasattr(client, "stop_command_called") and client.stop_command_called:
             # If the stop_command was called, we do not play the next song
             client.stop_command_called = False
+            if client.server_config.delete_message_after_play:
+                try:
+                    await last_progress_message.delete()
+                except discord.NotFound:
+                    print("Progress message not found, it might have been deleted already")
             return
         try:
             queue, voice_client = client.queue, client.voice_client

@@ -62,7 +62,8 @@ class LavalinkVoiceClient(discord.VoiceClient):
 
     @lavalink.listener(TrackEndEvent)
     async def on_track_end(self, event):
-        print(f"Track ended: {event.track.title} in guild {self.guild_id}")
+        if event is not None and event.track is not None:
+            print(f"Track ended: {event.track.title} in guild {self.guild_id}")
         if self._after_callback:
             try:
                 self._after_callback(None)  # DO NOT await this
