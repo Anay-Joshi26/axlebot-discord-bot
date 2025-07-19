@@ -832,6 +832,7 @@ class MusicCog(commands.Cog):
         #     current_song.stop()
         # else:
         #     current_song.play()
+        await asyncio.sleep(0.4)
         current_song.seconds_played = mseconds_into_song // 1000
         # #current_song.player = new_player 
         
@@ -887,7 +888,7 @@ class MusicCog(commands.Cog):
         #     await client.voice_client.pause()
         # else:
         #     current_song.play()
-        
+        await asyncio.sleep(0.4)
         current_song.seconds_played = new_position // 1000
         #current_song.player = new_player
         # return True

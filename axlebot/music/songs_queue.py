@@ -144,9 +144,9 @@ class SongQueue:
         if num < 1 or num > 20:
             raise ValueError("Number of repeats must be between 1 and 20")
         async with self.lock:
-            current_song = await self.queue[0].copy()
+            base_song = self.queue[0]
             for _ in range(num):
-                self.queue.insert(1, current_song)
+                self.queue.insert(1, await base_song.copy())  # fresh copy each time
 
         self.update_live_queue_message()
 

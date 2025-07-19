@@ -111,7 +111,7 @@ yt_dl = YoutubeDL(yt_dl_options)
 class Song:
     def __init__(self, duration, artist, yt_url, player, name, thumbnail_url, audio_url, song_type = None, 
                  is_spot=False, is_yt=True, is_playlist = False, belongs_to = None, all_untried_song_streams: List[str] = None,
-                 lavalink_track_id: str = None, auto_play = False, lyrics: str = None):
+                 lavalink_track_id: str = None, auto_play = False, lyrics: str = None, embed_color = None):
         self.yt_url = yt_url # could be soundcloud or youtube url
         self.name = name
         self.artist = artist
@@ -146,7 +146,9 @@ class Song:
         self.auto_play = auto_play  # Indicates if this song was added automatically (e.g., from a recommendation or autoplay feature)
         self.increment_seconds_time_delay = 1 # seconds
         self._embed_color_future = None
-        self._start_color_fetch()
+        self._embed_color = embed_color
+        if self._embed_color is None:
+            self._start_color_fetch()
         #self.track = lavalink_track  # For Lavalink 4.x, this is the track object
 
     @staticmethod
@@ -176,16 +178,23 @@ class Song:
         return hex_color
 
     def _start_color_fetch(self):
-        # Start background color fetch as soon as the song is created
-        if self.thumbnail_url:
+        # Start background fetch only if no cached color and thumbnail URL exists
+        if self.thumbnail_url and self._embed_color is None:
             self._embed_color_future = asyncio.create_task(
                 Song.get_dominant_colour(self.thumbnail_url)
             )
+        else:
+            self._embed_color_future = None
+
 
     async def get_embed_color(self):
+        if self._embed_color is not None:
+            return self._embed_color
         if self._embed_color_future:
-            return await self._embed_color_future
+            self._embed_color = await self._embed_color_future
+            return self._embed_color
         return discord.Color.default()
+
 
     @property
     async def player(self) -> lavalink.AudioTrack | None:
@@ -542,7 +551,21 @@ class Song:
         # return song
     
     async def copy(self):
-        return Song(self.duration, self.artist, self.yt_url, await self.player, self.name, self.thumbnail_url, self._audio_url, song_type=self.type, is_playlist = self.is_playlist)
+        new_song = Song(self.duration, 
+                    self.artist, 
+                    self.yt_url, 
+                    await self.player, 
+                    self.name, 
+                    self.thumbnail_url, 
+                    self._audio_url, 
+                    song_type=self.type, 
+                    is_playlist = self.is_playlist,
+                    lavalink_track_id=self.lavalink_track_id,
+                    auto_play=self.auto_play,
+                    lyrics=self.lyrics,
+                    embed_color=await self.get_embed_color())
+        new_song._lyrics_status = self._lyrics_status
+        return new_song
     
     @classmethod
     async def SongFromYouTubeURL(cls, yt_url):
@@ -884,7 +907,8 @@ class Song:
         if self._play_task is not None:
             return
 
-        asyncio.create_task(self.fetch_lyrics())
+        if self._lyrics_status in [LyricsStatus.NOT_STARTED, LyricsStatus.FETCHING]:
+            asyncio.create_task(self.fetch_lyrics())
         self._play_task = asyncio.create_task(self._increment_seconds())
 
     def stop(self):

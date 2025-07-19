@@ -272,17 +272,18 @@ class PlaylistCog(commands.Cog):
 
             queue = client.queue
 
-            playlist = deepcopy(playlist)
+            #playlist = deepcopy(playlist)
+            songs = [await song.copy() for song in playlist.songs]
 
             if shuffle:
-                random.shuffle(playlist.songs)
+                random.shuffle(songs)
 
-            pl_added = craft_custom_playlist_queued(name, playlist, shuffle=shuffle)
+            pl_added = craft_custom_playlist_queued(name, playlist, shuffle=shuffle, songs = songs)
 
             await ctx.send(embed = pl_added)
             auto_play_updated = False
 
-            for song in playlist.songs:
+            for song in songs:
                 await queue.append(song, update_auto_play = False)
 
                 if len(queue) == 5:

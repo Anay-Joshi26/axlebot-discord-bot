@@ -349,17 +349,19 @@ def craft_songs_added_to_playlist(name: str, songs_added: list) -> discord.Embed
     
     return embed
 
-def craft_custom_playlist_queued(name: str, playlist: Playlist, shuffle = False) -> discord.Embed:
+def craft_custom_playlist_queued(name: str, playlist: Playlist, shuffle = False, songs = None) -> discord.Embed:
     embed = discord.Embed(
         title=f'{name} - Playlist Queued',
         description=f"A custom playlist has been queued{' in a shuffled order' if shuffle else ''}. \n\nEvery song inside the playlist has been added to the queue:\n\n",
         colour=COLOURS["success"]
     )
 
-    for i, song in enumerate(playlist.songs):
+    songs_in_pl = playlist.songs if songs is None else songs
+
+    for i, song in enumerate(songs_in_pl):
         embed.description += f"{i+1}. {song.name}\n"
 
-    embed.add_field(name="Total Songs", value=f"{len(playlist.songs)}", inline=True)
+    embed.add_field(name="Total Songs", value=f"{len(songs_in_pl)}", inline=True)
     embed.add_field(name="Total Duration", value=convert_duration(playlist.total_duration), inline=True)
     embed.add_field(name="Playlist Created At", value=datetime.fromtimestamp(playlist.created_at).strftime('%d/%m/%Y %H:%M'), inline=True)
     
