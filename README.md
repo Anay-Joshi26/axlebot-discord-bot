@@ -29,6 +29,7 @@ Axlebot is a feature-rich Discord music bot that supports YouTube and Spotify pl
 - FFmpeg installed and available in your PATH
 - Dependencies inside the `requirements.txt` file
 - Firestore account + database with `account_key.json` file
+- A `.env` or environment variables set with necessary values (such as keys, paths etc)
 - Lavalink YouTube plugin, follow [this guide](https://github.com/lavalink-devs/youtube-source#plugin) to add that and update the `application.yml` file as needed
 
 ### Installation
@@ -41,7 +42,8 @@ Axlebot is a feature-rich Discord music bot that supports YouTube and Spotify pl
    ```bash
    pip install -r requirements.txt
    ```
-3. Configure your bot:
+   *Note: It is recommended to use a Python virtual environment*
+4. Configure your bot:
    - Copy `account_key.json` and `application.yml` with your credentials and settings.
    - Set your Discord bot token in the config file or as an environment variable.
    - Ensure `Lavalink.jar` is present and configured (see Lavalink docs).
