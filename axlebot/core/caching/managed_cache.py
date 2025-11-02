@@ -12,12 +12,17 @@ class CacheManager:
     The CacheManager is in charge of promoting Client objects to higher priority caches and demoting inactive clients to lower priority caches.
     The priority is a measure of the access speed
     """
-    def __init__(self, caches: List[BaseCache], check_freq_time):
+    def __init__(self, caches: List[BaseCache], check_freq_time: int | timedelta):
         print(caches)
         self.caches = sorted(caches, key=lambda c: c.priority, reverse=True)
         self.cache_to_index = {repr(cache): i for i, cache in enumerate(self.caches)}
         self._eviction_task = None
-        self.check_freq_time = check_freq_time  # Time in seconds to check for expired entries
+        if isinstance(check_freq_time, timedelta):
+            self.check_freq_time = check_freq_time.total_seconds()
+        elif isinstance(check_freq_time, int):
+            self.check_freq_time = check_freq_time
+        else:
+            raise ValueError("check_freq_time must be an int or timedelta")
         self.dbs = [cache for cache in self.caches if cache.is_db]
 
     def start(self):

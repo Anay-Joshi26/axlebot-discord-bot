@@ -9,8 +9,12 @@ class Playlist:
         self.songs : List[Song] = []  
         self.total_duration = 0 
         self.guild_id = guild_id
-        self.created_at : float = discord.utils.utcnow().timestamp()
+        self.created_at_raw : float = discord.utils.utcnow().timestamp()
         self.song_limit = 30
+
+    @property
+    def created_at(self) -> int:
+        return int(self.created_at_raw)
 
     def add_song(self, song : Song):
         
@@ -65,7 +69,7 @@ class Playlist:
             )
             #playlist.songs = [await Song.from_dict(song) for song in data["songs"]]
             playlist.total_duration = data["total_duration"]
-            playlist.created_at = data["created_at"]
+            playlist.created_at_raw = data["created_at"]
             print('pl created, exiting func')
         except Exception as e:
             print(e)

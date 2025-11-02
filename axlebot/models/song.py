@@ -400,7 +400,10 @@ class Song:
         )
         duration = int(info.get('length', 0)/1000)
         yt_url = info.get('uri') or info.get('url')  # For Lavalink 4.x, 'uri' is standard
-        thumbnail_url = info.get('artworkUrl')
+        thumbnail_url = info.get('artworkUrl') or info.get('thumbnail')
+        if not thumbnail_url and track.source_name.lower() == "youtube":
+            thumbnail_url = f"https://img.youtube.com/vi/{track.identifier}/hqdefault.jpg"
+        print(thumbnail_url)
 
         print("SONG CREATED")
 
@@ -991,7 +994,8 @@ class Song:
         except Exception as e:
             print("what the", e)
             return None
-
-
+        
+    def __repr__(self):
+        return f"<Song name={self.name}, artist={self.artist}, duration={self.duration}s, yt_url={self.yt_url}>"
 
 

@@ -255,7 +255,7 @@ class AdminCog(commands.Cog):
             timestamp=ctx.message.created_at
         )
 
-        embed.set_footer(text = 'This information has been sent you you privately')
+        embed.set_footer(text = 'This information has been sent you privately')
 
         await ctx.author.send(embed=embed)
         await ctx.message.add_reaction("✅")

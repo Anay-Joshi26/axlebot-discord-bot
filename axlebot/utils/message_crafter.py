@@ -363,8 +363,8 @@ def craft_custom_playlist_queued(name: str, playlist: Playlist, shuffle = False,
 
     embed.add_field(name="Total Songs", value=f"{len(songs_in_pl)}", inline=True)
     embed.add_field(name="Total Duration", value=convert_duration(playlist.total_duration), inline=True)
-    embed.add_field(name="Playlist Created At", value=datetime.fromtimestamp(playlist.created_at).strftime('%d/%m/%Y %H:%M'), inline=True)
-    
+    embed.add_field(name="Playlist Created On", value=f"<t:{playlist.created_at}>", inline=True)
+
     return embed
 
 def craft_playlist_deleted(name: str) -> discord.Embed:
@@ -471,7 +471,7 @@ def craft_songs_in_playlist(playlist) -> discord.Embed:
 
     embed.add_field(name="Total Songs", value=f"{len(songs)}", inline=True)
     embed.add_field(name="Total Duration", value=convert_duration(playlist.total_duration), inline=True)
-    embed.add_field(name="Playlist Created At", value=datetime.fromtimestamp(playlist.created_at).strftime('%d/%m/%Y %H:%M'), inline=True)
+    embed.add_field(name="Playlist Created On", value=f"<t:{playlist.created_at}>", inline=True)
 
     return embed
 
