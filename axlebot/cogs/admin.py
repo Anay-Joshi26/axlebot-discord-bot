@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from core.commands_handler import audio_command_check, in_voice_channel, cooldown_time, has_manage_guild
+from core.commands_handler import audio_command_check, in_voice_channel, cooldown_time, has_manage_guild, has_manage_guild_raise_error
 from music.song_request_handler import determine_query_type
 from models.song import Song, LyricsStatus
 import asyncio
@@ -53,6 +53,12 @@ class AdminCog(commands.Cog):
                 except ValueError as e:
                     failed.append(entity.name)
                     error = str(e)
+            else:
+                # No change needed
+                if entity_type == "role":
+                    await ctx.send(f"Role `{entity.name}` is already {'added' if action == 'add' else 'removed'}.", delete_after=10)
+                elif entity_type == "channel":
+                    await ctx.send(f"Channel `{entity.name}` is already {'added' if action == 'add' else 'removed'}.", delete_after=10)
 
         if successful:
             embed = craft_update_access_embed(entity_type, successful, action)
@@ -67,7 +73,7 @@ class AdminCog(commands.Cog):
 
     @commands.command()
     @commands.dynamic_cooldown(cooldown_time, type=BucketType.guild)
-    @commands.check(has_manage_guild)
+    @commands.check(has_manage_guild_raise_error)
     async def add_use_role(self, ctx: commands.Context, *args):
         client = await self.server_manager.get_client(ctx.guild.id)
         await self._process_entities(
@@ -80,7 +86,7 @@ class AdminCog(commands.Cog):
 
     @commands.command()
     @commands.dynamic_cooldown(cooldown_time, type=BucketType.guild)
-    @commands.check(has_manage_guild)
+    @commands.check(has_manage_guild_raise_error)
     async def remove_use_role(self, ctx: commands.Context, *args):
         client = await self.server_manager.get_client(ctx.guild.id)
         await self._process_entities(
@@ -93,7 +99,7 @@ class AdminCog(commands.Cog):
 
     @commands.command()
     @commands.dynamic_cooldown(cooldown_time, type=BucketType.guild)
-    @commands.check(has_manage_guild)
+    @commands.check(has_manage_guild_raise_error)
     async def add_use_channel(self, ctx: commands.Context, *args):
         client = await self.server_manager.get_client(ctx.guild.id)
         await self._process_entities(
@@ -106,7 +112,7 @@ class AdminCog(commands.Cog):
 
     @commands.command()
     @commands.dynamic_cooldown(cooldown_time, type=BucketType.guild)
-    @commands.check(has_manage_guild)
+    @commands.check(has_manage_guild_raise_error)
     async def remove_use_channel(self, ctx: commands.Context, *args):
         client = await self.server_manager.get_client(ctx.guild.id)
         await self._process_entities(
@@ -126,7 +132,7 @@ class AdminCog(commands.Cog):
 
     @commands.command()
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
-    @commands.check(has_manage_guild)
+    @commands.check(has_manage_guild_raise_error)
     async def see_access_channels(self, ctx: commands.Context):
         client: Client = await self.server_manager.get_client(ctx.guild.id)
         channels = client.server_config.permitted_channels_of_use
@@ -138,7 +144,7 @@ class AdminCog(commands.Cog):
         
     @commands.command()
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
-    @commands.check(has_manage_guild)
+    @commands.check(has_manage_guild_raise_error)
     async def see_access_roles(self, ctx: commands.Context):
         client: Client = await self.server_manager.get_client(ctx.guild.id)
         roles = client.server_config.permitted_roles_of_use
@@ -151,7 +157,7 @@ class AdminCog(commands.Cog):
 
     @commands.command(aliases = ['del_message_after_play', 'del_msg_after_play', 'dmap'])
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
-    @commands.check(has_manage_guild)
+    @commands.check(has_manage_guild_raise_error)
     async def delete_message_after_play(self, ctx: commands.Context, *args):
         """
         Deletes the message after playing if the setting is enabled.
@@ -174,7 +180,7 @@ class AdminCog(commands.Cog):
 
     @commands.command(aliases = ['ap', 'autoplay'])
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
-    @commands.check(has_manage_guild)
+    @commands.check(has_manage_guild_raise_error)
     async def auto_play(self, ctx: commands.Context, *args):
         """
         Toggles the auto play setting for the server.
@@ -206,7 +212,7 @@ class AdminCog(commands.Cog):
 
     @commands.command(aliases = ['sac'])
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
-    @commands.check(has_manage_guild)
+    @commands.check(has_manage_guild_raise_error)
     async def see_all_config(self, ctx: commands.Context, *args):
         client: Client = await self.server_manager.get_client(ctx.guild.id)
         config = client.server_config.to_dict()

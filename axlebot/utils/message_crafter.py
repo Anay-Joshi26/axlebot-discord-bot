@@ -760,7 +760,7 @@ def craft_admin_help_command():
                     value="To delete song message after \nplaying run:\n`-delete_message_after_play \n<true or false>`\n*This can help to de-clutter song\nmessages*\n\nAliases: `del_message_after_play`, `del_msg_after_play`, `dmap`",
                     inline=True)
     embed.add_field(name="Auto play songs",
-                    value="To enable or disable auto play run:\n`-autoplay <true or false>`\n*Auto play will automatically queue songs based on the current queue using Spotify's recommendation algorithm*\n\nAliases: `autoplay`, `ap`",
+                    value="To enable or disable auto play run:\n`-autoplay <true or false>`\n*Auto play will automatically queue songs based on the current queue using Spotify's recommendation algorithm*\n\nAliases: `auto_play`, `ap`",
                     inline=True)
     embed.add_field(name="See all config",
                     value="To see the bots entire configuration run:\n`-see_all_config` or `-sac`",
@@ -809,7 +809,10 @@ def craft_update_access_embed(access_type: str, entities: list[str], action: str
     action_title = "Add" if action == "add" else "Remove"
 
     if added:
-        title = f"{action_title}ed {access_type_title} Access"
+        if action == "add":
+            title = f"{action_title}ed {access_type_title} Access"
+        else:
+            title = f"{action_title}d {access_type_title} Access"
         if not entities:
             description = f"No {access_type}s were {action}ed."
         else:

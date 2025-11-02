@@ -23,6 +23,11 @@ def has_manage_guild(ctx: commands.Context):
         return False
     return True
 
+def has_manage_guild_raise_error(ctx: commands.Context):
+    if not ctx.author.guild_permissions.manage_guild:
+        raise NoPermissionsCheckFailure("You do not have the required permissions to use this command.")
+    return True
+
     
 async def in_voice_channel(ctx):
     user_vc = ctx.author.voice
