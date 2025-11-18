@@ -62,6 +62,7 @@ class LavalinkVoiceClient(discord.VoiceClient):
 
     @lavalink.listener(TrackEndEvent)
     async def on_track_end(self, event):
+        await asyncio.sleep(0.5)
         if event is not None and event.track is not None:
             print(f"Track ended: {event.track.title} in guild {self.guild_id}")
         if self._after_callback:
@@ -125,10 +126,12 @@ class LavalinkVoiceClient(discord.VoiceClient):
         await self.channel.guild.change_voice_state(channel=self.channel, self_mute=self_mute, self_deaf=self_deaf)
         print(f"Connected to voice channel {self.channel.name} in guild {self.channel.guild.name}")
 
-    async def disconnect(self, *, force: bool = False) -> None:
+    async def disconnect(self, *, force: bool = False, client_already_stopped: bool = False) -> None:
         """
         Handles the disconnect.
         Cleans up running player and leaves the voice client.
+        :param force: Whether to force the disconnect even if not connected.
+        :param client_already_stopped: Whether the client has already been stopped.
         """
         player = self._lavalink.player_manager.get(self.channel.guild.id)
 
@@ -143,9 +146,18 @@ class LavalinkVoiceClient(discord.VoiceClient):
         # this must be done because the on_voice_state_update that would set channel_id
         # to None doesn't get dispatched after the disconnect
         player.channel_id = None
-        await self._destroy()
+        await self._destroy(client_already_stopped=client_already_stopped)
 
-    async def _destroy(self):
+    async def _destroy(self, client_already_stopped: bool = False):
+        if not client_already_stopped:
+            client = await core.extensions.server_manager.server_manager.get_client(self.guild_id)
+            player = self._lavalink.player_manager.get(self.channel.guild.id)
+            player.channel_id = None
+            if client:
+                if hasattr(client, 'primary_ctx'):
+                    await client.stop(client.primary_ctx, disconnect = False) # we have already disconnected
+                else:
+                    await client.stop(None, send_embed=False, disconnect = False) # we have already disconnected
         self.cleanup()
 
         if self._destroyed:

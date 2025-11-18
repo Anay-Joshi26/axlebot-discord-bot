@@ -15,9 +15,20 @@ class ServerConfig:
         self.MAX_PERMITTED_ROLES = 10
         self.MAX_PERMITTED_CHANNELS = 10
         self.auto_play = False # Never keeps the queue empty, always recommends a song to play next
+        self.voteskip = False  # Whether voteskipping is enabled
 
     async def _trigger_update(self):
         await self.client.update_changes_by_attribute("server_config", self.to_dict())
+
+    async def update_voteskip(self, value: bool, update_db: bool = True):
+        """
+        Sets whether voteskipping is enabled.
+
+        :param value: True to enable voteskipping, False to disable.
+        """
+        self.voteskip = value
+        if update_db:
+            await self._trigger_update()
 
     async def update_auto_play(self, value: bool, update_db: bool = True):
         """

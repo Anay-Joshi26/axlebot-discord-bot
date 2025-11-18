@@ -18,7 +18,7 @@ async def fetch_data(url: str, params: dict | None = None, timeout: int = 30):
     :return: A tuple of (status_code, json_data) if successful, or (None, None) on errors.
     """
     timeout = aiohttp.ClientTimeout(total=timeout) # total time budget
-
+    print(f"Fetching data from URL: {url} with params: {params}")
     async with aiohttp.ClientSession(timeout=timeout) as session:  
         try:
             async with session.get(url, params=params, headers = {"Accept": "application/json"}) as response:
@@ -37,9 +37,9 @@ async def fetch_data(url: str, params: dict | None = None, timeout: int = 30):
 
 https = True if os.getenv('FASTAPI_HTTPS') == 'true' else False
 if https:
-    BASE_URL = f"{os.getenv('FASTAPI_HOST')}/api"
+    BASE_URL = f"https://{os.getenv('FASTAPI_HOST')}/api"
 else:
-    BASE_URL = f"{os.getenv('FASTAPI_HOST')}:{os.getenv('FASTAPI_PORT')}/api"
+    BASE_URL = f"http://{os.getenv('FASTAPI_HOST')}:{os.getenv('FASTAPI_PORT')}/api"
 
 print(f"Using API base URL: {BASE_URL}")
 
@@ -61,9 +61,10 @@ async def get_youtube_audio_url(video_url: str) -> List[str]:
         return None
     return data["audio_urls"]
 
-async def get_lyrics(name: str, artist: str) -> dict | None:
+async def get_lyrics(name: str, artist: str, duration: int) -> dict | None:
     url = f"{BASE_URL}/lyrics"
-    params = {"name": name, "artist": artist}
+    params = {"name": name, "artist": artist, "duration": duration}
+    print(f"Fetching lyrics for {name} by {artist}")
     status, data = await fetch_data(url, params=params)
     if status != 200 or data is None:
         print(f"Failed to get lyrics for {name} by {artist}")

@@ -16,14 +16,14 @@ cleanup() {
 trap cleanup SIGINT
 
 # Start Lavalink silently
-cd axlebot || exit 1
-echo "Starting Lavalink silently..."
-java -jar Lavalink.jar > /dev/null 2>&1 &
-LAVALINK_PID=$!
+# cd axlebot || exit 1
+# echo "Starting Lavalink silently..."
+# java -jar Lavalink.jar > /dev/null 2>&1 &
+# LAVALINK_PID=$!
 
-sleep 2  # wait for Lavalink to start
+# sleep 2  # wait for Lavalink to start
 
-cd .. || exit 1
+# cd .. || exit 1
 
 # Start Uvicorn with logs
 echo "Starting Uvicorn API (logging to axlebot/logs/uvicorn.log)..."

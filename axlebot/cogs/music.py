@@ -1,3 +1,4 @@
+from enum import member
 import discord
 from discord.ext import commands
 from core.commands_handler import *
@@ -9,9 +10,11 @@ from core.server_manager import ServerManager
 from core.lavalink import LavalinkVoiceClient
 from models.client import Client
 from music.songs_queue import SongQueue
+from music.lyrics import LyricSession
 from discord.ext.commands import BucketType, CommandOnCooldown
 from utils import parse_seek_time
 from copy import deepcopy
+import math
 #import lavalink
 import core.extensions
 import traceback
@@ -27,37 +30,8 @@ class MusicPlaybackButtons(discord.ui.View):
         self.ctx = ctx
         self.client = client
 
-    # @discord.ui.button(style=discord.ButtonStyle.gray, label='⏯ Pause/Resume')
-    # @commands.check(in_voice_channel)
-    # async def pause_resume_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-    #     try:
-    #         await in_voice_channel_interaction(interaction)
-    #     except NotInVoiceChannelCheckFailure as e:
-    #         await interaction.response.send_message(str(e), ephemeral=True)
-    #         return
-
-    #     voice_client = self.client.voice_client
-
-    #     if voice_client is None:
-    #         await interaction.response.send_message("The bot is not connected to a voice channel", ephemeral = True)
-
-    #     if voice_client.is_playing():
-    #         await voice_client.pause()
-    #         self.client.queue.current_song.stop()
-    #         await interaction.message.add_reaction('⏸️')
-    #         # await interaction.message.clear_reaction('▶️')
-    #         await interaction.response.defer()
-
-    #     elif voice_client.is_paused():
-    #         voice_client.resume()
-    #         self.client.queue.current_song.play()
-    #         #await interaction.message.add_reaction('▶️')
-    #         await interaction.message.remove_reaction('⏸️', interaction.guild.me)
-    #         await interaction.response.defer()
-    #     else:
-    #         await self.ctx.send("Cannot pause/resume song, due to some complications", ephemeral = True)
-
     @discord.ui.button(style=discord.ButtonStyle.gray, label='⏭️ Skip', row = 1)
+    @commands.check(bot_use_permissions)
     @commands.check(in_voice_channel)
     async def skip_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
@@ -75,12 +49,13 @@ class MusicPlaybackButtons(discord.ui.View):
             await self.client.voice_client.stop()
             self.client.queue.current_song.stop()
 
-            await interaction.message.remove_reaction('⏭️', interaction.guild.me)
+            #await interaction.message.remove_reaction('⏭️', interaction.guild.me)
             # await ctx.send("Skipped the song...")
         else:
             await self.ctx.send("No song is currently playing", ephemeral = True)
 
     @discord.ui.button(style=discord.ButtonStyle.gray, label='🔂 Repeat', row = 1)
+    @commands.check(bot_use_permissions)
     @commands.check(in_voice_channel)
     async def repeat_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
@@ -104,6 +79,7 @@ class MusicPlaybackButtons(discord.ui.View):
         
 
     @discord.ui.button(style=discord.ButtonStyle.gray, label='🔁 Loop', row = 1)
+    @commands.check(bot_use_permissions)
     @commands.check(in_voice_channel)
     async def loop_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
@@ -128,6 +104,7 @@ class MusicPlaybackButtons(discord.ui.View):
             await interaction.response.send_message(e, ephemeral = True)
 
     @discord.ui.button(style=discord.ButtonStyle.gray, label='⏪ 10s', row = 0)
+    @commands.check(bot_use_permissions)
     @commands.check(in_voice_channel)
     async def seek_backwards_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
@@ -143,6 +120,7 @@ class MusicPlaybackButtons(discord.ui.View):
             await interaction.followup.send(f"Failed to seek: {e}", ephemeral=True)
 
     @discord.ui.button(style=discord.ButtonStyle.gray, label='⏯ Pause/Resume', row = 0)
+    @commands.check(bot_use_permissions)
     @commands.check(in_voice_channel)
     async def pause_resume_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
@@ -175,6 +153,7 @@ class MusicPlaybackButtons(discord.ui.View):
             await self.ctx.send("Cannot pause/resume song, due to some complications", ephemeral = True)
 
     @discord.ui.button(style=discord.ButtonStyle.gray, label='10s ⏩', row = 0)
+    @commands.check(bot_use_permissions)
     @commands.check(in_voice_channel)
     async def seek_forward_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
@@ -190,6 +169,42 @@ class MusicPlaybackButtons(discord.ui.View):
             await interaction.followup.send(f"Failed to seek: {e}", ephemeral=True)
 
 
+class VoteSkipView(discord.ui.View):
+    def __init__(self, client, ctx: commands.Context):
+        super().__init__(timeout=client.queue.current_song.duration+43200)
+        self.client = client
+        self.ctx = ctx
+
+    @discord.ui.button(style=discord.ButtonStyle.green, label="Vote to Skip", row=0)
+    @commands.check(bot_use_permissions)
+    @commands.check(in_voice_channel)
+    async def vote_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+        member = interaction.user
+        voice_client = self.client.voice_client
+
+        if not voice_client or member not in voice_client.channel.members:
+            return await interaction.response.send_message(
+                "You must be in the voice channel to vote.", ephemeral=True
+            )
+
+        vote_passed, votes, required, status = self.client.place_vote(member.id)
+        if status == 'REPEAT':
+            return await interaction.response.send_message(
+                "You have already voted to skip this song.", ephemeral=True
+            )
+        elif status == 'FAILED':
+            return await interaction.response.send_message(
+                "There is no active voteskip session.", ephemeral=True
+            )
+        new_embed = craft_voteskip_embed(self.client.queue.current_song, votes, required, voice_client.channel.name)
+        await interaction.message.edit(embed=new_embed, view=self)
+
+        if vote_passed:
+            # skip the song
+            await self.client.voice_client.stop()
+            self.client.queue.current_song.stop()
+        
 
 class MusicCog(commands.Cog):
 
@@ -325,6 +340,7 @@ class MusicCog(commands.Cog):
 
                     # Start playing the first song if it's not already playing
                     if len(queue) == 1:
+                        client.primary_ctx = ctx
                         await fetching_song_message.delete()
                         song.is_first_in_queue = True
                         await self.send_play_song_embed(ctx, song, client)
@@ -368,6 +384,7 @@ class MusicCog(commands.Cog):
             await queue.append(song, position)
 
             if len(queue) == 1:
+                client.primary_ctx = ctx
                 await fetching_song_message.delete()
                 song.is_first_in_queue = True
                 await self.send_play_song_embed(ctx, song, client)
@@ -402,6 +419,8 @@ class MusicCog(commands.Cog):
         """
         Plays the next song in the queue, or informs the user that the queue is empty
         """
+        if client.is_active_voting_session:
+            await client.end_voteskip_session()
         if hasattr(client, "stop_command_called") and client.stop_command_called:
             # If the stop_command was called, we do not play the next song
             client.stop_command_called = False
@@ -431,8 +450,8 @@ class MusicCog(commands.Cog):
             if next_song is None and not client.server_config.auto_play:
                 # queue is empty, let them know
 
-                embed = craft_queue_empty()
-                await ctx.send(embed = embed)
+                embed = craft_queue_empty(inactivity_timeout=client.exit_after_inactivity)
+                await ctx.send(embed = embed, delete_after = 120)
                 if client.voice_client is not None:
                     await client.start_inactivity_timer(ctx) 
                 return
@@ -444,8 +463,8 @@ class MusicCog(commands.Cog):
                 recommendations = await Song.get_song_recommendations([last_song], limit = 5)
                 if not recommendations:
                     await ctx.send(embed=craft_general_error("No recommendations found :("), delete_after = 20)
-                    embed = craft_queue_empty()
-                    await ctx.send(embed = embed)
+                    embed = craft_queue_empty(inactivity_timeout=client.exit_after_inactivity)
+                    await ctx.send(embed = embed, delete_after = 120)
                     if client.voice_client is not None:
                         await client.start_inactivity_timer(ctx) 
                     return
@@ -569,10 +588,17 @@ class MusicCog(commands.Cog):
             await ctx.send("No song is currently playing")
             return
         
-        lyrics, status = current_song.get_lyrics()
+        lyrics, status, synced = current_song.get_lyrics()
 
-        embed = craft_lyrics_embed(lyrics, current_song.name, current_song.artist, status)
-        await ctx.send(embed = embed)
+        if not synced:
+            embed = craft_lyrics_embed(lyrics, current_song.name, current_song.artist, status)
+            return await ctx.send(embed=embed, delete_after=10 if status != LyricsStatus.FETCHED else None)
+
+        # synced lyrics mode:
+        if client.current_lyrics_session is not None:
+            await client.current_lyrics_session.stop()
+        session = LyricSession(client, ctx, lyrics, current_song)
+        await session.start()
 
     @commands.command(aliases = ['pn', 'qn'])
     @commands.check(in_voice_channel)
@@ -635,27 +661,6 @@ class MusicCog(commands.Cog):
             return
         
         await client.stop(ctx)
-        # delete_after = 10
-
-        # embed = craft_bot_music_stopped(delete_after=delete_after)
-        # await ctx.send(embed=embed, delete_after=delete_after)
-
-        # client.queue.current_song.stop()
-        # await voice_client.stop()
-        # await voice_client.disconnect(); client.voice_client = None
-        # client.queue.clear()
-
-    # async def stop(self, ctx: commands.Context, client: Client, delete_after: int = 10):
-    #     """
-    #     Stops the music playback and clears the queue.
-    #     """
-    #     embed = craft_bot_music_stopped(delete_after=delete_after)
-    #     await ctx.send(embed=embed, delete_after=delete_after)
-
-    #     client.queue.current_song.stop()
-    #     client.await voice_client.stop()
-    #     await client.voice_client.disconnect(); client.voice_client = None
-    #     client.queue.clear()
 
     @commands.command(aliases = ['lp'])
     @commands.check(in_voice_channel)
@@ -728,13 +733,7 @@ class MusicCog(commands.Cog):
         if client.voice_client is None:
             await ctx.send("The bot is not connected to a voice channel")
             return
-        
-        # try:
-        #     num = int(num)
-        #     print(f"Repeating the current song {num} times")
-        # except ValueError as e:
-        #     await ctx.send("Please provide a valid number (between 1 and 20)")
-        #     return
+
         rep_queue = args and (args[-1] in ['-q', '-queue', 'q', 'queue'])
         print(f"rep_queue: {rep_queue}")
         
@@ -780,6 +779,7 @@ class MusicCog(commands.Cog):
 
     @commands.command()
     @commands.check(bot_use_permissions)
+    @commands.check(in_voice_channel)
     @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
     async def seek(self, ctx, new_time: str):
         client = await self.server_manager.get_client(ctx.guild.id)
@@ -807,37 +807,13 @@ class MusicCog(commands.Cog):
         
         try:
             await client.voice_client.player.seek(mseconds_into_song)
+            #await asyncio.sleep(0)
             await ctx.message.add_reaction('✅') 
         except Exception as e:
             await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_time}`. Please ensure the format is correct.\n{info_msg}"), delete_after = 90)
             return
-
-        # new_player = await current_song.get_fresh_player(additional_before_options= f"-ss {new_time}")
-        # if new_player is None:
-        #     await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_time}`. Please ensure the format is correct.\n{info_msg}"))
-        #     return
-        
-        # was_paused = client.voice_client.is_paused()
-        # client.vc_stopped_due_to_seek = True  # Set this flag to indicate that the voice client was stopped due to seeking
-        # await client.voice_client.stop()
-        # current_song.stop()
-        # await client.voice_client.play(
-        #     new_player,
-        #     after=lambda e: self.bot.loop.call_soon_threadsafe(
-        #         lambda: asyncio.ensure_future(self._after_playback(e, ctx, client))
-        #     )
-        # )
-        # if was_paused:
-        #     await client.voice_client.pause()
-        #     current_song.stop()
-        # else:
-        #     current_song.play()
-        await asyncio.sleep(0.4)
-        current_song.seconds_played = mseconds_into_song // 1000
-        # #current_song.player = new_player 
-        
-
-
+ 
+        current_song.seconds_played = (mseconds_into_song + 1000) // 1000
 
     async def seek_by(self, ctx, seconds: int):
         client = await self.server_manager.get_client(ctx.guild.id)
@@ -865,37 +841,18 @@ class MusicCog(commands.Cog):
         current_song: Song = client.queue.current_song
         try:
             await client.voice_client.player.seek(new_position)
+            #await asyncio.sleep(1)
         except Exception as e:
             await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_position}`. Please ensure the format is correct.\n{info_msg}"), delete_after = 90)
             return
-        # new_player = await current_song.get_fresh_player(additional_before_options=f"-ss {new_position}")
 
-        # if new_player is None:
-        #     await ctx.send(embed=craft_general_error(f"Failed to seek to `{new_position}` seconds. Please ensure the format is correct.\n{info_msg}"))
-        #     return False
+        current_song.seconds_played = (new_position + 1000) // 1000
 
-        # was_paused = client.voice_client.is_paused()
-        # client.vc_stopped_due_to_seek = True
-        # await client.voice_client.stop()
-        # current_song.stop()
-        # await client.voice_client.play(
-        #     new_player,
-        #     after=lambda e: self.bot.loop.call_soon_threadsafe(
-        #         lambda: asyncio.ensure_future(self._after_playback(e, ctx, client))
-        #     )
-        # )
-        # if was_paused:
-        #     await client.voice_client.pause()
-        # else:
-        #     current_song.play()
-        await asyncio.sleep(0.4)
-        current_song.seconds_played = new_position // 1000
-        #current_song.player = new_player
-        # return True
 
 
     @commands.command(aliases=['fwd', 'fw'])
     @commands.check(bot_use_permissions)
+    @commands.check(in_voice_channel)
     @commands.dynamic_cooldown(cooldown_time, type=BucketType.guild)
     async def forward(self, ctx, seconds: int):
         if seconds < 0:
@@ -907,6 +864,7 @@ class MusicCog(commands.Cog):
 
     @commands.command(aliases=['rw', 'rew'])
     @commands.check(bot_use_permissions)
+    @commands.check(in_voice_channel)
     @commands.dynamic_cooldown(cooldown_time, type=BucketType.guild)
     async def rewind(self, ctx, seconds: int):
         if seconds < 0:
@@ -919,6 +877,7 @@ class MusicCog(commands.Cog):
         aliases=['sf', 'apply_filters', 'applyfilters', 'set_filter', 'setfilter', 'apply_filter']
     )
     @commands.check(bot_use_permissions)
+    @commands.check(in_voice_channel)
     @commands.dynamic_cooldown(cooldown_time, type=BucketType.guild)
     async def set_filters(self, ctx, *filters):
         client = await self.server_manager.get_client(ctx.guild.id)
@@ -1012,7 +971,7 @@ class MusicCog(commands.Cog):
         try:
             await player.clear_filters() 
             await player.set_filters(*filters_to_apply)
-            await asyncio.sleep(5.5)
+            await asyncio.sleep(0.05)
             await adding.delete()
             if "timescale_speed" in parsed or "timescale_rate" in parsed:
                 client.queue.current_song.increment_seconds_time_delay /= parsed.get('timescale_speed', 1.0) * parsed.get('timescale_rate', 1.0)
@@ -1027,6 +986,7 @@ class MusicCog(commands.Cog):
         aliases=['remove_filters', 'reset_filters', 'resetfilters', 'removefilter', 'clearfilter', 'rmf', 'cf', 'rf'] 
     )
     @commands.check(bot_use_permissions)
+    @commands.check(in_voice_channel)
     @commands.dynamic_cooldown(cooldown_time, type=BucketType.guild)
     async def clear_filters(self, ctx):
         """
@@ -1041,39 +1001,77 @@ class MusicCog(commands.Cog):
         clearing = await ctx.send("Clearing filters, please wait...")
 
         await player.clear_filters()
-        await asyncio.sleep(5.5)
+        await asyncio.sleep(0.05)
         await clearing.delete()
         client.queue.current_song.increment_seconds_time_delay = 1
         #await ctx.send("✅ All filters have been cleared.")
         await ctx.message.add_reaction('✅') 
         #player.set_equalizer()
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member, before, after):
+        # only care if this is a guild with an active music session
+        if member.id == self.bot.user.id:
+            return
+
+        guild_id = member.guild.id
+        client = await self.server_manager.get_client(guild_id)
+        bot_vc = client.voice_client
+        if not bot_vc or not bot_vc.channel:
+            return  # bot is not in a VC, ignore the event entirely
+
+        bot_channel = bot_vc.channel
+
+        # 3. Detect if user *left* the bot’s VC
+        left_bot_vc = before.channel == bot_channel and after.channel != bot_channel
+
+        # 4. Detect if user *joined* the bot’s VC
+        joined_bot_vc = after.channel == bot_channel and before.channel != bot_channel
+
+        # If neither, ignore event (muting/deafening triggers this event — skip those)
+        if not left_bot_vc and not joined_bot_vc:
+            return
+        # 5. If no queue or nothing playing, no need to process
+        if len(client.queue) == 0:
+            return
         
+        non_bot_members_in_vc = len([m for m in bot_channel.members if not m.bot])
+
+        if not client.server_config.voteskip:
+            return
         
+        if non_bot_members_in_vc == 0:
+            await client.end_voteskip_session()
+
+        client.update_required_votes()
+
+
+    @commands.command(aliases=['vote_skip', 'vs', 'skipvote', 'skip_vote'] )
+    @commands.check(bot_use_permissions)
+    @commands.check(in_voice_channel)
+    @commands.dynamic_cooldown(cooldown_time, type=BucketType.guild)
+    async def voteskip(self, ctx):
+        client = await self.server_manager.get_client(ctx.guild.id)
+        queue, voice_client = client.queue, client.voice_client
+
+        if voice_client is None:
+            await ctx.send("The bot is not connected to a voice channel")
+
+        if len(queue) <= 0:
+            await ctx.send("No song is currently playing")
+
+        if not client.server_config.voteskip:
+            await ctx.send("Vote skipping is currently disabled on this server. You can simply use `-skip` to skip the current song.")
+            return
         
+        if client.is_active_voting_session:
+            await ctx.send("A voteskip session is already active. Please wait for it to conclude before starting a new one.")
+            return
 
-
-
-
-
-    
+        # from here, implement voteskip logic
         
-
-            
-
-
-        
-
-    
-
-
-
-
-
-        
-
-# def setup(bot):
-#     bot.add_cog(MusicCog(bot, server_manager))
-
-
-
-    
+        client.start_voteskip_session()
+        vc_members = [m for m in client.voice_client.channel.members if not m.bot]
+        required_votes = max(1, math.ceil(len(vc_members) / 2))
+        embed = craft_voteskip_embed(client.queue.current_song, 0, required_votes, voice_client.channel.name)
+        client._voteskip_dict['message'] = await ctx.send(embed=embed, view=VoteSkipView(client, ctx))

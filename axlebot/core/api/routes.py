@@ -13,5 +13,6 @@ async def youtube_audio_url(video_url: str = Query(...)):
     return await get_audio_url(video_url)
 
 @router.get("/lyrics")
-async def lyrics(name: str = Query(...), artist: str = Query(...)):
-    return await fetch_lyrics(name, artist)
+async def lyrics(name: str = Query(...), artist: str = Query(...), duration: int = Query(...)):
+    print("REQUEST RECEIVED FOR LYRICS")
+    return await fetch_lyrics(name, artist, duration)

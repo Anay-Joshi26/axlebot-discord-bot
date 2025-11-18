@@ -197,6 +197,8 @@ class SongQueue:
         
         self.current_song.stop()
         self.current_song.is_first_in_queue = False
+        if self.client.current_lyrics_session is not None:
+            await self.client.current_lyrics_session.stop()
         
         if self.loop_current:
             await self.repeat()

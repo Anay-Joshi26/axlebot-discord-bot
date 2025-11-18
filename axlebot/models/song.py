@@ -149,6 +149,7 @@ class Song:
         self._embed_color = embed_color
         if self._embed_color is None:
             self._start_color_fetch()
+        self.synced_lyrics = None
         #self.track = lavalink_track  # For Lavalink 4.x, this is the track object
 
     @staticmethod
@@ -367,25 +368,27 @@ class Song:
         return song
     
     @classmethod
-    async def CreateSong(cls, query: str):
+    async def CreateSong(cls, query: str, lavalink_track: lavalink.AudioTrack = None):
         print(f"Searching song... query = {query}")
 
         # Search via Lavalink node
         #search_result = await player.node.get_tracks(f"scsearch:{query}")
-        search_result = await core.extensions.lavalink_client.get_tracks(f"ytsearch:{query}")
-
-        if not search_result or not search_result['tracks']:
-            print(f"Failed to fetch song info for query: {query}, trying SoundCloud search")
-
-            search_result = await core.extensions.lavalink_client.get_tracks(f"scsearch:{query}")
+        if lavalink_track is None:
+            search_result = await core.extensions.lavalink_client.get_tracks(f"ytsearch:{query}")
 
             if not search_result or not search_result['tracks']:
-                print(f"Failed to fetch song info for query: {query} from SoundCloud as well")
-                return None
+                print(f"Failed to fetch song info for query: {query}, trying SoundCloud search")
 
+                search_result = await core.extensions.lavalink_client.get_tracks(f"scsearch:{query}")
 
-        # Use the first track
-        track = search_result['tracks'][0]
+                if not search_result or not search_result['tracks']:
+                    print(f"Failed to fetch song info for query: {query} from SoundCloud as well")
+                    return None
+            # Use the first track
+            track = search_result['tracks'][0]
+        else:
+            track = lavalink_track
+
         info = track['info'].raw.get('info', {})
 
         name = info.get('title', 'Unknown Title')
@@ -588,24 +591,91 @@ class Song:
     
     def get_lyrics(self):
         if self._lyrics_status == LyricsStatus.FETCHED:
-            return self.lyrics, LyricsStatus.FETCHED
+            return self.lyrics, LyricsStatus.FETCHED, self.synced_lyrics
         
-        return None, self._lyrics_status
+        return None, self._lyrics_status, self.synced_lyrics
     
     async def fetch_lyrics(self, URL = None, tries = 1):
-
+        print(f"Fetching lyrics for {self.name} by {self.artist} (try {tries})")
         self._lyrics_status = LyricsStatus.FETCHING
-        data = await get_lyrics(self.name, self.artist)
+        data = await get_lyrics(self.name, self.artist, self.duration)
         if data is None:
             self._lyrics_status = LyricsStatus.NO_LYRICS_FOUND
             return None
         self._lyrics_status = LyricsStatus[data['status']]
         self.lyrics = data.get('lyrics', None)
+        self.synced_lyrics = data.get('synced', None)
         return data['lyrics']
 
     @staticmethod
     def _self_weighted_mean(values):
         return sum(x**2 for x in values) / sum(values)
+    
+    # @staticmethod
+    # async def get_song_recommendations(seed_songs: list, limit=3, set_auto_play=True, sort_by_popularity=True) -> List["Song"]:
+    #     """
+    #     Fetches song recommendations based on current songs (YouTube autoplay style).
+    #     Uses 'ytsearch:<query> mix' to get algorithmic related tracks.
+
+    #     Args:
+    #         seed_songs (list): A list of Song objects to use as seeds for recommendations.
+    #         limit (int): The maximum number of recommendations to return.
+    #         set_auto_play (bool): Whether to set auto_play attribute for returned songs.
+    #         sort_by_popularity (bool): Ignored in the YouTube autoplay version.
+
+    #     Returns:
+    #         List[Song]: Recommended Song objects.
+    #     """
+        
+    #     if not seed_songs:
+    #         return []
+
+    #     # Use only the first seed for YouTube autoplay (mix playlists are single-seed anyway)
+    #     seed = seed_songs[0]
+
+    #     # Clean up the name for better search
+    #     search_term = clean_song_name(seed.name, seed.artist)
+    #     base_query = f"{search_term}".strip()
+
+    #     # # If we know the artist and it's meaningful, append it.
+    #     # # (Prevents generic matches like "Stay" → random artist covers)
+    #     # if seed.artist and seed.artist.lower() not in base_query.lower():
+    #     #     base_query += f" {seed.artist}"
+
+    #     print(f"[Autoplay] Using YouTube Mix seed: {base_query}")
+
+    #     # The magic autoplay mix query 🎶
+    #     query = f"ytsearch:{base_query} mix"
+
+    #     try:
+    #         search_result = await core.extensions.lavalink_client.get_tracks(query)
+
+    #         if not search_result or not search_result["tracks"]:
+    #             print(f"[Autoplay] No tracks found for mix: {base_query}")
+    #             return []
+
+    #         recommendations = []
+    #         tracks = search_result["tracks"][:limit]
+
+    #         for t in tracks:
+
+    #             print("heheheheh")
+
+    #             song = await Song.CreateSong(None, lavalink_track=t)
+
+    #             if set_auto_play:
+    #                 song.auto_play = True
+
+    #             recommendations.append(song)
+
+    #             print(f"[Autoplay] Recommended: {song.name} by {song.artist}")
+
+    #         return recommendations
+
+    #     except Exception as e:
+    #         print(f"[Autoplay] Error while fetching autoplay recommendations: {e}")
+    #         return []
+
     
     @staticmethod
     async def get_song_recommendations(seed_songs: list, limit = 3, set_auto_play = True,
@@ -978,6 +1048,7 @@ class Song:
     
     @staticmethod
     async def from_dict(data: dict):
+        #print("creating song from dict")
         try:
             return Song(
                 data["duration"],
@@ -992,7 +1063,8 @@ class Song:
                 lavalink_track_id=data.get("lavalink_track_id", None),
             )
         except Exception as e:
-            print("what the", e)
+            #print("Error creating song from dict:")
+            #print("what the", e, type(e))
             return None
         
     def __repr__(self):

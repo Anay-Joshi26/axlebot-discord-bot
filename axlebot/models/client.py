@@ -1,16 +1,17 @@
 from music.songs_queue import SongQueue
 import time
-from typing import Tuple, Union
+from typing import Tuple, Union, Literal
 from models.playlist import Playlist
 #from core.firebase import FirebaseClient
 from core.extensions.firebase import fbc
 import asyncio
 import discord
+import math
 from discord.ext import commands
 from utils.message_crafter import craft_bot_music_stopped
 from models.server_config import ServerConfig
 from core.lavalink import LavalinkVoiceClient
-
+from music.lyrics import LyricSession
 
 class Client:
     def __init__(self, server_id):
@@ -41,13 +42,15 @@ class Client:
         self.playlists : list[Playlist] = []
         self.last_added_playlist: Union[Playlist, None] = None
         self.is_premium : bool | None = None # check this, coz its funky
-        self.exit_after_inactivity = 60 * 3 # 3 minutes
+        self.exit_after_inactivity = 60 * 2 # 3 minutes
         self.stop_task = None # used to stop the client after a certain time of inactivity
         self.number_of_playlists_limit = 10
         self.client_lock = asyncio.Lock()  # Lock to prevent concurrent modifications to the client
         self.server_config: ServerConfig = ServerConfig(self)
         self.vc_stopped_due_to_seek = False
         self.stop_event = None
+        self._voteskip_dict = None
+        self.current_lyrics_session : LyricSession | None = None # current lyric session if any (otherwise None)
         #print("TEST TEST", core.extensions.lavalink_client.node_manager.available_nodes)
         #self.lavalink_player = core.extensions.lavalink_client.player_manager.get(server_id) or core.extensions.lavalink_client.player_manager.create(server_id)
 
@@ -59,11 +62,75 @@ class Client:
         data = await fbc.get_client_dict(guild_id)
         return await Client.from_dict(data, guild_id)
     
+    @property
+    def is_active_voting_session(self) -> bool:
+        """
+        Returns if there is an active voteskip session
+        """
+        return self._voteskip_dict is not None and self._voteskip_dict.get('active', False)
+    
     def is_premium(self) -> bool:
         """
         Returns if the client is premium
         """
         if self.is_premium is not None: return self.is_premium
+
+    def update_required_votes(self):
+        if not self.voice_client or not self.voice_client.channel or not self._voteskip_dict:
+            return  # Bot is not in a voice channel
+        
+        vc_members = [m for m in self.voice_client.channel.members if not m.bot]
+        required_votes = max(1, math.ceil(len(vc_members) / 2))
+        self._voteskip_dict['required_votes'] = required_votes
+    
+    def start_voteskip_session(self):
+        """
+        Starts a voteskip session
+        """
+        # Get non-bot members in the VC
+        if not self.voice_client or not self.voice_client.channel:
+            return  # Bot is not in a voice channel
+        
+        vc_members = [m for m in self.voice_client.channel.members if not m.bot]
+        required_votes = max(1, math.ceil(len(vc_members) / 2))
+
+        self._voteskip_dict = {
+            'active': True,
+            'voters': set(),
+            'required_votes': required_votes,
+            'message': None
+        }
+
+    def place_vote(self, member_id: int) -> tuple[bool, int, int, Literal["SUCCESS", "REPEAT", "FAILED"]]:
+        """
+        Places a vote for voteskip
+        """
+        if not self.is_active_voting_session:
+            return False, 0, 0, "FAILED"
+        
+        votes = self._voteskip_dict['voters']
+        
+        if not member_id in self._voteskip_dict['voters']:
+            votes.add(member_id)
+            passed = len(votes) >= self._voteskip_dict['required_votes']
+            return passed, len(votes), self._voteskip_dict['required_votes'], "SUCCESS"
+        else:
+            passed = len(votes) >= self._voteskip_dict['required_votes']
+            return passed, len(votes), self._voteskip_dict['required_votes'], "REPEAT"        
+
+    async def end_voteskip_session(self):
+        """
+        Ends a voteskip session
+        """
+        await self._voteskip_dict['message'].delete()
+        self._voteskip_dict = None
+
+    @property
+    def voteskip_dict(self) -> dict:
+        """
+        Returns the voteskip dictionary
+        """
+        return self._voteskip_dict
 
     async def _init_client_fields(self, server_id):
         """
@@ -161,7 +228,7 @@ class Client:
 
         self.stop_task = asyncio.create_task(timer())
     
-    async def stop(self, ctx: commands.Context, delete_after: int = 10, send_embed: bool = True):
+    async def stop(self, ctx: commands.Context, delete_after: int = 10, send_embed: bool = True, disconnect: bool = True):
         """
         This function stops the client from playing any music, clears the queue, and disconnects from the voice channel.
         """
@@ -180,10 +247,15 @@ class Client:
             self.queue.current_song.stop()
         if self.voice_client is not None:
             await self.voice_client.stop()
-            await self.voice_client.disconnect(); self.voice_client = None
+            if disconnect:
+                await self.voice_client.disconnect(client_already_stopped=True)
+            self.voice_client = None
         self.queue.auto_play_queue = []
         self.queue.last_seed_songs = set()
         await self.queue.clear()
+
+        if self.current_lyrics_session is not None:
+            await self.current_lyrics_session.stop()
 
         self.interupt_inactivity_timer()
 

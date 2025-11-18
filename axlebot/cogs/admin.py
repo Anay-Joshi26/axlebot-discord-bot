@@ -266,6 +266,29 @@ class AdminCog(commands.Cog):
         await ctx.author.send(embed=embed)
         await ctx.message.add_reaction("✅")
 
+    @commands.command(aliases = ['set_vote_skip', 'set_voteskip', 'svs'])
+    @commands.dynamic_cooldown(cooldown_time, type = BucketType.guild)
+    @commands.check(has_manage_guild_raise_error)
+    async def setvoteskip(self, ctx: commands.Context, *args):
+        """
+        Toggles the vote skip setting for the server.
+        Vote skip allows users to vote to skip the current song instead of skipping it directly.
+        """
+        if not args:
+            await ctx.send("Please provide 'true' or 'false'.")
+            return
+        
+        value: str = args[0].lower()
+
+        if value not in ["true", "false"]:
+            await ctx.send("Please provide 'true' or 'false'.")
+            return
+        
+        client: Client = await self.server_manager.get_client(ctx.guild.id)
+
+        await client.server_config.update_voteskip(value == "true")
+
+        await ctx.send(f"Vote skip has been set to `{value.capitalize()}` and will take effect for subsequent `-voteskip` commands.")
 
 
             

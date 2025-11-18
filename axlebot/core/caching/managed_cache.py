@@ -39,6 +39,7 @@ class CacheManager:
         """
         Get an item from the cache.
         """
+        print("GETTING CLIENT")
         key = str(key)
         for i, cache in enumerate(self.caches):
             #print(cache)
@@ -50,7 +51,7 @@ class CacheManager:
                 except Exception as e:
                     print(f"Exception in sync_get: {e}")
                     raise
-                print(value)
+                #print(value)
             else:
                 value = await self._get(key, cache)
             #print(f"Cache {i}: {cache}\nKey: {key}\nValue: {value}")
@@ -87,7 +88,7 @@ class CacheManager:
         """
         Promote a key/object to a higher priority cache
         """
-        print(f"Promoting {key} from cache {curr_cache_index}")
+        #print(f"Promoting {key} from cache {curr_cache_index}")
         from models.client import Client
         if curr_cache_index == 0:
             return value, False  # Already in the top cache

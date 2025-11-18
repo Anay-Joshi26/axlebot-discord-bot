@@ -117,7 +117,7 @@ def clean_song_name(name: str, artist: str) -> str:
         "(lyric video)", "(lyric)", "(music video)", "(official lyric video)",
         "(official lyric)", "()", "~", "( )", "( Music )", "visualiser", "visualizer",
         "(visualiser)", "(visualizer)", "[]", "[ ]", artist, " - ", "ft.", "feat.", "-", "- ", " -",
-        ".", "(", ")", "[", "]", "|"
+        ".", "(", ")", "[", "]", "|", "//", "/", "\\"
     ]
 
     if " - " in name:

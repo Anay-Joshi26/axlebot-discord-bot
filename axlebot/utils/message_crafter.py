@@ -236,10 +236,10 @@ def craft_lyrics_embed(lyrics: str, song_name: str, artist: str, status = Lyrics
             colour=0xff0000,
         )
         return embed
-    elif status == LyricsStatus.NO_LYRICS_FOUND:
+    elif status == LyricsStatus.NO_LYRICS_FOUND or lyrics is None:
         embed = discord.Embed(
             title="Lyrics not found for this song",
-            description="No lyrics were found for this song with that title and artist",
+            description="No lyrics were found for this song",
             colour=0xff0000,
         )
         return embed
@@ -258,10 +258,10 @@ def craft_lyrics_embed(lyrics: str, song_name: str, artist: str, status = Lyrics
 
     return embed
 
-def craft_queue_empty(live = False):
+def craft_queue_empty(live = False, inactivity_timeout: int = 180):
     embed = discord.Embed(
         title=f"The song queue is empty! {'[LIVE]' if live else ''}",
-        description=f"The queue is empty use `-p [song_name]` to play and add songs to the queue\n\n*AxleBot will leave the voice channel after 3 minutes of inactivity*",
+        description=f"The queue is empty use `-p [song_name]` to play and add songs to the queue\n\n*AxleBot will leave the voice channel after {inactivity_timeout//60} minutes of inactivity*",
         colour=0x00b0f4)
     return embed
 
@@ -762,6 +762,9 @@ def craft_admin_help_command():
     embed.add_field(name="Auto play songs",
                     value="To enable or disable auto play run:\n`-autoplay <true or false>`\n*Auto play will automatically queue songs based on the current queue using Spotify's recommendation algorithm*\n\nAliases: `auto_play`, `ap`",
                     inline=True)
+    embed.add_field(name="Enable/Disable voteskipping",
+                    value="To enable or disable voteskipping run:\n`-setvoteskip <true or false>`\n*Vote skipping allows users to vote to skip the current song instead of skipping it directly.*\n\nAliases: `vote_skip`, `vs`, `skipvote`",
+                    inline=True)
     embed.add_field(name="See all config",
                     value="To see the bots entire configuration run:\n`-see_all_config` or `-sac`",
                     inline=True)
@@ -829,6 +832,35 @@ def craft_update_access_embed(access_type: str, entities: list[str], action: str
 
     embed = discord.Embed(title=title, description=description, color=color)
     return embed
+
+import discord
+
+def craft_voteskip_embed(song: str, votes: int, required: int, vc_name: str) -> discord.Embed:
+    """
+    Create a Discord embed for the voteskip message.
+
+    Args:
+        song (str): Name of the currently playing song.
+        votes (int): Number of votes already placed.
+        required (int): Number of votes required to skip.
+        vc_name (str): Name of the voice channel.
+
+    Returns:
+        discord.Embed: The formatted embed object.
+    """
+    embed = discord.Embed(
+        title=f"Voting to skip: {song.name}",
+        description=(
+            f"Over 50% of the voice channel `{vc_name}` need to vote to skip the track.\n\n"
+            f"Votes: **{votes}/{required}**\n\n"
+            "*Voting window is open until the current song ends.*"
+        ),
+        color=0x00b0f4
+    )
+    embed.set_thumbnail(url=song.thumbnail_url)
+    return embed
+
+    
 
     
 
